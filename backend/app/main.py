@@ -7,6 +7,7 @@ from fastapi.middleware.cors import CORSMiddleware
 import logging
 
 from whisperlivekit import AudioProcessor
+from whisperlivekit.audio_processor import FrontData
 
 from .asr import create_engine
 
@@ -43,20 +44,25 @@ def read_root():
     return {"Hello": "FastAPI is running"}
 
 
-async def handle_websocket_results(websocket, results_generator):
+async def handle_websocket_results(websocket, results_generator) -> FrontData | None:
     """Consumes results from the audio processor and sends them via WebSocket."""
     try:
+        last_response = None
         async for response in results_generator:
             await websocket.send_json(response.to_dict())
-        # when the results_generator finishes it means all audio has been processed
-        logger.info("Results generator finished. Sending 'ready_to_stop' to client.")
-        await websocket.send_json({"type": "ready_to_stop"})
+            last_response = response
+
+        # await websocket.send_json({"type": "ready_to_stop"})
+
+        return last_response
     except WebSocketDisconnect:
         logger.info(
             "WebSocket disconnected while handling results (client likely closed connection)."
         )
     except Exception as e:
         logger.exception(f"Error in WebSocket results handler: {e}")
+
+    return None
 
 
 @app.websocket("/ws/audio")
@@ -75,8 +81,21 @@ async def websocket_endpoint(websocket: WebSocket):
     try:
         while True:
             message = await websocket.receive_bytes()
+            if b"STOP" in message:
+                logger.info("Received end from client")
+                break
 
             await audio_processor.process_audio(message)
+
+        await audio_processor.process_audio(None)
+
+        last_response = await websocket_task
+        if last_response:
+            lines = [
+                line.text for line in last_response.lines if line.text and line.speaker
+            ]
+            logger.info(f"Delivered speech: {''.join(lines)}")
+
     except KeyError as e:
         if "bytes" in str(e):
             logger.warning("Client has closed the connection.")

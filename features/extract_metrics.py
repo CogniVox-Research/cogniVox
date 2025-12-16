@@ -20,8 +20,37 @@ def load_audio(path):
 
 def compute_pitch_variability(audio, sr):
     f0 = librosa.yin(audio, fmin=50, fmax=400, sr=sr)
-    f0 = f0[f0 > 0]
-    return float(np.std(f0)) if len(f0) else 0.0
+    f0 = f0[f0 > 0]  # Keep voiced frames only
+
+    if len(f0) < 20:
+        return 0.0
+
+    # Convert pitch to perceptual scale (semitones)
+    # log2 models human pitch perception (ratio-based, not linear in Hz).
+    # Using the median as baseline provides speaker normalization and
+    # robustness to emphasis and pitch-tracking outliers.
+    # Multiplying by 12 converts octaves to semitones (human-relevant units).
+    f0_st = 12 * np.log2(f0 / np.median(f0))
+
+    # Remove outliers using IQR filtering (robust to pitch estimation errors)
+    q1, q3 = np.percentile(f0_st, [25, 75])
+    iqr = q3 - q1
+    f0_clean = f0_st[
+        (f0_st >= q1 - 1.5 * iqr) &
+        (f0_st <= q3 + 1.5 * iqr)
+    ]
+
+    if len(f0_clean) < 20:
+        return 0.0
+
+    # Robust pitch variability using Median Absolute Deviation (MAD)
+    # MAD is preferred over standard deviation as it is less sensitive
+    # to outliers and extreme intonation.
+    pitch_variability = np.median(np.abs(f0_clean - np.median(f0_clean)))
+
+    return float(pitch_variability)
+
+
 
 
 # ---------------------------------------------------

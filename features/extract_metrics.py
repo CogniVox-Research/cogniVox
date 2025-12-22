@@ -13,6 +13,33 @@ def load_audio(path):
     audio = librosa.util.normalize(audio)
     return audio, sr
 
+# ---------------------------------------------------
+# VOICED DURATION (Fluency)
+#----------------------------------------------------
+def compute_voiced_duration(audio, sr):
+    """
+    Compute voiced duration using both pitch and energy.
+    Prevents silence/noise from being counted as voiced.
+    """
+    # Pitch
+    f0 = librosa.yin(audio, fmin=50, fmax=400, sr=sr)
+
+    # Energy (RMS)
+    rms = librosa.feature.rms(y=audio)[0]
+
+    # Normalize RMS for robustness
+    rms = rms / np.max(rms + 1e-8)
+
+    # Voicing conditions:
+    # 1. Valid pitch
+    # 2. Sufficient energy
+    voiced_frames = (f0 > 0) & (rms > 0.1)
+
+    hop_length = 512
+    voiced_duration = np.sum(voiced_frames) * hop_length / sr
+
+    return float(voiced_duration)
+
 
 # ---------------------------------------------------
 # PITCH VARIABILITY (Prosody)
@@ -51,20 +78,47 @@ def compute_pitch_variability(audio, sr):
     return float(pitch_variability)
 
 
-
-
 # ---------------------------------------------------
 # SYLLABLE ESTIMATION (Articulation)
 # ---------------------------------------------------
 
 def estimate_syllables(audio, sr):
-    rms = librosa.feature.rms(y=audio)[0]
-    peaks, _ = find_peaks(rms, height=np.mean(rms))
+    # Band-pass filter to focus on speech energy (vowel-dominant region)
+    audio = librosa.effects.preemphasis(audio)
+    
+    # Amplitude envelope (smoothed)
+    envelope = np.abs(audio)
+    envelope = librosa.util.normalize(envelope)
+    
+    # Smooth envelope (~50 ms window)
+    win_size = int(0.05 * sr)
+    envelope_smooth = np.convolve(
+        envelope, np.ones(win_size) / win_size, mode="same"
+    )
+
+    # Adaptive threshold (robust to loudness differences)
+    threshold = np.percentile(envelope_smooth, 75)
+
+    # Minimum distance between syllables (~120 ms → max ~8 syll/sec)
+    min_distance = int(0.12 * sr)
+
+    peaks, _ = find_peaks(
+        envelope_smooth,
+        height=threshold,
+        distance=min_distance
+    )
+
     return int(len(peaks))
 
 
-def compute_articulation_rate(syllables, duration):
-    return float(syllables / duration) if duration > 0 else 0.0
+def compute_articulation_rate(syllables, voiced_duration):
+    """
+    Articulation rate (syllables per second of voiced speech).
+
+    Uses voiced duration instead of total duration to avoid
+    penalizing pauses and silence.
+    """
+    return float(syllables / voiced_duration) if voiced_duration > 0 else 0.0
 
 
 # ---------------------------------------------------
@@ -137,6 +191,7 @@ def extract_metrics(audio_path, transcript, segments):
     duration = librosa.get_duration(y=audio, sr=sr)
 
     syllables = estimate_syllables(audio, sr)
+    voiced_duration = compute_voiced_duration(audio, sr)
 
     word_count = len(transcript.split()) if transcript else 0
     wpm = (word_count / duration) * 60 if duration > 0 else 0.0
@@ -150,5 +205,5 @@ def extract_metrics(audio_path, transcript, segments):
         "disfluencies": detect_disfluencies(transcript),
         "filled_pauses": detect_filled_pauses(transcript),
         "loudness_variance": float(np.var(rms)),
-        "articulation_rate": compute_articulation_rate(syllables, duration)
+        "articulation_rate": compute_articulation_rate(syllables, voiced_duration),
     }

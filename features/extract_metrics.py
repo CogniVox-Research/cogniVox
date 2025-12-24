@@ -40,6 +40,90 @@ def compute_voiced_duration(audio, sr):
 
     return float(voiced_duration)
 
+def detect_pauses(audio, sr,
+                  rms_threshold=0.1,
+                  min_pause_duration=0.4):
+    """
+    Detect pauses based on low energy.
+    Returns a list of pause dicts with start, end, duration (seconds).
+    """
+
+    rms = librosa.feature.rms(y=audio)[0]
+    rms = rms / np.max(rms + 1e-8)
+
+    hop_length = 512
+    frame_duration = hop_length / sr
+
+    silent = rms < rms_threshold
+
+    pauses = []
+    current_start = None
+    current_duration = 0.0
+
+    for i, is_silent in enumerate(silent):
+        t = i * frame_duration
+
+        if is_silent:
+            if current_start is None:
+                current_start = t
+            current_duration += frame_duration
+        else:
+            if current_duration >= min_pause_duration:
+                pauses.append({
+                    "start": current_start,
+                    "end": current_start + current_duration,
+                    "duration": current_duration
+                })
+            current_start = None
+            current_duration = 0.0
+
+    # Catch trailing pause
+    if current_duration >= min_pause_duration:
+        pauses.append({
+            "start": current_start,
+            "end": current_start + current_duration,
+            "duration": current_duration
+        })
+
+    return pauses
+
+def merge_close_pauses(pauses, gap_threshold=0.3):
+    """
+    Merge pauses separated by very short speech gaps.
+    """
+
+    if not pauses:
+        return pauses
+
+    merged = [pauses[0]]
+
+    for p in pauses[1:]:
+        prev = merged[-1]
+
+        # If gap between pauses is very small, merge them
+        if p["start"] - prev["end"] <= gap_threshold:
+            prev["end"] = p["end"]
+            prev["duration"] = prev["end"] - prev["start"]
+        else:
+            merged.append(p)
+
+    return merged
+
+def compute_pause_metrics(pauses):
+    if not pauses:
+        return {
+            "avg_pause": 0.0,
+            "max_pause": 0.0,
+            "pause_count": 0
+        }
+
+    durations = [p["duration"] for p in pauses]
+
+    return {
+        "avg_pause": float(np.mean(durations)),
+        "max_pause": float(np.max(durations)),
+        "pause_count": int(len(durations))
+    }
 
 # ---------------------------------------------------
 # PITCH VARIABILITY (Prosody)
@@ -196,11 +280,17 @@ def extract_metrics(audio_path, transcript, segments):
     word_count = len(transcript.split()) if transcript else 0
     wpm = (word_count / duration) * 60 if duration > 0 else 0.0
 
+    pauses = detect_pauses(audio, sr)
+    pauses = merge_close_pauses(pauses)
+    pause_metrics = compute_pause_metrics(pauses)
+
     rms = librosa.feature.rms(y=audio)[0]
 
     return {
         "wpm": float(wpm),
-        "avg_pause": compute_avg_pause(segments),
+        "avg_pause": pause_metrics["avg_pause"],
+        "max_pause": pause_metrics["max_pause"],
+        "pause_count": pause_metrics["pause_count"],
         "pitch_variability": compute_pitch_variability(audio, sr),
         "disfluencies": detect_disfluencies(transcript),
         "filled_pauses": detect_filled_pauses(transcript),

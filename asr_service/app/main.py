@@ -6,6 +6,8 @@ from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 import logging
 
+import pika
+from pika.adapters.asyncio_connection import AsyncioConnection
 from whisperlivekit import AudioProcessor
 from whisperlivekit.audio_processor import FrontData
 
@@ -20,12 +22,20 @@ logger.setLevel(logging.DEBUG)
 
 transcription_engine = None
 
+############################################
+# RabbitMQ connection
+############################################
+connection = AsyncioConnection(
+    pika.ConnectionParameters(host='localhost'))
+channel = connection.channel()
+channel.exchange_declare(exchange='ASR', exchange_type='fanout')
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     global transcription_engine
     transcription_engine = create_engine()
     yield
+    connection.close()
 
 
 app = FastAPI()
@@ -49,6 +59,9 @@ async def handle_websocket_results(websocket, results_generator) -> FrontData | 
     try:
         last_response = None
         async for response in results_generator:
+            # send data to queue
+            channel.basic_publish(exchange='ASR', routing_key='', body=response.to_dict())
+            
             await websocket.send_json(response.to_dict())
             last_response = response
 
@@ -122,3 +135,6 @@ async def websocket_endpoint(websocket: WebSocket):
 
         await audio_processor.cleanup()
         logger.info("WebSocket endpoint cleaned up successfully.")
+
+
+    

@@ -1,15 +1,16 @@
 import asyncio
 from contextlib import asynccontextmanager
+import json
 from pathlib import Path
 
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 import logging
 
-import pika
 from pika.adapters.asyncio_connection import AsyncioConnection
 from whisperlivekit import AudioProcessor
 from whisperlivekit.audio_processor import FrontData
+import aio_pika
 
 from .asr import create_engine
 
@@ -25,20 +26,31 @@ transcription_engine = None
 ############################################
 # RabbitMQ connection
 ############################################
-connection = AsyncioConnection(
-    pika.ConnectionParameters(host='localhost'))
-channel = connection.channel()
-channel.exchange_declare(exchange='ASR', exchange_type='fanout')
+connection: aio_pika.abc.AbstractRobustConnection | None = None
+channel: aio_pika.abc.AbstractChannel | None = None
+
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    global transcription_engine
+    global transcription_engine, connection, channel
     transcription_engine = create_engine()
+    connection = await aio_pika.connect_robust(
+        "amqp://appuser:apppass@127.0.0.1/", loop=asyncio.get_event_loop()
+    )
+    await connection.connect()
+    # Creating channel
+    channel = await connection.channel()
+
+    # Declaring queue
+    await channel.declare_queue("ASR_stream", auto_delete=False)
+    await channel.declare_queue("ASR", auto_delete=False)
+
     yield
-    connection.close()
+    await channel.close()
+    await connection.close()
 
 
-app = FastAPI()
+app = FastAPI(lifespan=lifespan)
 
 app.add_middleware(
     CORSMiddleware,
@@ -60,8 +72,12 @@ async def handle_websocket_results(websocket, results_generator) -> FrontData | 
         last_response = None
         async for response in results_generator:
             # send data to queue
-            channel.basic_publish(exchange='ASR', routing_key='', body=response.to_dict())
-            
+            assert channel is not None, "RabbitMQ channel is not initialized"
+            await channel.default_exchange.publish(
+                aio_pika.Message(body=json.dumps(response.to_dict()).encode()),
+                routing_key="ASR_stream",
+            )
+
             await websocket.send_json(response.to_dict())
             last_response = response
 
@@ -108,6 +124,11 @@ async def websocket_endpoint(websocket: WebSocket):
                 line.text for line in last_response.lines if line.text and line.speaker
             ]
             logger.info(f"Delivered speech: {''.join(lines)}")
+            assert channel is not None, "RabbitMQ channel is not initialized"
+            await channel.default_exchange.publish(
+                aio_pika.Message(body="".join(lines).encode()),
+                routing_key="ASR",
+            )
 
     except KeyError as e:
         if "bytes" in str(e):
@@ -135,6 +156,3 @@ async def websocket_endpoint(websocket: WebSocket):
 
         await audio_processor.cleanup()
         logger.info("WebSocket endpoint cleaned up successfully.")
-
-
-    

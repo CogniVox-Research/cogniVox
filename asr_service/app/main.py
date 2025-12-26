@@ -7,7 +7,6 @@ from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 import logging
 
-from pika.adapters.asyncio_connection import AsyncioConnection
 from whisperlivekit import AudioProcessor
 from whisperlivekit.audio_processor import FrontData
 import aio_pika

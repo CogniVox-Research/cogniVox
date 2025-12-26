@@ -10,12 +10,15 @@ dependencies = [
     "uvicorn (>=0.38.0,<0.39.0)",
     "whisperlivekit (>=0.2.16,<0.3.0)",
     "aio-pika (>=9.5.8,<10.0.0)",
+    "shared @ file:///home/yehan/Projects/Cognivox/shared",
 ]
 
 [tool.poetry]
 package-mode = false
 
 
+[tool.poetry.dependencies]
+shared = {develop = true}
 [build-system]
 requires = ["poetry-core>=2.0.0,<3.0.0"]
 build-backend = "poetry.core.masonry.api"

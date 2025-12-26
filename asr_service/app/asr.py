@@ -58,7 +58,7 @@ class ASREngine:
             async for response in results_generator:
                 # send data to websocket to update ui
                 try:
-                    await ws_writer(response.to_dict())
+                    await ws_writer({"event": "partial", "content": response.to_dict()})
                 except WebSocketError as e:
                     logger.error(f"WebSocket error: {e}")
                     # ignore the error and continue processing
@@ -77,6 +77,9 @@ class ASREngine:
             if last_response and complete_cb:
                 full_text = get_full_text(last_response)
                 await complete_cb(full_text)
+                await ws_writer(
+                    {"event": "completed", "content": last_response, "text": full_text}
+                )
 
         except Exception as e:
             logger.error(
@@ -84,5 +87,5 @@ class ASREngine:
             )
         finally:
             logger.info(f"Cleaning up ASR session {session_id}...")
-
+            await websocket.close()
             await audio_processor.cleanup()

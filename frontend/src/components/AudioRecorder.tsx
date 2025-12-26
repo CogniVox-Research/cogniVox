@@ -17,7 +17,7 @@ const AudioRecorder: React.FC = () => {
     const streamer = useRef(new AudioStreamer(WEBSOCKET_URL));
     useEffect(() => {
         streamer.current.onMessage((m) => {
-            setContent(JSON.parse(m.data))
+            setContent(JSON.parse(m.data).content)
         });
 
         streamer.current.onStateChange(() => {
@@ -46,6 +46,20 @@ const AudioRecorder: React.FC = () => {
                 }}
             >
                 {isRecording ? '🔴 Stop Streaming' : '▶️ Start Streaming'}
+            </button>
+            <button
+                onClick={!isRecording ? () => streamer.current.startTestStream() : null}
+                style={{
+                    padding: '10px 20px',
+                    fontSize: '16px',
+                    backgroundColor: isRecording ? '#d9534f' : '#5cb85c',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '5px',
+                    cursor: 'pointer'
+                }}
+            >
+                ▶️ Send Test Streaming
             </button>
             <p style={{ marginTop: '10px', fontSize: '12px', color: '#666' }}>
                 *The backend will log the size of each audio chunk it receives.

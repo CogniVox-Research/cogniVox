@@ -17,6 +17,10 @@ python = "^3.12"
 fastapi = {extras = ["standard"], version = "^0.119.0"}
 grpcio = "^1.75.1"
 shared = {path = "../shared", develop = true}
+sentence-transformers = "^5.1.2"
+nltk = "^3.9.2"
+numpy = "^2.3.5"
+scikit-learn = "^1.7.2"
 
 
 [build-system]

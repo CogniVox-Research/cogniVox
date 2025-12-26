@@ -32,7 +32,10 @@ def websocket_writer(
 
     async def send_message(message: typing.Any):
         try:
-            await websocket.send_bytes(json.dumps(message).encode("utf-8"))
+            if isinstance(message, bytes):
+                await websocket.send_bytes(message)
+            else:
+                await websocket.send_text(json.dumps(message))
         except Exception as e:
             raise WebSocketError("Error writing to WebSocket ") from e
 

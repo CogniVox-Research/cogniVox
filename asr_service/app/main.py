@@ -5,9 +5,9 @@ import json
 from fastapi import FastAPI, WebSocket
 from fastapi.middleware.cors import CORSMiddleware
 
-from whisperlivekit.audio_processor import FrontData
 import aio_pika
 
+from . import dto
 from .asr import ASREngine
 from .config import config
 
@@ -54,20 +54,14 @@ def read_root():
 
 @app.websocket("/audio/{session_id}")
 async def websocket_endpoint(websocket: WebSocket, session_id: str):
-    async def transcribe_cb(data: FrontData):
+    async def transcribe_cb(data: dto.ASRData):
         assert channel is not None, "RabbitMQ channel is not initialized"
+
+        routing_key = "ASR" if data.type == "complete" else "ASR_stream"
+
         await channel.default_exchange.publish(
-            aio_pika.Message(body=json.dumps(data.to_dict()).encode()),
-            routing_key="ASR_stream",
+            aio_pika.Message(body=json.dumps(data.model_dump_json()).encode()),
+            routing_key=routing_key,
         )
 
-    async def complete_cb(data: str):
-        assert channel is not None, "RabbitMQ channel is not initialized"
-        await channel.default_exchange.publish(
-            aio_pika.Message(body="".join(data).encode()),
-            routing_key="ASR",
-        )
-
-    await transcription_engine.start_session(
-        session_id, websocket, transcribe_cb, complete_cb
-    )
+    await transcription_engine.start_session(session_id, websocket, transcribe_cb)

@@ -80,7 +80,6 @@ export default class AudioStreamer {
                     }
 
                     this.#connection.send(audioBlob);
-                    console.log(`Streaming: Sent ${audioBlob.size} bytes`);
                 }
             }
         };
@@ -103,8 +102,15 @@ export default class AudioStreamer {
 
         this.#connection.send(audioBlob);
         console.log(`Test Stream: Sent ${audioBlob.size} bytes`);
-        this.#connection?.send(new Blob(["STOP"], { type: "plain/text" }));
 
+        const audioUrl = URL.createObjectURL(audioBlob);
+        const audio = new Audio(audioUrl);
+        audio.onloadedmetadata = () => {
+            const length = audio.duration * 200;
+            setTimeout(() => {
+                this.#connection?.send(new Blob(["STOP"], { type: "plain/text" }));
+            }, length + 500);
+        }
     }
 
     async stopStreaming() {

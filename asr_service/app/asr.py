@@ -1,5 +1,6 @@
 import asyncio
 from pathlib import Path
+import time
 import typing
 from fastapi import WebSocket
 from whisperlivekit import AudioProcessor, TranscriptionEngine
@@ -8,12 +9,15 @@ from whisperlivekit.audio_processor import FrontData
 from .websocket import AudioWebSocket
 from .ffmpeg_manager import CustomFFmpegManager
 from .config import config
-from . import logger
+from . import logger, dto
 
 
 def get_full_text(data: FrontData) -> str:
     lines = [line.text for line in data.lines if line.text and line.speaker]
     return "".join(lines)
+
+
+ASRCallback = typing.Callable[[dto.ASRData], typing.Awaitable[None]]
 
 
 class ASREngine:
@@ -40,84 +44,111 @@ class ASREngine:
         self,
         session_id: str,
         websocket: WebSocket,
-        transcript_cb: typing.Callable[[FrontData], typing.Awaitable[None]]
-        | None = None,
-        complete_cb: typing.Callable[[str], typing.Awaitable[None]] | None = None,
+        transcript_cb: ASRCallback | None = None,
     ) -> None:
         assert self.engine is not None, "Transcription engine is not initialized"
 
         async with AudioWebSocket(websocket) as ws:
-            audio_processor = AudioProcessor(transcription_engine=self.engine)
-            out_file = Path(config.recording_dir) / f"{session_id}.wav"
-            out_file = out_file.absolute()
+            session = ASRSession(
+                engine=self.engine,
+                session_id=session_id,
+                websocket=ws,
+                transcript_cb=transcript_cb,
+            )
+            await session.run()
 
-            if out_file.exists():
-                logger.warning(
-                    f"Recording file {out_file} already exists. Overwriting..."
+
+class ASRSession:
+    def __init__(
+        self,
+        engine: TranscriptionEngine,
+        session_id: str,
+        websocket: AudioWebSocket,
+        transcript_cb: ASRCallback | None = None,
+    ) -> None:
+        self.engine = engine
+        self.session_id = session_id
+        self.websocket = websocket
+        self.transcript_cb = transcript_cb
+        self.response: FrontData | None = None
+        self.start_time = time.time()
+
+        out_file = (Path(config.recording_dir) / f"{session_id}.wav").absolute()
+        if out_file.exists():
+            logger.warning(f"Overwriting existing recording {out_file}")
+            out_file.unlink()
+
+        self.audio_processor = AudioProcessor(transcription_engine=self.engine)
+        CustomFFmpegManager.patch_audio_processor(self.audio_processor, out_file)
+
+    async def run(self) -> None:
+        results_generator = await self.audio_processor.create_tasks()
+        asyncio.create_task(self.audio_stream_handler())
+        broadcast_task = asyncio.create_task(self.transcript_broadcaster())
+
+        try:
+            async for response in results_generator:
+                await self.transcript_result_handler(response)
+
+            await broadcast_task
+            await self.transcript_complete_handler()
+
+        except Exception as e:
+            logger.error(
+                f"Unexpected error in asr handler main loop: {e}",
+                exc_info=True,
+            )
+        finally:
+            logger.info(f"Cleaning up ASR session {self.session_id}...")
+            await self.audio_processor.cleanup()
+
+    async def transcript_broadcaster(self):
+        prev_response = None
+        last_text = ""
+        while not self.audio_processor.is_stopping:
+            if self.response and self.response is not prev_response:
+                data = dto.ASRData.from_whisper_data(
+                    self.audio_processor,
+                    self.response,
+                    start_time=self.start_time,
                 )
-                out_file.unlink()
 
-            CustomFFmpegManager.patch_audio_processor(audio_processor, out_file)
+                # send partial transcript update if the text has changed.
+                if data.full_text != last_text and self.transcript_cb:
+                    logger.debug(f"Partial transcription sent: {data.model_dump()}")
+                    await self.transcript_cb(data)
 
-            results_generator = await audio_processor.create_tasks()
+                # send data to websocket to update ui
+                await self.websocket.send_message(data.model_dump_json())
+                last_text = data.full_text
 
-            async def audio_stream_handler():
-                try:
-                    async for audio_chunk in ws.receive_audio_chunk():
-                        # send the audio chunk for asr
-                        await audio_processor.process_audio(audio_chunk)
-                finally:
-                    # signal end of stream
-                    await audio_processor.process_audio(None)
+            prev_response = self.response
+            await asyncio.sleep(0.5)
 
-            asyncio.create_task(audio_stream_handler())
+    async def transcript_result_handler(self, response: FrontData):
+        self.response = response
 
-            async def test():
-                while not audio_processor.is_stopping:
-                    logger.info(
-                        f"silence {audio_processor.current_silence} {audio_processor.state}",
-                    )
-                    await asyncio.sleep(1)
+    async def transcript_complete_handler(self):
+        if not self.response:
+            return
 
-            asyncio.create_task(test())
+        data = dto.ASRData.from_whisper_data(
+            self.audio_processor,
+            self.response,
+            start_time=self.start_time,
+            is_complete=True,
+        )
 
-            try:
-                last_response: FrontData | None = None
-                async for response in results_generator:
-                    # send data to websocket to update ui
-                    await ws.send_message(
-                        {"event": "partial", "content": response.to_dict()},
-                    )
+        if self.transcript_cb:
+            await self.transcript_cb(data)
 
-                    # send partial transcript update if the text has changed.
-                    if (
-                        last_response
-                        and transcript_cb
-                        and get_full_text(response) != get_full_text(last_response)
-                    ):
-                        logger.debug(
-                            f"Partial transcription sent: {response.to_dict()}"
-                        )
-                        await transcript_cb(response)
+        await self.websocket.send_message(data.model_dump_json())
 
-                    last_response = response
-
-                if last_response and complete_cb:
-                    full_text = get_full_text(last_response)
-                    await complete_cb(full_text)
-                    await ws.send_message(
-                        {
-                            "event": "completed",
-                            "content": last_response.to_dict(),
-                            "text": full_text,
-                        },
-                    )
-
-            except Exception as e:
-                logger.error(
-                    f"Unexpected error in websocket_endpoint main loop: {e}",
-                    exc_info=True,
-                )
-            finally:
-                logger.info(f"Cleaning up ASR session {session_id}...")
-                await audio_processor.cleanup()
+    async def audio_stream_handler(self):
+        try:
+            async for audio_chunk in self.websocket.receive_audio_chunk():
+                # send the audio chunk for asr
+                await self.audio_processor.process_audio(audio_chunk)
+        finally:
+            # signal end of stream
+            await self.audio_processor.process_audio(None)

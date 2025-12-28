@@ -44,6 +44,8 @@ class AudioWebSocket:
         try:
             if isinstance(message, bytes):
                 await self.__websocket.send_bytes(message)
+            elif isinstance(message, str):
+                await self.__websocket.send_text(message)
             else:
                 await self.__websocket.send_text(json.dumps(message))
         except Exception as e:

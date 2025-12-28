@@ -17,7 +17,7 @@ const AudioRecorder: React.FC = () => {
     const streamer = useRef(new AudioStreamer(WEBSOCKET_URL));
     useEffect(() => {
         streamer.current.onMessage((m) => {
-            setContent(JSON.parse(m.data).content)
+            setContent(JSON.parse(m.data))
         });
 
         streamer.current.onStateChange(() => {
@@ -66,6 +66,7 @@ const AudioRecorder: React.FC = () => {
             </p>
             {content && content.lines.map(v => <p>{JSON.stringify(v)}</p>)}
             {content && content.lines.filter(v => v.speaker).reduce((pv, c) => pv + c.text, "")}
+            {JSON.stringify(content)}
         </div>
     );
 };

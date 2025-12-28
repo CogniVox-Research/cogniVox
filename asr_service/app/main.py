@@ -13,10 +13,6 @@ from .config import config
 
 
 transcription_engine = ASREngine()
-
-############################################
-# RabbitMQ connection
-############################################
 channel: aio_pika.abc.AbstractChannel | None = None
 
 
@@ -57,8 +53,8 @@ def read_root():
     return {"Hello": "FastAPI is running"}
 
 
-@app.websocket("/ws/audio")
-async def websocket_endpoint(websocket: WebSocket):
+@app.websocket("/audio/{session_id}")
+async def websocket_endpoint(websocket: WebSocket, session_id: str):
     async def transcribe_cb(data: FrontData):
         assert channel is not None, "RabbitMQ channel is not initialized"
         await channel.default_exchange.publish(
@@ -74,5 +70,5 @@ async def websocket_endpoint(websocket: WebSocket):
         )
 
     await transcription_engine.start_session(
-        "todo", websocket, transcribe_cb, complete_cb
+        session_id, websocket, transcribe_cb, complete_cb
     )

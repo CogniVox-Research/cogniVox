@@ -8,7 +8,7 @@ declare global {
     }
 }
 
-const WEBSOCKET_URL = "ws://localhost:8000/ws/audio";
+const WEBSOCKET_URL = "ws://localhost:8000/audio/test-session-id";
 
 const AudioRecorder: React.FC = () => {
     const [isRecording, setIsRecording] = useState(false);

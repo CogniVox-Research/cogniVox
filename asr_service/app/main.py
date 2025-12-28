@@ -31,7 +31,6 @@ async def lifespan(app: FastAPI):
     # Declaring queue
     await channel.declare_queue("ASR_stream", auto_delete=False)
     await channel.declare_queue("ASR", auto_delete=False)
-    print(channel)
     yield
     await channel.close()
     await connection.close()

@@ -81,11 +81,6 @@ class CustomFFmpegManager(ffmpeg_manager.FFmpegManager):
                 await self.on_error_callback("start_failed")  # type: ignore
             return False
 
-    async def read_data(self, size: int) -> bytes | None:
-        data = await super().read_data(size)
-        print(f"Read {len(data) if data else 0} bytes of denoised audio data")
-        return data
-
     @staticmethod
     def patch_audio_processor(processor: AudioProcessor, recording_file: Path):
         """Patch the AudioProcessor to use the CustomFFmpegManager."""

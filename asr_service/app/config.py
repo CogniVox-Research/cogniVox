@@ -15,5 +15,7 @@ class Settings(SharedBaseSettings):
     )
     warmup_model: bool = Field(default=True)
 
+    recording_dir: str = Field(default="recordings/")
+
 
 config = Settings.load()

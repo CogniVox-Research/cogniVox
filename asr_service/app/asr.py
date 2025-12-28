@@ -6,6 +6,7 @@ from whisperlivekit import AudioProcessor, TranscriptionEngine
 from whisperlivekit.audio_processor import FrontData
 
 from .websocket import AudioWebSocket
+from .audio_recorder import AudioRecorder
 from .config import config
 from . import logger
 
@@ -51,6 +52,7 @@ class ASREngine:
 
             async def audio_stream_handler():
                 try:
+                    async with AudioRecorder(session_id) as recorder:
                         async for audio_chunk in ws.receive_audio_chunk():
                             # send the audio chunk for asr
                             await audio_processor.process_audio(audio_chunk)

@@ -1,11 +1,14 @@
 import asyncio
 from contextlib import asynccontextmanager
 import json
+from pathlib import Path
+import re
 
 from fastapi import FastAPI, WebSocket
 from fastapi.middleware.cors import CORSMiddleware
 
 import aio_pika
+from fastapi.responses import FileResponse
 
 from . import dto
 from .asr import ASREngine
@@ -65,3 +68,17 @@ async def websocket_endpoint(websocket: WebSocket, session_id: str):
         )
 
     await transcription_engine.start_session(session_id, websocket, transcribe_cb)
+
+
+@app.get("/recording/{session_id}")
+async def recording_endpoint(session_id: str):
+    recording_dir = Path(config.recording_dir).absolute()
+    clean_session_id = re.sub(r"[/\\?%*:|\"<>\x7F\x00-\x1F]", "-", session_id)
+
+    file_name = f"{clean_session_id}.wav"
+    recording_file = recording_dir / file_name
+    return FileResponse(
+        path=recording_file,
+        filename=file_name,
+        media_type="audio/vnd.wave",
+    )

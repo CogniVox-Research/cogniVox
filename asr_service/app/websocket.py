@@ -18,7 +18,11 @@ class AudioWebSocket:
         return self
 
     async def __aexit__(self, exc_type, exc_val, exc_tb):
-        await self.__websocket.close()
+        try:
+            await self.__websocket.close()
+        except:  # noqa: E722
+            # ignore error because connection may already be closed
+            pass
 
     async def receive_audio_chunk(self) -> typing.AsyncGenerator[bytes, None]:
         """Returns an async generator that yields audio chunks from the WebSocket."""

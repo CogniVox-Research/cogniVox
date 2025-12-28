@@ -9,34 +9,38 @@ class WebSocketError(Exception):
         super().__init__(message)
 
 
-async def websocket_reader(websocket: WebSocket) -> typing.AsyncGenerator[bytes, None]:
-    """Asynchronously reads binary messages from a WebSocket."""
-    try:
-        while True:
-            message = await websocket.receive_bytes()
-            if b"STOP" in message:
-                logger.info("Received end from client")
-                break
-            yield message
+class AudioWebSocket:
+    def __init__(self, websocket: WebSocket):
+        self.__websocket = websocket
 
-    except WebSocketDisconnect:
-        raise WebSocketError("WebSocket disconnected without sending STOP signal.")
-    except Exception as e:
-        raise WebSocketError("Error reading from WebSocket ") from e
+    async def __aenter__(self):
+        await self.__websocket.accept()
+        return self
 
+    async def __aexit__(self, exc_type, exc_val, exc_tb):
+        await self.__websocket.close()
 
-def websocket_writer(
-    websocket: WebSocket,
-) -> typing.Callable[[typing.Any], typing.Awaitable[None]]:
-    """Returns a function that sends binary messages to a WebSocket."""
+    async def receive_audio_chunk(self) -> typing.AsyncGenerator[bytes, None]:
+        """Returns an async generator that yields audio chunks from the WebSocket."""
+        try:
+            while True:
+                message = await self.__websocket.receive_bytes()
+                if b"STOP" in message:
+                    logger.info("Received end from client")
+                    break
+                yield message
 
-    async def send_message(message: typing.Any):
+        except WebSocketDisconnect:
+            raise WebSocketError("WebSocket disconnected without sending STOP signal.")
+        except Exception as e:
+            raise WebSocketError("Error reading from WebSocket ") from e
+
+    async def send_message(self, message: typing.Any) -> None:
+        """Sends a message to the WebSocket."""
         try:
             if isinstance(message, bytes):
-                await websocket.send_bytes(message)
+                await self.__websocket.send_bytes(message)
             else:
-                await websocket.send_text(json.dumps(message))
+                await self.__websocket.send_text(json.dumps(message))
         except Exception as e:
             raise WebSocketError("Error writing to WebSocket ") from e
-
-    return send_message

@@ -33,7 +33,7 @@ class AudioRecorder:
             await self.temp_dir.__aexit__(exc_type, exc_val, exc_tb)
 
     async def __save_recording(self) -> None:
-        out_file = Path(config.recording_dir) / f"{self.session_id}.opus"
+        out_file = Path(config.recording_dir) / f"{self.session_id}.wav"
         out_file = out_file.absolute()
 
         if out_file.exists():
@@ -47,8 +47,6 @@ class AudioRecorder:
             "error",
             "-i",
             "concat:" + "|".join(self.audio_chunks),
-            "-c",
-            "copy",
             out_file,
         )
 

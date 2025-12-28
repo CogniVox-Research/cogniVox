@@ -6,7 +6,7 @@ from whisperlivekit import AudioProcessor, TranscriptionEngine
 from whisperlivekit.audio_processor import FrontData
 
 from .websocket import AudioWebSocket
-from .audio_recorder import AudioRecorder
+from .ffmpeg_manager import CustomFFmpegManager
 from .config import config
 from . import logger
 
@@ -48,22 +48,38 @@ class ASREngine:
 
         async with AudioWebSocket(websocket) as ws:
             audio_processor = AudioProcessor(transcription_engine=self.engine)
+            out_file = Path(config.recording_dir) / f"{session_id}.wav"
+            out_file = out_file.absolute()
+
+            if out_file.exists():
+                logger.warning(
+                    f"Recording file {out_file} already exists. Overwriting..."
+                )
+                out_file.unlink()
+
+            CustomFFmpegManager.patch_audio_processor(audio_processor, out_file)
+
             results_generator = await audio_processor.create_tasks()
 
             async def audio_stream_handler():
                 try:
-                    async with AudioRecorder(session_id) as recorder:
-                        async for audio_chunk in ws.receive_audio_chunk():
-                            # send the audio chunk for asr
-                            await audio_processor.process_audio(audio_chunk)
-
-                            # save the audio chunk to file
-                            await recorder.add_chunk(audio_chunk)
+                    async for audio_chunk in ws.receive_audio_chunk():
+                        # send the audio chunk for asr
+                        await audio_processor.process_audio(audio_chunk)
                 finally:
                     # signal end of stream
                     await audio_processor.process_audio(None)
 
             asyncio.create_task(audio_stream_handler())
+
+            async def test():
+                while not audio_processor.is_stopping:
+                    logger.info(
+                        f"silence {audio_processor.current_silence} {audio_processor.state}",
+                    )
+                    await asyncio.sleep(1)
+
+            asyncio.create_task(test())
 
             try:
                 last_response: FrontData | None = None

@@ -12,11 +12,6 @@ from .config import config
 from . import logger, dto
 
 
-def get_full_text(data: FrontData) -> str:
-    lines = [line.text for line in data.lines if line.text and line.speaker]
-    return "".join(lines)
-
-
 ASRCallback = typing.Callable[[dto.ASRData], typing.Awaitable[None]]
 
 
@@ -27,6 +22,7 @@ class ASREngine:
     def init(self):
         logger.info("Initializing ASR engine...")
 
+        # load warmup file for asr model
         warmup_file = Path(__file__).parent.parent / "micro-machines.wav"
         if not config.warmup_model:
             warmup_file = None
@@ -73,7 +69,9 @@ class ASRSession:
         self.response: FrontData | None = None
         self.start_time = time.time()
 
+        # create recording dir and remove recording if it already exists
         out_file = (Path(config.recording_dir) / f"{session_id}.wav").absolute()
+        out_file.parent.mkdir(parents=True, exist_ok=True)
         if out_file.exists():
             logger.warning(f"Overwriting existing recording {out_file}")
             out_file.unlink()
@@ -88,7 +86,7 @@ class ASRSession:
 
         try:
             async for response in results_generator:
-                await self.transcript_result_handler(response)
+                self.response = response
 
             await broadcast_task
             await self.transcript_complete_handler()
@@ -103,6 +101,9 @@ class ASRSession:
             await self.audio_processor.cleanup()
 
     async def transcript_broadcaster(self):
+        """
+        Sends an transcript update every second to the ui and the callback function
+        """
         prev_response = None
         last_text = ""
         while not self.audio_processor.is_stopping:
@@ -123,10 +124,7 @@ class ASRSession:
                 last_text = data.full_text
 
             prev_response = self.response
-            await asyncio.sleep(0.5)
-
-    async def transcript_result_handler(self, response: FrontData):
-        self.response = response
+            await asyncio.sleep(1)
 
     async def transcript_complete_handler(self):
         if not self.response:
@@ -145,6 +143,9 @@ class ASRSession:
         await self.websocket.send_message(data.model_dump_json())
 
     async def audio_stream_handler(self):
+        """
+        Gets audio chunks from the websocket and sends it to the ASR model.
+        """
         try:
             async for audio_chunk in self.websocket.receive_audio_chunk():
                 # send the audio chunk for asr

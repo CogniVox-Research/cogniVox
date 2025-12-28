@@ -21,9 +21,17 @@ class ASREngine:
 
     def init(self):
         logger.info("Initializing ASR engine...")
+
+        warmup_file = Path(__file__).parent.parent / "micro-machines.wav"
+        if not config.warmup_model:
+            warmup_file = None
+        elif not warmup_file.exists():
+            logger.warning(f"Warmup file {warmup_file} does not exist. Skipping.")
+            warmup_file = None
+
         self.engine = TranscriptionEngine(
             model_size=config.whisper_model,
-            warmup_file=Path(__file__).parent.parent / "micro-machines.wav",
+            warmup_file=warmup_file,
         )
         logger.info("ASR engine initialized.")
 

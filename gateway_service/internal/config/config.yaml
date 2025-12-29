@@ -1,0 +1,4 @@
+app:
+  AppName: Gateway Server
+  Env: "Development"
+  Port: "8081"

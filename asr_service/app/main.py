@@ -1,38 +1,49 @@
 import asyncio
 from contextlib import asynccontextmanager
+import json
 from pathlib import Path
+import re
 
-from fastapi import FastAPI, WebSocket, WebSocketDisconnect
+from fastapi import FastAPI, WebSocket
 from fastapi.middleware.cors import CORSMiddleware
-import logging
 
-from whisperlivekit import AudioProcessor
-from whisperlivekit.audio_processor import FrontData
+import aio_pika
+from fastapi.responses import FileResponse
 
-from .asr import create_engine
-
-logging.basicConfig(
-    level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s"
-)
-logger = logging.getLogger(__name__)
-logger.setLevel(logging.DEBUG)
+from . import dto
+from .asr import ASREngine
+from .config import config
 
 
-transcription_engine = None
+transcription_engine = ASREngine()
+channel: aio_pika.abc.AbstractChannel | None = None
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    global transcription_engine
-    transcription_engine = create_engine()
+    global channel
+    transcription_engine.init()
+
+    connection = await aio_pika.connect_robust(
+        config.rabbitmq_url, loop=asyncio.get_event_loop()
+    )
+    await connection.connect()
+    # Creating channel
+    channel = await connection.channel()
+
+    # Declaring queue
+    await channel.declare_queue("ASR_stream", auto_delete=False)
+    await channel.declare_queue("ASR", auto_delete=False)
     yield
+    await channel.close()
+    await connection.close()
 
 
-app = FastAPI()
+app = FastAPI(lifespan=lifespan)
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173"],
+    allow_origins=config.cors_allow_origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -44,81 +55,30 @@ def read_root():
     return {"Hello": "FastAPI is running"}
 
 
-async def handle_websocket_results(websocket, results_generator) -> FrontData | None:
-    """Consumes results from the audio processor and sends them via WebSocket."""
-    try:
-        last_response = None
-        async for response in results_generator:
-            await websocket.send_json(response.to_dict())
-            last_response = response
+@app.websocket("/audio/{session_id}")
+async def websocket_endpoint(websocket: WebSocket, session_id: str):
+    async def transcribe_cb(data: dto.ASRData):
+        assert channel is not None, "RabbitMQ channel is not initialized"
 
-        # await websocket.send_json({"type": "ready_to_stop"})
+        routing_key = "ASR" if data.type == "complete" else "ASR_stream"
 
-        return last_response
-    except WebSocketDisconnect:
-        logger.info(
-            "WebSocket disconnected while handling results (client likely closed connection)."
+        await channel.default_exchange.publish(
+            aio_pika.Message(body=json.dumps(data.model_dump_json()).encode()),
+            routing_key=routing_key,
         )
-    except Exception as e:
-        logger.exception(f"Error in WebSocket results handler: {e}")
 
-    return None
+    await transcription_engine.start_session(session_id, websocket, transcribe_cb)
 
 
-@app.websocket("/ws/audio")
-async def websocket_endpoint(websocket: WebSocket):
-    audio_processor = AudioProcessor(
-        transcription_engine=transcription_engine,
+@app.get("/recording/{session_id}")
+async def recording_endpoint(session_id: str):
+    recording_dir = Path(config.recording_dir).absolute()
+    clean_session_id = re.sub(r"[/\\?%*:|\"<>\x7F\x00-\x1F]", "-", session_id)
+
+    file_name = f"{clean_session_id}.wav"
+    recording_file = recording_dir / file_name
+    return FileResponse(
+        path=recording_file,
+        filename=file_name,
+        media_type="audio/vnd.wave",
     )
-    await websocket.accept()
-    logger.info("WebSocket connection opened.")
-
-    results_generator = await audio_processor.create_tasks()
-    websocket_task = asyncio.create_task(
-        handle_websocket_results(websocket, results_generator)
-    )
-
-    try:
-        while True:
-            message = await websocket.receive_bytes()
-            if b"STOP" in message:
-                logger.info("Received end from client")
-                break
-
-            await audio_processor.process_audio(message)
-
-        await audio_processor.process_audio(None)
-
-        last_response = await websocket_task
-        if last_response:
-            lines = [
-                line.text for line in last_response.lines if line.text and line.speaker
-            ]
-            logger.info(f"Delivered speech: {''.join(lines)}")
-
-    except KeyError as e:
-        if "bytes" in str(e):
-            logger.warning("Client has closed the connection.")
-        else:
-            logger.error(
-                f"Unexpected KeyError in websocket_endpoint: {e}", exc_info=True
-            )
-    except WebSocketDisconnect:
-        logger.info("WebSocket disconnected by client during message receiving loop.")
-    except Exception as e:
-        logger.error(
-            f"Unexpected error in websocket_endpoint main loop: {e}", exc_info=True
-        )
-    finally:
-        logger.info("Cleaning up WebSocket endpoint...")
-        if not websocket_task.done():
-            websocket_task.cancel()
-        try:
-            await websocket_task
-        except asyncio.CancelledError:
-            logger.info("WebSocket results handler task was cancelled.")
-        except Exception as e:
-            logger.warning(f"Exception while awaiting websocket_task completion: {e}")
-
-        await audio_processor.cleanup()
-        logger.info("WebSocket endpoint cleaned up successfully.")

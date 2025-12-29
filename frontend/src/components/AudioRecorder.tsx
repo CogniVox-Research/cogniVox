@@ -8,7 +8,7 @@ declare global {
     }
 }
 
-const WEBSOCKET_URL = "ws://localhost:8000/ws/audio";
+const WEBSOCKET_URL = "ws://localhost:8000/audio/test-session-id";
 
 const AudioRecorder: React.FC = () => {
     const [isRecording, setIsRecording] = useState(false);
@@ -47,11 +47,26 @@ const AudioRecorder: React.FC = () => {
             >
                 {isRecording ? '🔴 Stop Streaming' : '▶️ Start Streaming'}
             </button>
+            <button
+                onClick={!isRecording ? () => streamer.current.startTestStream() : null}
+                style={{
+                    padding: '10px 20px',
+                    fontSize: '16px',
+                    backgroundColor: isRecording ? '#d9534f' : '#5cb85c',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '5px',
+                    cursor: 'pointer'
+                }}
+            >
+                ▶️ Send Test Streaming
+            </button>
             <p style={{ marginTop: '10px', fontSize: '12px', color: '#666' }}>
                 *The backend will log the size of each audio chunk it receives.
             </p>
             {content && content.lines.map(v => <p>{JSON.stringify(v)}</p>)}
             {content && content.lines.filter(v => v.speaker).reduce((pv, c) => pv + c.text, "")}
+            {JSON.stringify(content)}
         </div>
     );
 };

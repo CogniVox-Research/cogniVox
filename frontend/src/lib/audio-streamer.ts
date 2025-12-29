@@ -1,9 +1,12 @@
+import testAudio from '../assets/micro-machines.wav';
+
 export default class AudioStreamer {
     #url: string;
     #connection: WebSocket | null = null;
     #recorder: MediaRecorder | null = null;
     #messageHandler: ((m: MessageEvent) => void) | null = null;
     #stateHandler: (() => void) | null = null;
+    #isProcessing: boolean = false;
 
     constructor(url: string) {
         this.#url = url;
@@ -19,6 +22,11 @@ export default class AudioStreamer {
                     this.#connection = ws;
                 };
                 ws.onmessage = (event) => {
+                    const data = JSON.parse(event.data);
+                    if (data.event === "completed") {
+                        this.#isProcessing = false;
+                    }
+
                     if (this.#messageHandler) {
                         this.#messageHandler(event)
                     } else {
@@ -28,6 +36,7 @@ export default class AudioStreamer {
                 ws.onclose = () => {
                     console.log("WebSocket Disconnected.");
                     this.#connection = null;
+                    this.#isProcessing = false;
                     if (this.#stateHandler) this.#stateHandler();
                 };
                 ws.onerror = (error) => console.error('WebSocket Error:', error);
@@ -71,12 +80,37 @@ export default class AudioStreamer {
                     }
 
                     this.#connection.send(audioBlob);
-                    console.log(`Streaming: Sent ${audioBlob.size} bytes`);
                 }
             }
         };
 
         this.#recorder.start(1000);
+    }
+
+    async startTestStream() {
+        await this.connectWS();
+        this.#isProcessing = true;
+
+        const response = await fetch(testAudio);
+        const audioBlob = await response.blob();
+
+        if (this.#connection == null) {
+            return;
+        }
+
+        if (this.#stateHandler) this.#stateHandler();
+
+        this.#connection.send(audioBlob);
+        console.log(`Test Stream: Sent ${audioBlob.size} bytes`);
+
+        const audioUrl = URL.createObjectURL(audioBlob);
+        const audio = new Audio(audioUrl);
+        audio.onloadedmetadata = () => {
+            const length = audio.duration * 200;
+            setTimeout(() => {
+                this.#connection?.send(new Blob(["STOP"], { type: "plain/text" }));
+            }, length + 500);
+        }
     }
 
     async stopStreaming() {
@@ -94,6 +128,6 @@ export default class AudioStreamer {
     }
 
     get isRecording() {
-        return this.#recorder != null
+        return this.#recorder != null || this.#isProcessing;
     }
 }

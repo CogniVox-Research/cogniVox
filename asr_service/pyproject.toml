@@ -2,21 +2,24 @@
 name = "stream-application"
 version = "0.1.0"
 description = ""
-authors = [
-    {name = "navindunimsara2001",email = "navidunimsara@gmail.com"}
-]
+authors = [{ name = "navindunimsara2001", email = "navidunimsara@gmail.com" }]
 readme = "README.md"
-requires-python = ">=3.12"
+requires-python = ">=3.12,<4.0"
 dependencies = [
     "fastapi[standard] (>=0.122.0,<0.123.0)",
     "uvicorn (>=0.38.0,<0.39.0)",
-    "whisperlivekit (>=0.2.16,<0.3.0)"
+    "whisperlivekit (>=0.2.16,<0.3.0)",
+    "aio-pika (>=9.5.8,<10.0.0)",
+    "shared @ file:///home/yehan/Projects/Cognivox/shared",
+    "aiofiles (>=25.1.0,<26.0.0)",
 ]
 
 [tool.poetry]
 package-mode = false
 
 
+[tool.poetry.dependencies]
+shared = {develop = true}
 [build-system]
 requires = ["poetry-core>=2.0.0,<3.0.0"]
 build-backend = "poetry.core.masonry.api"

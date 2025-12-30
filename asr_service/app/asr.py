@@ -109,6 +109,7 @@ class ASRSession:
         while not self.audio_processor.is_stopping:
             if self.response and self.response is not prev_response:
                 data = dto.ASRData.from_whisper_data(
+                    self.session_id,
                     self.audio_processor,
                     self.response,
                     start_time=self.start_time,
@@ -131,6 +132,7 @@ class ASRSession:
             return
 
         data = dto.ASRData.from_whisper_data(
+            self.session_id,
             self.audio_processor,
             self.response,
             start_time=self.start_time,

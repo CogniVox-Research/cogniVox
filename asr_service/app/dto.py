@@ -43,6 +43,7 @@ class ASRData(pydantic.BaseModel):
     type: typing.Literal["partial", "complete"]
     lines: list[Text | Silence]
     full_text: str
+    session_id: str
 
     current_silence: Silence | None
     remaining_time: float
@@ -50,12 +51,14 @@ class ASRData(pydantic.BaseModel):
     @classmethod
     def from_whisper_data(
         cls,
+        session_id: str,
         processor: AudioProcessor,
         data: FrontData,
         start_time: float,
         is_complete: bool = False,
     ):
         model = cls(
+            session_id=session_id,
             type="complete" if is_complete else "partial",
             lines=[],
             full_text=get_full_text(data),

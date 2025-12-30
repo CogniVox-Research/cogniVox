@@ -2,6 +2,7 @@ import asyncio
 import logging
 import typing
 import uuid
+import inspect
 
 from functools import partial
 from typing import MutableMapping
@@ -9,6 +10,8 @@ from typing import MutableMapping
 from aio_pika import Message
 from aio_pika.abc import AbstractChannel, AbstractIncomingMessage
 import pydantic
+
+__all__ = ["RPCException", "RPCInterface", "RPCServer", "RPCClient"]
 
 
 class _RPCMessage(pydantic.BaseModel):
@@ -113,7 +116,13 @@ class RPCClient:
     async def get_server[T: RPCInterface](self, name: str, proto: typing.Type[T]):
         return typing.cast(T, _RpcCaller(self, name, proto))
 
-    async def _call(self, routing_key: str, fn: str, data: typing.Any) -> typing.Any:
+    async def _call(
+        self,
+        routing_key: str,
+        fn: str,
+        data: typing.Any,
+        return_type: typing.Type[pydantic.RootModel] | None = None,
+    ) -> typing.Any:
         correlation_id = str(uuid.uuid4())
 
         loop = asyncio.get_running_loop()
@@ -136,6 +145,9 @@ class RPCClient:
         if not response.ok:
             raise RPCException(response.data)
 
+        if return_type:
+            return return_type(response.data).root
+
         return response.data
 
 
@@ -146,22 +158,78 @@ class _RpcCaller:
         self._client = client
         self._proto = proto
         self._name = name
+        self._methods = {}
 
     def __getattribute__(self, name: str) -> typing.Any:
         if name.startswith("_"):
             return super().__getattribute__(name)
 
-        if hasattr(self._proto, name):
-            return partial(self._client._call, self._name, name)
+        cached_methods = super().__getattribute__("_methods")
+        if name in cached_methods:
+            return cached_methods[name]
 
-        return super().__getattribute__(name)
+        method_def = getattr(self._proto, name, None)
+        if not method_def:
+            return super().__getattribute__(name)
+
+        signature = inspect.signature(method_def)
+        return_type = None
+        if signature.return_annotation:
+            return_type = pydantic.RootModel[signature.return_annotation]
+
+        param_names = [i for i in signature.parameters.keys()]
+        if "self" in param_names:
+            param_names.remove("self")
+
+        if len(param_names) == 1:
+            param_name = param_names[0]
+
+            async def wrapper(arg):
+                return await self._client._call(
+                    self._name, name, arg, return_type=return_type
+                )
+
+            wrapper.__annotations__ = method_def.__annotations__.copy()
+            wrapper.__annotations__["arg"] = wrapper.__annotations__.pop(param_name)
+
+            handler = pydantic.validate_call(
+                config=pydantic.ConfigDict(arbitrary_types_allowed=True),
+            )(wrapper)
+
+        elif len(param_names) > 1:
+            raise RuntimeError("RPC methods can only have one arg")
+        else:
+            handler = partial(
+                self._client._call, self._name, name, return_type=return_type
+            )
+
+        cached_methods[name] = handler
+        return handler
 
 
-# class Test(RPCInterface):
-#     async def test_fn(self, data: typing.Any):
-#         pass
+class TestClient(RPCInterface):
+    async def test_fn(self, data: typing.Any) -> int:
+        pass
 
 
-# class TestServer(RPCServer):
-#     async def rpc_test_fn(self, data: typing.Any):
-#         return f"called {data}"
+class TestServer:
+    async def test_fn(self, data: typing.Any):
+        return 1234
+
+
+async def test():
+    from shared import rabbitmq_connect
+
+    async with rabbitmq_connect("amqp://appuser:apppass@127.0.0.1/") as c:
+        server = RPCServer("test-server", c, TestServer())
+        server_task = asyncio.create_task(server.start_server())
+        async with RPCClient(c) as client:
+            test = client.get_server("test-server", TestClient)
+            result = await test.test_fn(123)
+            print(result)
+
+        server_task.cancel()
+
+
+if __name__ == "__main__":
+    asyncio.run(test())

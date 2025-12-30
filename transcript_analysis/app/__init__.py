@@ -19,3 +19,4 @@ def check_similarity(req: SimilarityCheckReq):
     comparer = SpeechComparer()
     results = comparer.compare(req.expected_text, req.speech_text)
     return results
+

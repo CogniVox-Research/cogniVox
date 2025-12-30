@@ -6,7 +6,6 @@ import uuid
 from functools import partial
 from typing import MutableMapping
 
-
 from aio_pika import Message
 from aio_pika.abc import AbstractChannel, AbstractIncomingMessage
 import pydantic
@@ -34,7 +33,7 @@ class RPCInterface(typing.Protocol):
 
 class RPCServer:
     def __init__(
-        self, name: str, channel: AbstractChannel, handler: RPCInterface
+        self, name: str, channel: AbstractChannel, handler: typing.Any
     ) -> None:
         self.channel = channel
         self.name = name

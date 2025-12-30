@@ -110,7 +110,7 @@ class RPCClient:
 
         future.set_result(message.body)
 
-    async def get_server[T: RPCInterface](self, name: str, proto: typing.Type[T]):
+    def get_server[T: RPCInterface](self, name: str, proto: typing.Type[T]):
         return typing.cast(T, _RpcCaller(self, name, proto))
 
     async def _call(self, routing_key: str, fn: str, data: typing.Any) -> typing.Any:

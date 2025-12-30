@@ -8,6 +8,7 @@ from shared import SharedBaseSettings
 class Settings(SharedBaseSettings):
     port: int = Field()
     upload_dir: str = Field()
+    rabbitmq_url: str = Field()
 
     # add other config keys here
 

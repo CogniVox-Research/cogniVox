@@ -1,11 +1,11 @@
 [project]
-name = "service"
+name = "document-service"
 version = "0.1.0"
 description = "Add your description here"
 requires-python = ">=3.12"
 
 [tool.poetry]
-name = "service-name"
+name = "document-service"
 version = "0.1.0"
 description = ""
 authors = ["yehan2002 <yehanjaya2002@gmail.com>"]
@@ -14,9 +14,9 @@ package-mode = false
 
 [tool.poetry.dependencies]
 python = "^3.12"
-fastapi = {extras = ["standard"], version = "^0.119.0"}
+fastapi = { extras = ["standard"], version = "^0.119.0" }
 grpcio = "^1.75.1"
-shared = {path = "../shared", develop = true}
+shared = { path = "../shared", develop = true }
 python-multipart = "^0.0.21"
 pypdf = "^6.5.0"
 aiofiles = "^25.1.0"

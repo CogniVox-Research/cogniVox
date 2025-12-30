@@ -1,3 +1,5 @@
+import asyncio
+from contextlib import asynccontextmanager
 from pathlib import Path
 import re
 import shutil
@@ -7,13 +9,27 @@ import pydantic
 from pypdf import PdfReader
 import io
 
+from .rpc_handler import DocumentRPCServer
+
 from .config import config
+from shared import rpc, rabbitmq_connect
 
 __all__ = ["app", "config"]
 
 
-app = FastAPI()
-print(config)
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    async with rabbitmq_connect(config.rabbitmq_url) as channel:
+        server = rpc.RPCServer("document-server", channel, DocumentRPCServer())
+
+        task = asyncio.create_task(server.start_server())
+
+        yield
+
+        task.cancel()
+
+
+app = FastAPI(lifespan=lifespan)
 
 ALLOWED_TYPES = ["text/plain", "application/pdf"]
 

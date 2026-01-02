@@ -1,6 +1,7 @@
 import asyncio
 import typing
 from contextlib import asynccontextmanager
+from warnings import deprecated
 
 from aio_pika import connect_robust
 from aio_pika.abc import AbstractChannel, AbstractIncomingMessage
@@ -8,13 +9,18 @@ import pydantic
 
 
 @asynccontextmanager
-async def rabbitmq_connect(rabbitmq_url: str):
+async def connect(rabbitmq_url: str):
     connection = await connect_robust(rabbitmq_url, loop=asyncio.get_event_loop())
     await connection.connect()
     try:
         yield await connection.channel()
     finally:
         await connection.close()
+
+
+@deprecated("use rabbitmq.connect instead")
+async def rabbitmq_connect(url: str):
+    return connect(url)
 
 
 @typing.overload

@@ -1,4 +1,3 @@
-import asyncio
 from contextlib import asynccontextmanager
 from pathlib import Path
 import re
@@ -12,30 +11,20 @@ from fastapi.responses import FileResponse
 from . import dto
 from .asr import ASREngine
 from .config import config
-
+from shared import lifespan_managed, rabbitmq
 
 transcription_engine = ASREngine()
-channel: aio_pika.abc.AbstractChannel | None = None
+channel = lifespan_managed(lambda: rabbitmq.connect(config.rabbitmq_url))
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    global channel
-    transcription_engine.init()
-
-    connection = await aio_pika.connect_robust(
-        config.rabbitmq_url, loop=asyncio.get_event_loop()
-    )
-    await connection.connect()
-    # Creating channel
-    channel = await connection.channel()
-
-    # Declaring queue
-    await channel.declare_queue("ASR_stream", auto_delete=False)
-    await channel.declare_queue("ASR", auto_delete=False)
-    yield
-    await channel.close()
-    await connection.close()
+    async with transcription_engine:
+        async with channel:
+            # Declaring queue
+            await channel.declare_queue("ASR_stream", auto_delete=False)
+            await channel.declare_queue("ASR", auto_delete=False)
+            yield
 
 
 app = FastAPI(lifespan=lifespan)

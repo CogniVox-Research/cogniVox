@@ -1,6 +1,7 @@
 import asyncio
 import typing
 from contextlib import asynccontextmanager
+from warnings import deprecated
 
 from aio_pika import connect_robust
 from aio_pika.abc import AbstractChannel, AbstractIncomingMessage
@@ -8,7 +9,7 @@ import pydantic
 
 
 @asynccontextmanager
-async def rabbitmq_connect(rabbitmq_url: str):
+async def connect(rabbitmq_url: str):
     connection = await connect_robust(rabbitmq_url, loop=asyncio.get_event_loop())
     await connection.connect()
     try:
@@ -17,8 +18,13 @@ async def rabbitmq_connect(rabbitmq_url: str):
         await connection.close()
 
 
+@deprecated("use rabbitmq.connect instead")
+def rabbitmq_connect(url: str):
+    return connect(url)
+
+
 @typing.overload
-async def read_queue[T: pydantic.BaseModel](
+def read_queue[T: pydantic.BaseModel](
     channel: AbstractChannel,
     queue_name: str,
     msg_type: typing.Type[T],
@@ -26,7 +32,7 @@ async def read_queue[T: pydantic.BaseModel](
 
 
 @typing.overload
-async def read_queue(
+def read_queue(
     channel: AbstractChannel,
     queue_name: str,
     msg_type: None,
@@ -38,8 +44,7 @@ async def read_queue[T: pydantic.BaseModel](
     queue_name: str,
     msg_type: typing.Type[T] | None = None,
 ) -> typing.AsyncIterable[T] | typing.AsyncIterable[AbstractIncomingMessage]:
-    queue = await channel.declare_queue(queue_name, auto_delete=False)
-
+    queue = await channel.get_queue(queue_name, ensure=True)
     async with queue.iterator() as queue_iter:
         async for message in queue_iter:
             async with message.process():

@@ -1,6 +1,5 @@
 import asyncio
 from contextlib import asynccontextmanager
-import json
 from pathlib import Path
 import re
 
@@ -63,7 +62,7 @@ async def websocket_endpoint(websocket: WebSocket, session_id: str):
         routing_key = "ASR" if data.type == "complete" else "ASR_stream"
 
         await channel.default_exchange.publish(
-            aio_pika.Message(body=json.dumps(data.model_dump_json()).encode()),
+            aio_pika.Message(body=data.model_dump_json().encode()),
             routing_key=routing_key,
         )
 

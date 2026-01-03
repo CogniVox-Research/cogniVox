@@ -6,6 +6,7 @@ import inspect
 
 from functools import partial
 from typing import MutableMapping
+from warnings import deprecated
 
 from aio_pika import Message
 from aio_pika.abc import AbstractChannel, AbstractIncomingMessage
@@ -42,50 +43,76 @@ class RPCServer:
         self.name = name
         self.handler = handler
 
+    async def __aenter__(self):
+        self.queue = await self.channel.declare_queue(self.name)
+        self.task = asyncio.create_task(self._start_server())
+
+    async def __aexit__(self, *args):
+        self.task.cancel()
+
+    async def run_forever(self):
+        await self.task
+
+    async def _respond(self, message: AbstractIncomingMessage, response: typing.Any):
+        assert message.reply_to is not None
+        await self.queue.channel.default_exchange.publish(
+            Message(
+                body=_RPCResponse(
+                    data=response,
+                    ok=not isinstance(response, RPCException),
+                )
+                .model_dump_json()
+                .encode(),
+                correlation_id=message.correlation_id,
+            ),
+            routing_key=message.reply_to,
+        )
+
+    @deprecated("use 'async with' instead")
     async def start_server(self):
-        queue = await self.channel.declare_queue(self.name)
-        async with queue.iterator() as qiterator:
+        await self.__aenter__()
+        await self.task
+
+    async def _start_server(self):
+        async with self.queue.iterator() as qiterator:
             message: AbstractIncomingMessage
-
             async for message in qiterator:
+                asyncio.create_task(self._handle_rpc_call(message))
+
+    async def _handle_rpc_call(self, message: AbstractIncomingMessage):
+        try:
+            async with message.process(requeue=False):
                 try:
-                    async with message.process(requeue=False):
-                        assert message.reply_to is not None
+                    request = _RPCMessage.model_validate_json(message.body.decode())
+                except pydantic.ValidationError as e:
+                    return await self._respond(
+                        message, RPCException(f"Invalid request {e}")
+                    )
 
-                        request = _RPCMessage.model_validate_json(message.body.decode())
-
-                        if hasattr(self.handler, request.fn):
-                            handler = getattr(self.handler, request.fn)
-                            try:
-                                response = await handler(request.data)
-                            except Exception as e:
-                                logging.getLogger().error(
-                                    "error in rpc call", exc_info=True
-                                )
-                                response = RPCException(
-                                    f"An exception occured while handling RPC: {e}"
-                                )
-
-                        else:
-                            response = _RPCResponse(
-                                ok=False, data=RPCException("method not found")
-                            )
-
-                        await queue.channel.default_exchange.publish(
-                            Message(
-                                body=_RPCResponse(
-                                    data=response,
-                                    ok=not isinstance(response, RPCException),
-                                )
-                                .model_dump_json()
-                                .encode(),
-                                correlation_id=message.correlation_id,
-                            ),
-                            routing_key=message.reply_to,
+                if hasattr(self.handler, request.fn):
+                    handler = getattr(self.handler, request.fn)
+                    try:
+                        response = await handler(request.data)
+                    except Exception as e:
+                        logging.getLogger().error("error in rpc call", exc_info=True)
+                        response = RPCException(
+                            f"An exception occurred while handling RPC: {e}"
                         )
+                else:
+                    response = _RPCResponse(
+                        ok=False, data=RPCException("method not found")
+                    )
+                await self._respond(message, response)
 
-                except Exception:
-                    logging.exception("Processing error for message %r", message)
+        except Exception as e:
+            logging.exception("Processing error for message %r", message)
+            try:
+                await self._respond(
+                    message,
+                    RPCException(f"An exception occurred while handling RPC: {e}"),
+                )
+            except Exception:
+                logging.exception("Failed to send error response %r", message)
 
 
 class RPCClient:

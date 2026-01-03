@@ -1,35 +1,27 @@
 
 import asyncio
 import aio_pika
+
+from app.transcript import SpeechComparer
 from .config import config
+import shared
+from .dto import ASRData
+from aio_pika.abc import AbstractChannel
+from . import document_server
 
 
-async def read_queue():
-    connection: aio_pika.abc.AbstractRobustConnection = await aio_pika.connect_robust(
-        config.rabbitmq_url, loop=asyncio.get_event_loop()
-    )
+async def read_queue(conn: AbstractChannel):
+    
+    queue_reader = shared.rabbitmq.read_queue(conn,"ASR",ASRData)
+    async for data in queue_reader:
+        await check_similarity(data)
+            
 
-    async with connection:
-        queue_name = "ASR"
+async def check_similarity(data: ASRData):
+    comparer = SpeechComparer()
 
-        # Creating channel
-        channel: aio_pika.abc.AbstractChannel = await connection.channel()
+    response = await document_server.get_transcript(data.session_id)
+    expected_text = response["text"]
 
-        # Declaring queue
-        queue: aio_pika.abc.AbstractQueue = await channel.declare_queue(
-            queue_name,
-            auto_delete=False
-        )
-
-        async with queue.iterator() as queue_iter:
-            # Cancel consuming after __aexit__
-            async for message in queue_iter:
-                async with message.process():
-                    print(message.body)
-
-                    if queue.name in message.body.decode():
-                        break
-
-
-def check_similairty():
-    return
+    results = comparer.compare(expected_text, data.full_text)
+    print(results)

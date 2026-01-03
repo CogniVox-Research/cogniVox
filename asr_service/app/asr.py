@@ -19,7 +19,7 @@ class ASREngine:
     def __init__(self):
         self.engine: TranscriptionEngine | None = None
 
-    def init(self):
+    async def __aenter__(self):
         logger.info("Initializing ASR engine...")
 
         # load warmup file for asr model
@@ -35,6 +35,9 @@ class ASREngine:
             warmup_file=warmup_file,
         )
         logger.info("ASR engine initialized.")
+
+    async def __aexit__(self, *args):
+        self.engine = None
 
     async def start_session(
         self,

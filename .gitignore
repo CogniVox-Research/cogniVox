@@ -80,3 +80,9 @@ captures/
 
 
 **/node_modules/**
+.mypy_cache
+.venv
+__pycache__
+.env
+recordings/
+uploads/

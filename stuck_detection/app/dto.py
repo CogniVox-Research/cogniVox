@@ -4,6 +4,13 @@ from typing import Literal
 import pydantic
 
 
+class StuckDetection(pydantic.BaseModel):
+    stuck_id: str
+    reason: Literal["silence", "repetition"]
+    suggestions: list[str] | None
+    at: datetime
+
+
 class Timestamp(pydantic.BaseModel):
     start: datetime
     end: datetime

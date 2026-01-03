@@ -6,6 +6,7 @@ from shared import rabbitmq
 from .dto import ASRData
 from .config import config
 from aio_pika.abc import AbstractChannel
+from .detector import detector
 
 __all__ = ["app", "config"]
 
@@ -16,7 +17,7 @@ async def read_queue(conn: AbstractChannel):
     try:
         queue_reader = rabbitmq.read_queue(conn, "ASR_stream", ASRData)
         async for data in queue_reader:
-            print(data)
+            await detector.detect_stuck(data)
     except Exception as e:
         print(e)
 

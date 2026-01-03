@@ -1,9 +1,0 @@
-
-/bin/
-/build/
-/out/
-
-
-**/config.yaml
-/config/*.env
-/config/*.local.yaml

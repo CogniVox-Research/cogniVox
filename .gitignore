@@ -69,11 +69,14 @@ google-services.json
 *.p12
 
 # BioSync_Galaxy Android Project specific
-BioSync_Galaxy/local.properties
-BioSync_Galaxy/.gradle/
-BioSync_Galaxy/.idea/
-BioSync_Galaxy/*/build/
-BioSync_Galaxy/build/
+app/local.properties
+app/.gradle/
+app/.idea/
+app/*/build/
+app/build/
 
 # Captures (Android Profiler)
 captures/
+
+
+**/node_modules/**

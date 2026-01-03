@@ -106,6 +106,7 @@ class ASRSession:
         """
         prev_response = None
         last_text = ""
+        last_sent = 0
         while not self.audio_processor.is_stopping:
             if self.response and self.response is not prev_response:
                 data = dto.ASRData.from_whisper_data(
@@ -115,10 +116,14 @@ class ASRSession:
                     start_time=self.start_time,
                 )
 
-                # send partial transcript update if the text has changed.
-                if data.full_text != last_text and self.transcript_cb:
-                    logger.debug(f"Partial transcription sent: {data.model_dump()}")
-                    await self.transcript_cb(data)
+                if self.transcript_cb:
+                    should_resend = time.time() - last_sent > 5
+
+                    # send partial transcript update if the text has changed.
+                    if data.full_text != last_text or should_resend:
+                        logger.debug(f"Partial transcription sent: {data.model_dump()}")
+                        await self.transcript_cb(data)
+                        last_sent = time.time()
 
                 # send data to websocket to update ui
                 await self.websocket.send_message(data.model_dump_json())

@@ -1,0 +1,29 @@
+[project]
+name = "transcript-analysis"
+version = "0.1.0"
+description = "Add your description here"
+requires-python = ">=3.12"
+
+[tool.poetry]
+name = "transcript-analysis"
+version = "0.1.0"
+description = ""
+authors = ["yehan2002 <yehanjaya2002@gmail.com>"]
+readme = "README.md"
+package-mode = false
+
+[tool.poetry.dependencies]
+python = "^3.12"
+fastapi = {extras = ["standard"], version = "^0.119.0"}
+grpcio = "^1.75.1"
+shared = {path = "../shared", develop = true}
+sentence-transformers = "^5.1.2"
+nltk = "^3.9.2"
+numpy = "^2.3.5"
+scikit-learn = "^1.7.2"
+aio-pika = "^9.5.8"
+
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"

@@ -25,6 +25,10 @@ class _RPCResponse(pydantic.BaseModel):
     data: typing.Any
 
 
+class RPCError(pydantic.BaseModel):
+    msg: str
+
+
 class RPCException(Exception):
     def __init__(self, msg: str) -> None:
         super().__init__(msg)
@@ -59,7 +63,7 @@ class RPCServer:
             Message(
                 body=_RPCResponse(
                     data=response,
-                    ok=not isinstance(response, RPCException),
+                    ok=not isinstance(response, RPCError),
                 )
                 .model_dump_json()
                 .encode(),
@@ -86,7 +90,7 @@ class RPCServer:
                     request = _RPCMessage.model_validate_json(message.body.decode())
                 except pydantic.ValidationError as e:
                     return await self._respond(
-                        message, RPCException(f"Invalid request {e}")
+                        message, RPCError(msg=f"Invalid request {e}")
                     )
 
                 if hasattr(self.handler, request.fn):
@@ -95,12 +99,12 @@ class RPCServer:
                         response = await handler(request.data)
                     except Exception as e:
                         logging.getLogger().error("error in rpc call", exc_info=True)
-                        response = RPCException(
-                            f"An exception occurred while handling RPC: {e}"
+                        response = RPCError(
+                            msg=f"An exception occurred while handling RPC: {e}"
                         )
                 else:
                     response = _RPCResponse(
-                        ok=False, data=RPCException("method not found")
+                        ok=False, data=RPCError(msg="method not found")
                     )
                 await self._respond(message, response)
 
@@ -109,7 +113,7 @@ class RPCServer:
             try:
                 await self._respond(
                     message,
-                    RPCException(f"An exception occurred while handling RPC: {e}"),
+                    RPCError(msg=f"An exception occurred while handling RPC: {e}"),
                 )
             except Exception:
                 logging.exception("Failed to send error response %r", message)
@@ -170,7 +174,7 @@ class RPCClient:
 
         response = _RPCResponse.model_validate_json(await future)
         if not response.ok:
-            raise RPCException(response.data)
+            raise RPCException(RPCError.model_validate(response.data).msg)
 
         if return_type:
             return return_type(response.data).root

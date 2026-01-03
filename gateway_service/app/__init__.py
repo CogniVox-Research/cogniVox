@@ -1,9 +1,5 @@
-from .config import config
+import logging
 
-__all__ = ["app", "config"]
-
-from fastapi import FastAPI
-
-app = FastAPI()
-
-print(config)
+logging.basicConfig(level=logging.INFO, format="%(asctime)s[%(levelname)s] %(message)s")
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.DEBUG)

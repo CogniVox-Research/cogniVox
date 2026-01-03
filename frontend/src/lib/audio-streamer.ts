@@ -1,4 +1,10 @@
 import testAudio from '../assets/micro-machines.wav';
+import { toBase64 } from './utils';
+
+type SpeechOptions = {
+    doc: File
+    settings?: {}
+}
 
 export default class AudioStreamer {
     #url: string;
@@ -57,8 +63,13 @@ export default class AudioStreamer {
     }
 
 
-    async startStream() {
+    async startStream(options: SpeechOptions) {
         await this.connectWS();
+
+
+        this.#connection?.send(JSON.stringify({ "type": "settings", "data": options.settings }));
+        this.#connection?.send(JSON.stringify({ "type": "transcript", "data": await toBase64(options.doc) }));
+        this.#connection?.send(JSON.stringify({ "type": "speech_start" }))
 
         const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
 
@@ -108,17 +119,18 @@ export default class AudioStreamer {
         audio.onloadedmetadata = () => {
             const length = audio.duration * 200;
             setTimeout(() => {
-                this.#connection?.send(new Blob(["STOP"], { type: "plain/text" }));
+                this.#connection?.send(JSON.stringify({ "type": "speech_end" }))
             }, length + 500);
         }
     }
 
     async stopStreaming() {
+        console.trace("Stop called")
         this.#recorder?.stop();
         if (this.#recorder) {
             this.#recorder.onstop = () => {
                 setTimeout(() => {
-                    this.#connection?.send(new Blob(["STOP"], { type: "plain/text" }));
+                    this.#connection?.send(JSON.stringify({ "type": "speech_end" }))
                 }, 500)
             };
             this.#recorder = null;

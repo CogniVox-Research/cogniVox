@@ -1,1 +1,2 @@
-port=99999
+port = 99999
+rabbitmq_url = "amqp://appuser:apppass@127.0.0.1/"

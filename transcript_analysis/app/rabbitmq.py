@@ -7,7 +7,6 @@ from aio_pika.abc import AbstractChannel
 
 
 async def queue_listener(conn: AbstractChannel):
-    await conn.declare_queue("transcript_similarity", auto_delete=False)
     try:
         queue_reader = shared.rabbitmq.read_queue(conn, "ASR", ASRData)
         async for data in queue_reader:
@@ -17,7 +16,7 @@ async def queue_listener(conn: AbstractChannel):
         print(e)
 
 
-async def check_similarity(channel, data: ASRData):
+async def check_similarity(channel: AbstractChannel, data: ASRData):
     from . import document_server
 
     comparer = SpeechComparer()
@@ -29,8 +28,12 @@ async def check_similarity(channel, data: ASRData):
 
     results = comparer.compare(expected_text, data.full_text)
 
-    await channel.default_exchange.publish(
-        aio_pika.Message(body=json.dumps(results).encode()),
-        routing_key="transcript_similarity",
-    )
     print(f"Similarity result {results}")
+
+    await channel.default_exchange.publish(
+        aio_pika.Message(
+            body=json.dumps({"type": "transcript_similarity", "data": results}).encode()
+        ),
+        routing_key=f"session-{data.session_id}",
+        mandatory=False,
+    )

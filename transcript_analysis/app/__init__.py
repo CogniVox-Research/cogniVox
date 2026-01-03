@@ -1,9 +1,11 @@
+import asyncio
 from contextlib import asynccontextmanager
 import typing
 from .transcript import SpeechComparer
 from .config import config
+from .rabbitmq import queue_listener
 from pydantic import BaseModel
-from shared import rabbitmq_connect, rpc
+from shared import rabbitmq, rpc
 
 __all__ = ["app", "config"]
 
@@ -21,10 +23,15 @@ document_server: DocumentService = None  # pyright: ignore[reportAssignmentType]
 async def lifespan(app: FastAPI):
     global document_server
 
-    async with rabbitmq_connect(config.rabbitmq_url) as channel:
+    async with rabbitmq.connect(config.rabbitmq_url) as channel:
         async with rpc.RPCClient(channel) as client:
+            task = asyncio.create_task(queue_listener(channel))
             document_server = client.get_server("document-server", DocumentService)
             yield
+
+            task.cancel()
+
+            await task
 
 
 app = FastAPI(lifespan=lifespan)

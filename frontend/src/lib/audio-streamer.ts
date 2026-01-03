@@ -1,5 +1,10 @@
 import testAudio from '../assets/micro-machines.wav';
 
+type SpeechOptions = {
+    doc: File
+    settings?: {}
+}
+
 export default class AudioStreamer {
     #url: string;
     #connection: WebSocket | null = null;
@@ -57,7 +62,7 @@ export default class AudioStreamer {
     }
 
 
-    async startStream() {
+    async startStream(options: SpeechOptions) {
         await this.connectWS();
 
         const stream = await navigator.mediaDevices.getUserMedia({ audio: true });

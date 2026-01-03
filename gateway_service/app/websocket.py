@@ -3,9 +3,11 @@ import base64
 import json
 import typing
 import uuid
-from fastapi import WebSocket, WebSocketDisconnect
+from fastapi import WebSocket
 import httpx
+from shared import rabbitmq
 import websockets
+from aio_pika.abc import AbstractChannel
 
 from app.config import config
 from . import logger
@@ -17,19 +19,27 @@ class WebSocketError(Exception):
 
 
 class SpeechSession:
-    def __init__(self, websocket: WebSocket, client: httpx.AsyncClient):
+    def __init__(
+        self, websocket: WebSocket, client: httpx.AsyncClient, channel: AbstractChannel
+    ):
         self.__websocket = websocket
         self._session_id = str(uuid.uuid4())
         self._settings = {}
         self._client = client
+        self._channel = channel
 
     async def __aenter__(self):
         await self.__websocket.accept()
+        self._queue = await self._channel.declare_queue(
+            f"session-{self._session_id}", auto_delete=True, exclusive=True
+        )
+        self._queue_listen_task = asyncio.create_task(self.queue_listener())
         return self
 
     async def __aexit__(self, exc_type, exc_val, exc_tb):
         try:
             await self.__websocket.close()
+            await self._queue.delete()
         except:  # noqa: E722
             # ignore error because connection may already be closed
             pass
@@ -47,6 +57,7 @@ class SpeechSession:
                 await self._handle_speech_transcript(message["data"])
             elif message["type"] == "settings":
                 print(f"Got settings {message}")
+        await asyncio.sleep(20)
 
     async def _handle_speech_transcript(self, data: str):
         (file_type, file_data) = data.split(";base64,")
@@ -59,10 +70,9 @@ class SpeechSession:
         response.raise_for_status()
 
     async def _audio_send_loop(self) -> None:
+        asr_url = config.asr_stream_url.format(session_id=self._session_id)
         try:
-            async with websockets.connect(
-                config.asr_stream_url.format(session_id=self._session_id)
-            ) as con:
+            async with websockets.connect(asr_url) as con:
 
                 async def sender():
                     while True:
@@ -94,10 +104,14 @@ class SpeechSession:
 
                 await sender_task
 
-        except WebSocketDisconnect:
-            raise WebSocketError("WebSocket disconnected without sending STOP signal.")
         except Exception as e:
             raise WebSocketError("Error reading from WebSocket ") from e
+
+    async def queue_listener(self):
+        async for msg in rabbitmq.read_queue(
+            self._channel, f"session-{self._session_id}", None
+        ):
+            await self.__websocket.send_bytes(msg.body)
 
     async def send_message(self, message: typing.Any) -> None:
         """Sends a message to the WebSocket."""

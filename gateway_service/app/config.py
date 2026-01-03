@@ -6,7 +6,8 @@ from shared import SharedBaseSettings
 
 
 class Settings(SharedBaseSettings):
-    port: int = Field()
+    rabbitmq_url: str = Field()
+
     cors_allow_origins: list[str] = Field()
 
     asr_stream_url: str = Field()

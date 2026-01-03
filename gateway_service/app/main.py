@@ -1,7 +1,7 @@
-import asyncio
 from contextlib import asynccontextmanager
 
 import httpx
+from shared import rabbitmq
 from app.websocket import SpeechSession
 from .config import config
 from fastapi.middleware.cors import CORSMiddleware
@@ -13,9 +13,11 @@ from fastapi import FastAPI, WebSocket
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    async with httpx.AsyncClient() as client:
-        app.state.client = client
-        yield
+    async with rabbitmq.connect(config.rabbitmq_url) as conn:
+        async with httpx.AsyncClient() as client:
+            app.state.client = client
+            app.state.channel = conn
+            yield
 
 
 app = FastAPI(lifespan=lifespan)
@@ -31,6 +33,6 @@ app.add_middleware(
 
 @app.websocket("/ws")
 async def websocket_endpoint(websocket: WebSocket):
-    ws = SpeechSession(websocket, app.state.client)
+    ws = SpeechSession(websocket, app.state.client, app.state.channel)
     async with ws:
         await ws.handle_session()

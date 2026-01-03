@@ -7,13 +7,7 @@ import AudioStreamer from "../lib/audio-streamer";
 import type { FormValues } from '@/types/form';
 import { useForm, type SubmitHandler } from 'react-hook-form';
 
-declare global {
-    interface Window {
-        webkitAudioContext: typeof AudioContext;
-    }
-}
-
-const WEBSOCKET_URL = "ws://localhost:8000/audio/test-session-id";
+const WEBSOCKET_URL = "ws://localhost:8000/ws";
 
 const AudioRecorder: React.FC = () => {
     const [isRecording, setIsRecording] = useState(false);
@@ -33,12 +27,7 @@ const AudioRecorder: React.FC = () => {
     }, []);
 
     const onSubmit: SubmitHandler<FormValues> = (data) => {
-        streamer.current.startStream({doc: data.fileUpload[0]});
-
-        const file = data.fileUpload[0];
-        console.log('File name:', file?.name);
-        console.log('File size:', file?.size);
-
+        streamer.current.startStream({ doc: data.fileUpload[0] });
     };
 
     const stop = () => streamer.current.stopStreaming();
@@ -114,9 +103,9 @@ const AudioRecorder: React.FC = () => {
                                                 validate: {
                                                     lessThan10MB: (files) => files[0]?.size < 10000000 || 'Max 10MB',
                                                     acceptedFormats: (files) =>
-                                                        ['image/jpeg', 'image/png', 'application/pdf'].includes(
+                                                        ['text/plain', 'application/pdf'].includes(
                                                             files[0]?.type
-                                                        ) || 'Only PNG, JPEG or PDF',
+                                                        ) || 'Only PDF or text files',
                                                 },
                                             })}
                                         />
@@ -165,7 +154,7 @@ const AudioRecorder: React.FC = () => {
                             {/* Control Buttons */}
                             <div className="space-y-3">
                                 {isRecording ? <Button
-                                    onClick={handleSubmit(onSubmit)}
+                                    onClick={stop}
                                     className={'w-full font-semibold transition-all duration-300 bg-gradient-to-r from-red-600 to-rose-600 hover:from-red-700 hover:to-rose-700'}
                                 >
                                     <Square className="w-4 h-4 mr-2" />
@@ -174,7 +163,7 @@ const AudioRecorder: React.FC = () => {
                                 </Button> :
 
                                     <Button
-                                        onClick={stop}
+                                        onClick={handleSubmit(onSubmit)}
                                         className={'w-full font-semibold transition-all duration-300 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700'}
                                     >
                                         <>

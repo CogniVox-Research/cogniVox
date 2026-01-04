@@ -7,6 +7,7 @@ import AudioStreamer from "../lib/audio-streamer";
 import type { FormValues } from '@/types/form';
 import { useForm, type SubmitHandler } from 'react-hook-form';
 import SimilarityAnalysisDashboard from './SimilarityAnalysisDashboard';
+import SpeechAnalysisDashboard from './SpeechAnalysisDashboard';
 
 const WEBSOCKET_URL = "ws://localhost:8000/ws";
 
@@ -241,7 +242,7 @@ const AudioRecorder: React.FC = () => {
                     </Card>
                 )}
             </div>
-            <SimilarityAnalysisDashboard data={
+            {/* <SimilarityAnalysisDashboard data={
                 {
                     "overall_similarity": 0.8160355687141418,
                     "structural_transcript": {
@@ -302,7 +303,25 @@ const AudioRecorder: React.FC = () => {
                     "sentence_count_transcript": 4,
                     "sentence_count_speech": 4
                 }
-            } />
+            } /> */}
+            <SpeechAnalysisDashboard data={
+                {
+                    "scores": {
+                        "clarity": 4.9,
+                        "pace": 4,
+                        "pauses": 2,
+                        "pitch": 1.4000000000000001,
+                        "loudness": 4
+                    },
+                    "feedback": {
+                        "clarity": "Your speech is clear and easy to understand.",
+                        "pace": "Your speaking pace is well controlled.",
+                        "pauses": "Your pauses feel awkward or too long. Try making them more intentional.",
+                        "pitch": "Your voice sounds monotone. Add pitch variation to emphasize key points.",
+                        "loudness": "Your loudness and projection are strong and consistent."
+                    }
+                }
+            }/>
         </div>
     );
 };

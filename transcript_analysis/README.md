@@ -6,7 +6,7 @@ add description about service here
 pip install sentence-transformers nltk numpy scikit-learn 
 
 
-# SpeechComparer
+# Transcript Analyzer
 
 **Compare a delivered speech (audio->transcript) with a prepared transcript**
 
@@ -45,7 +45,7 @@ You don't need to know machine learning to read the output — the report contai
 
 ---
 
-## High-level overview (technical)
+## High-level overview
 
 `SpeechComparer` uses:
 

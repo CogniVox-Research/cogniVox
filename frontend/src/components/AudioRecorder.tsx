@@ -6,6 +6,7 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import AudioStreamer from "../lib/audio-streamer";
 import type { FormValues } from '@/types/form';
 import { useForm, type SubmitHandler } from 'react-hook-form';
+import SimilarityAnalysisDashboard from './SimilarityAnalysisDashboard';
 
 declare global {
     interface Window {
@@ -251,6 +252,68 @@ const AudioRecorder: React.FC = () => {
                     </Card>
                 )}
             </div>
+            <SimilarityAnalysisDashboard data={
+                {
+                    "overall_similarity": 0.8160355687141418,
+                    "structural_transcript": {
+                        "sentence_count": 4,
+                        "avg_sentence_length": 20.75,
+                        "lexical_density": 0.9157
+                    },
+                    "structural_speech": {
+                        "sentence_count": 4,
+                        "avg_sentence_length": 24.5,
+                        "lexical_density": 0.9592
+                    },
+                    "missing_points": [
+                        "However, the retail sector, a secondary market for the company, saw a modest decline of 5% in year-over-year sales. (Sim=0.5986)",
+                        "The 2024 annual report highlights strong growth in the technology division, specifically in ERP services. (Sim=0.6168)"
+                    ],
+                    "key_points_transcript": [
+                        "The board is prioritizing the expansion of data centers in Asia next quarter to support the cloud growth.Future plans also include a major investment in AI research and development to maintain a competitive edge.",
+                        "However, the retail sector, a secondary market for the company, saw a modest decline of 5% in year-over-year sales.",
+                        "The 2024 annual report highlights strong growth in the technology division, specifically in ERP services."
+                    ],
+                    "key_points_speech": [
+                        "A minor decrease in the secondary retail sales area was also noted, but this is not a core concern for the company.The firm is also looking at new AI R&D initiatives.",
+                        "The company's recent report indicates remarkable progress in its tech wing, with significant revenue from cloud services.",
+                        "To support this continuous expansion, the executive team is focused on deploying new data centers across Asia in the upcoming quarter."
+                    ],
+                    "alignment": [
+                        {
+                            "transcript_sentence": "The 2024 annual report highlights strong growth in the technology division, specifically in ERP services.",
+                            "closest_speech_sentence": "The company's recent report indicates remarkable progress in its tech wing, with significant revenue from cloud services.",
+                            "similarity": 0.6168366074562073,
+                            "paraphrase_type": "Missing"
+                        },
+                        {
+                            "transcript_sentence": "Revenue from cloud computing increased by 45% due to strategic partnerships and efficient infrastructure scaling.",
+                            "closest_speech_sentence": "The company's recent report indicates remarkable progress in its tech wing, with significant revenue from cloud services.This surge is attributed to strategic partnerships and robust scaling of IT infrastructure.",
+                            "similarity": 0.7189282178878784,
+                            "paraphrase_type": "Strong Paraphrase"
+                        },
+                        {
+                            "transcript_sentence": "However, the retail sector, a secondary market for the company, saw a modest decline of 5% in year-over-year sales.",
+                            "closest_speech_sentence": "A minor decrease in the secondary retail sales area was also noted, but this is not a core concern for the company.The firm is also looking at new AI R&D initiatives.",
+                            "similarity": 0.5986101627349854,
+                            "paraphrase_type": "Missing"
+                        },
+                        {
+                            "transcript_sentence": "The board is prioritizing the expansion of data centers in Asia next quarter to support the cloud growth.Future plans also include a major investment in AI research and development to maintain a competitive edge.",
+                            "closest_speech_sentence": "To support this continuous expansion, the executive team is focused on deploying new data centers across Asia in the upcoming quarter.",
+                            "similarity": 0.6555360555648804,
+                            "paraphrase_type": "Strong Paraphrase"
+                        }
+                    ],
+                    "order_analysis": {
+                        "in_order_percentage": 50,
+                        "out_of_order_percentage": 50
+                    },
+                    "redundant_speech_segments": [],
+                    "sentence_count_transcript": 4,
+                    "sentence_count_speech": 4
+                }
+            }/>
         </div>
     );
 };

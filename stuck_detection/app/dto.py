@@ -4,6 +4,10 @@ from typing import Literal
 import pydantic
 
 
+class UnstuckDetection(pydantic.BaseModel):
+    stuck_id: str
+
+
 class StuckDetection(pydantic.BaseModel):
     stuck_id: str
     reason: Literal["silence", "repetition"]

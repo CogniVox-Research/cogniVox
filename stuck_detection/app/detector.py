@@ -1,3 +1,5 @@
+import datetime
+from app import dto
 import spacy
 from app import config
 from app.dto import ASRData, Silence
@@ -13,22 +15,37 @@ class StuckDetector:
         has_spoken = data.full_text != ""
         if not has_spoken:
             # has not talked, skip processing
-            return
+            return None
 
         is_repeating = self._detect_semantic_repetition(data.full_text)
         has_long_silence = self._detect_long_silence(data)
 
         if not is_repeating and not has_long_silence:
-            self.detections.pop(data.session_id, None)
-            return
+            was_stuck = self.detections.pop(data.session_id, None) is not None
+            if was_stuck:
+                return dto.UnstuckDetection(stuck_id="PLACEHOLDER")
+            return None
 
         if data.session_id in self.detections:
             if not self.detections[data.session_id]:
                 logger.debug("Generating suggestions")
                 # suggestion generation
                 self.detections[data.session_id] = True
+                return dto.StuckDetection(
+                    stuck_id="PLACEHOLDER",
+                    reason="repetition" if is_repeating else "silence",
+                    suggestions=["test"],
+                    at=datetime.datetime.now(),
+                )
+
         else:
             self.detections[data.session_id] = False
+            return dto.StuckDetection(
+                stuck_id="PLACEHOLDER",
+                reason="repetition" if is_repeating else "silence",
+                suggestions=None,
+                at=datetime.datetime.now(),
+            )
 
     def _detect_semantic_repetition(self, text: str):
         doc = self.model(text)

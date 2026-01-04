@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { Upload, Mic, Square, Send, FileText, Activity } from 'lucide-react';
+import { Upload, Mic, Square, FileText, Activity } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Alert, AlertDescription } from '@/components/ui/alert';
@@ -209,7 +209,7 @@ const AudioRecorder: React.FC = () => {
                                         </>
                                     </Button>}
 
-                                <Button
+                                {/* <Button
                                     onClick={() => !isRecording && streamer.current.startTestStream()}
                                     disabled={isRecording}
                                     variant="outline"
@@ -217,7 +217,7 @@ const AudioRecorder: React.FC = () => {
                                 >
                                     <Send className="w-4 h-4 mr-2" />
                                     Send Test Stream
-                                </Button>
+                                </Button> */}
                             </div>
 
                             <p className="text-xs text-muted-foreground text-center pt-2">

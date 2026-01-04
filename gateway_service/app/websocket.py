@@ -111,7 +111,7 @@ class SpeechSession:
         async for msg in rabbitmq.read_queue(
             self._channel, f"session-{self._session_id}", None
         ):
-            await self.__websocket.send_bytes(msg.body)
+            await self.__websocket.send_text(msg.body.decode())
 
     async def send_message(self, message: typing.Any) -> None:
         """Sends a message to the WebSocket."""

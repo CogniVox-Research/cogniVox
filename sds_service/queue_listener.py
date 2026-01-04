@@ -16,22 +16,30 @@ class SpeechDone(pydantic.BaseModel):
 
 
 async def queue_listener(con: AbstractChannel, client: httpx.AsyncClient):
-    async for message in read_queue(con, "speech_done", SpeechDone):
-        url = config.audio_recording_url.format(session_id=message.session_id)
-        response = await client.get(url)
-        audio_bytes = await response.aread()
-        feedback = await handle_audio(message.session_id, audio_bytes)
+    try:
+        async for message in read_queue(con, "speech_done", SpeechDone):
+            url = config.audio_recording_url.format(session_id=message.session_id)
+            response = await client.get(url)
+            audio_bytes = await response.aread()
+            try:
+                feedback = await handle_audio(message.session_id, audio_bytes)
+            except Exception as e:
+                print(e)
+                continue
 
-        await con.default_exchange.publish(
-            aio_pika.Message(
-                body=json.dumps({"type": "speech_score", "data": feedback}).encode()
-            ),
-            routing_key=f"session-{message.session_id}",
-            mandatory=False,
-        )
+            await con.default_exchange.publish(
+                aio_pika.Message(
+                    body=json.dumps({"type": "speech_score", "data": feedback}).encode()
+                ),
+                routing_key=f"session-{message.session_id}",
+                mandatory=False,
+            )
+    except Exception as e:
+        print(e)
 
 
 async def handle_audio(session_id: str, audio_data: bytes):
+    print(f"Processing {session_id}")
     async with aiofiles.tempfile.TemporaryDirectory("recordings") as out_dir:
         audio_file = Path(out_dir) / f"{session_id}.wav"
         audio_file.write_bytes(audio_data)

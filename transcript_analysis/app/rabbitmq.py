@@ -1,5 +1,6 @@
 import json
 import aio_pika
+from app import util
 from app.transcript import SpeechComparer
 import shared
 from .dto import ASRData
@@ -32,7 +33,12 @@ async def check_similarity(channel: AbstractChannel, data: ASRData):
 
     await channel.default_exchange.publish(
         aio_pika.Message(
-            body=json.dumps({"type": "transcript_similarity", "data": results}).encode()
+            body=json.dumps(
+                {
+                    "type": "transcript_similarity",
+                    "data": util.convert_numpy_to_python(results),
+                }
+            ).encode()
         ),
         routing_key=f"session-{data.session_id}",
         mandatory=False,

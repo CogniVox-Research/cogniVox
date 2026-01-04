@@ -17,6 +17,8 @@ python = "^3.12"
 fastapi = {extras = ["standard"], version = "^0.119.0"}
 grpcio = "^1.75.1"
 shared = {path = "../shared", develop = true}
+httpx = "^0.28.1"
+websockets = "^15.0.1"
 
 
 [build-system]

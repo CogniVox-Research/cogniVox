@@ -1,3 +1,5 @@
+import numpy as np
+
 def convert_numpy_to_python(obj):
     """
     Recursively convert numpy types to Python native types in nested structures.

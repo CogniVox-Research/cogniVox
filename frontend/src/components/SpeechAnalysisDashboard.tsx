@@ -3,7 +3,6 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import {
     Volume2,
-    Clock,
     Pause,
     TrendingUp,
     Lightbulb,
@@ -42,40 +41,40 @@ interface Props {
 const SpeechAnalysisDashboard: React.FC<Props> = ({ data }) => {
     const getScoreColor = (score: number) => {
         if (score >= 4) return {
-            text: 'text-green-400',
-            bg: 'bg-green-950/30',
-            border: 'border-green-800/50',
-            gradient: 'from-green-500 to-emerald-600',
-            ring: 'ring-green-500/20'
+            text: 'text-chart-3',
+            bg: 'bg-chart-3/10',
+            border: 'border-chart-3/20',
+            solid: 'bg-chart-3',
+            ring: 'ring-chart-3/20'
         };
         if (score >= 3) return {
-            text: 'text-blue-400',
-            bg: 'bg-blue-950/30',
-            border: 'border-blue-800/50',
-            gradient: 'from-blue-500 to-cyan-600',
-            ring: 'ring-blue-500/20'
+            text: 'text-chart-1',
+            bg: 'bg-chart-1/10',
+            border: 'border-chart-1/20',
+            solid: 'bg-chart-1',
+            ring: 'ring-chart-1/20'
         };
         if (score >= 2) return {
-            text: 'text-yellow-400',
-            bg: 'bg-yellow-950/30',
-            border: 'border-yellow-800/50',
-            gradient: 'from-yellow-500 to-amber-600',
-            ring: 'ring-yellow-500/20'
+            text: 'text-chart-4',
+            bg: 'bg-chart-4/10',
+            border: 'border-chart-4/20',
+            solid: 'bg-chart-4',
+            ring: 'ring-chart-4/20'
         };
         return {
-            text: 'text-red-400',
-            bg: 'bg-red-950/30',
-            border: 'border-red-800/50',
-            gradient: 'from-red-500 to-rose-600',
-            ring: 'ring-red-500/20'
+            text: 'text-destructive',
+            bg: 'bg-destructive/10',
+            border: 'border-destructive/20',
+            solid: 'bg-destructive',
+            ring: 'ring-destructive/20'
         };
     };
 
     const getScoreIcon = (score: number) => {
-        if (score >= 4) return <CheckCircle2 className="w-6 h-6 text-green-400" />;
-        if (score >= 3) return <Award className="w-6 h-6 text-blue-400" />;
-        if (score >= 2) return <AlertCircle className="w-6 h-6 text-yellow-400" />;
-        return <XCircle className="w-6 h-6 text-red-400" />;
+        if (score >= 4) return <CheckCircle2 className="w-6 h-6 text-chart-3" />;
+        if (score >= 3) return <Award className="w-6 h-6 text-chart-1" />;
+        if (score >= 2) return <AlertCircle className="w-6 h-6 text-chart-4" />;
+        return <XCircle className="w-6 h-6 text-destructive" />;
     };
 
     const getScoreLabel = (score: number) => {
@@ -102,14 +101,14 @@ const SpeechAnalysisDashboard: React.FC<Props> = ({ data }) => {
     const overallPercentage = (parseFloat(overallScore) / 5) * 100;
 
     return (
-        <div className="space-y-6 p-6 bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950">
+        <div className="space-y-6 p-6 bg-background">
             {/* Header with Overall Score */}
-            <Card className="bg-gradient-to-br from-purple-950/50 to-blue-950/50 border-purple-700/30">
+            <Card className="bg-card border-border">
                 <CardHeader>
-                    <CardTitle className="text-3xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-blue-400">
+                    <CardTitle className="text-3xl font-bold text-chart-1">
                         Speech Performance Analysis
                     </CardTitle>
-                    <CardDescription className="text-slate-400">
+                    <CardDescription className="text-muted-foreground">
                         Comprehensive evaluation of your speaking performance
                     </CardDescription>
                 </CardHeader>
@@ -124,7 +123,8 @@ const SpeechAnalysisDashboard: React.FC<Props> = ({ data }) => {
                                         cy="100"
                                         r="85"
                                         fill="none"
-                                        stroke="#1e293b"
+                                        stroke="currentColor"
+                                        className="text-secondary"
                                         strokeWidth="20"
                                     />
                                     <circle
@@ -132,24 +132,18 @@ const SpeechAnalysisDashboard: React.FC<Props> = ({ data }) => {
                                         cy="100"
                                         r="85"
                                         fill="none"
-                                        stroke="url(#overallGradient)"
+                                        stroke="var(--chart-1)"
                                         strokeWidth="20"
                                         strokeDasharray={`${(parseFloat(overallScore) / 5) * 534.07} 534.07`}
                                         strokeLinecap="round"
                                         className="transition-all duration-1000"
                                     />
-                                    <defs>
-                                        <linearGradient id="overallGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-                                            <stop offset="0%" stopColor="#a855f7" />
-                                            <stop offset="100%" stopColor="#3b82f6" />
-                                        </linearGradient>
-                                    </defs>
                                 </svg>
                                 <div className="absolute inset-0 flex flex-col items-center justify-center">
-                                    <div className="text-5xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-blue-400">
+                                    <div className="text-5xl font-bold text-chart-1">
                                         {overallScore}
                                     </div>
-                                    <div className="text-slate-400 text-sm mt-1">out of 5.0</div>
+                                    <div className="text-muted-foreground text-sm mt-1">out of 5.0</div>
                                 </div>
                             </div>
                         </div>
@@ -157,8 +151,8 @@ const SpeechAnalysisDashboard: React.FC<Props> = ({ data }) => {
                         {/* Overall Stats */}
                         <div className="flex-1 space-y-4">
                             <div className="text-center md:text-left">
-                                <h3 className="text-2xl font-bold text-slate-200 mb-2">Overall Performance</h3>
-                                <p className="text-slate-400">
+                                <h3 className="text-2xl font-bold text-foreground mb-2">Overall Performance</h3>
+                                <p className="text-muted-foreground">
                                     {overallPercentage >= 80 ? 'Outstanding delivery! Your speech shows excellent command.' :
                                         overallPercentage >= 60 ? 'Good performance with room for improvement in key areas.' :
                                             overallPercentage >= 40 ? 'Fair delivery. Focus on the highlighted areas below.' :
@@ -166,9 +160,9 @@ const SpeechAnalysisDashboard: React.FC<Props> = ({ data }) => {
                                 </p>
                             </div>
 
-                            <div className="w-full bg-slate-800 rounded-full h-4 overflow-hidden">
+                            <div className="w-full bg-secondary rounded-full h-4 overflow-hidden">
                                 <div
-                                    className="h-full bg-gradient-to-r from-purple-500 to-blue-500 transition-all duration-1000"
+                                    className="h-full bg-chart-1 transition-all duration-1000"
                                     style={{ width: `${overallPercentage}%` }}
                                 />
                             </div>
@@ -178,8 +172,8 @@ const SpeechAnalysisDashboard: React.FC<Props> = ({ data }) => {
                                     <div
                                         key={level}
                                         className={`h-2 rounded-full transition-all ${parseFloat(overallScore) >= level
-                                                ? 'bg-gradient-to-r from-purple-500 to-blue-500'
-                                                : 'bg-slate-700'
+                                            ? 'bg-chart-1'
+                                            : 'bg-muted'
                                             }`}
                                     />
                                 ))}
@@ -208,7 +202,7 @@ const SpeechAnalysisDashboard: React.FC<Props> = ({ data }) => {
                                             <Icon className={`w-6 h-6 ${colors.text}`} />
                                         </div>
                                         <div>
-                                            <h3 className="font-semibold text-slate-200">{category.label}</h3>
+                                            <h3 className="font-semibold text-foreground">{category.label}</h3>
                                             <p className={`text-xs ${colors.text} font-medium`}>
                                                 {getScoreLabel(score)}
                                             </p>
@@ -220,14 +214,14 @@ const SpeechAnalysisDashboard: React.FC<Props> = ({ data }) => {
                                 {/* Score Visualization */}
                                 <div className="mb-4">
                                     <div className="flex items-center justify-between mb-2">
-                                        <span className="text-2xl font-bold text-slate-200">{score.toFixed(1)}</span>
-                                        <span className="text-sm text-slate-400">/ 5.0</span>
+                                        <span className="text-2xl font-bold text-foreground">{score.toFixed(1)}</span>
+                                        <span className="text-sm text-muted-foreground">/ 5.0</span>
                                     </div>
 
                                     <div className="relative">
-                                        <div className="w-full bg-slate-800 rounded-full h-3 overflow-hidden">
+                                        <div className="w-full bg-secondary rounded-full h-3 overflow-hidden">
                                             <div
-                                                className={`h-full bg-gradient-to-r ${colors.gradient} transition-all duration-1000`}
+                                                className={`h-full ${colors.solid} transition-all duration-1000`}
                                                 style={{ width: `${(score / 5) * 100}%` }}
                                             />
                                         </div>
@@ -235,7 +229,7 @@ const SpeechAnalysisDashboard: React.FC<Props> = ({ data }) => {
                                             {[1, 2, 3, 4, 5].map((tick) => (
                                                 <div
                                                     key={tick}
-                                                    className={`w-0.5 h-2 ${score >= tick ? colors.text.replace('text-', 'bg-') : 'bg-slate-600'
+                                                    className={`w-0.5 h-2 ${score >= tick ? colors.text.replace('text-', 'bg-') : 'bg-muted'
                                                         }`}
                                                 />
                                             ))}
@@ -249,8 +243,8 @@ const SpeechAnalysisDashboard: React.FC<Props> = ({ data }) => {
                                         <div
                                             key={level}
                                             className={`h-1.5 rounded-full transition-all ${score >= level
-                                                    ? `bg-gradient-to-r ${colors.gradient}`
-                                                    : 'bg-slate-700/50'
+                                                ? colors.solid
+                                                : 'bg-muted/50'
                                                 }`}
                                         />
                                     ))}
@@ -262,13 +256,13 @@ const SpeechAnalysisDashboard: React.FC<Props> = ({ data }) => {
             </div>
 
             {/* Detailed Feedback */}
-            <Card className="bg-slate-900/50 border-slate-700/50">
+            <Card className="bg-card border-border">
                 <CardHeader>
-                    <CardTitle className="flex items-center gap-2 text-cyan-400">
+                    <CardTitle className="flex items-center gap-2 text-chart-1">
                         <Lightbulb className="w-6 h-6" />
                         Detailed Feedback & Recommendations
                     </CardTitle>
-                    <CardDescription className="text-slate-400">
+                    <CardDescription className="text-muted-foreground">
                         Personalized insights to improve your speaking performance
                     </CardDescription>
                 </CardHeader>
@@ -301,7 +295,7 @@ const SpeechAnalysisDashboard: React.FC<Props> = ({ data }) => {
                                                     </span>
                                                 </div>
                                             </div>
-                                            <AlertDescription className="text-slate-300 leading-relaxed">
+                                            <AlertDescription className="text-foreground/90 leading-relaxed">
                                                 {feedback}
                                             </AlertDescription>
                                         </div>
@@ -314,10 +308,10 @@ const SpeechAnalysisDashboard: React.FC<Props> = ({ data }) => {
             </Card>
 
             {/* Performance Summary */}
-            <Card className="bg-gradient-to-br from-slate-900/50 to-slate-800/50 border-slate-700/50">
+            <Card className="bg-card border-border">
                 <CardHeader>
-                    <CardTitle className="text-slate-200">Performance Summary</CardTitle>
-                    <CardDescription className="text-slate-400">
+                    <CardTitle className="text-foreground">Performance Summary</CardTitle>
+                    <CardDescription className="text-muted-foreground">
                         Quick overview of your scores across all categories
                     </CardDescription>
                 </CardHeader>
@@ -329,12 +323,12 @@ const SpeechAnalysisDashboard: React.FC<Props> = ({ data }) => {
 
                             return (
                                 <div key={category.key} className="flex items-center gap-3">
-                                    <div className="w-32 text-sm text-slate-300 font-medium">
+                                    <div className="w-32 text-sm text-foreground font-medium">
                                         {category.label}
                                     </div>
-                                    <div className="flex-1 bg-slate-800 rounded-full h-8 overflow-hidden relative">
+                                    <div className="flex-1 bg-secondary rounded-full h-8 overflow-hidden relative">
                                         <div
-                                            className={`h-full bg-gradient-to-r ${colors.gradient} flex items-center justify-between px-4 transition-all duration-1000`}
+                                            className={`h-full ${colors.solid} flex items-center justify-between px-4 transition-all duration-1000`}
                                             style={{ width: `${(score / 5) * 100}%` }}
                                         >
                                             <span className="text-xs font-semibold text-white">
@@ -356,7 +350,7 @@ const SpeechAnalysisDashboard: React.FC<Props> = ({ data }) => {
                     </div>
 
                     {/* Overall Statistics */}
-                    <div className="mt-6 pt-6 border-t border-slate-700 grid grid-cols-2 md:grid-cols-5 gap-4">
+                    <div className="mt-6 pt-6 border-t border-border grid grid-cols-2 md:grid-cols-5 gap-4">
                         {categories.map((category) => {
                             const score = data.scores[category.key as keyof Scores];
                             const colors = getScoreColor(score);
@@ -372,7 +366,7 @@ const SpeechAnalysisDashboard: React.FC<Props> = ({ data }) => {
                                     <div className={`text-2xl font-bold ${colors.text}`}>
                                         {score.toFixed(1)}
                                     </div>
-                                    <div className="text-xs text-slate-400 mt-1">
+                                    <div className="text-xs text-muted-foreground mt-1">
                                         {getScoreLabel(score)}
                                     </div>
                                 </div>

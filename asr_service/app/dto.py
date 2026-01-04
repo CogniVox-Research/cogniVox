@@ -15,6 +15,10 @@ def get_full_text(data: FrontData) -> str:
     return "".join(lines)
 
 
+class SpeechDone(pydantic.BaseModel):
+    session_id: str
+
+
 class Timestamp(pydantic.BaseModel):
     start: datetime
     end: datetime

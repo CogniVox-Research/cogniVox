@@ -57,7 +57,7 @@ class SpeechSession:
                 await self._handle_speech_transcript(message["data"])
             elif message["type"] == "settings":
                 print(f"Got settings {message}")
-        await asyncio.sleep(20)
+        await asyncio.sleep(120)
 
     async def _handle_speech_transcript(self, data: str):
         (file_type, file_data) = data.split(";base64,")

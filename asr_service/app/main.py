@@ -24,6 +24,7 @@ async def lifespan(app: FastAPI):
             # Declaring queue
             await channel.declare_queue("ASR_stream", auto_delete=False)
             await channel.declare_queue("ASR", auto_delete=False)
+            await channel.declare_queue("speech_done", auto_delete=False)
             yield
 
 
@@ -56,6 +57,13 @@ async def websocket_endpoint(websocket: WebSocket, session_id: str):
         )
 
     await transcription_engine.start_session(session_id, websocket, transcribe_cb)
+
+    await channel.default_exchange.publish(
+        aio_pika.Message(
+            body=dto.SpeechDone(session_id=session_id).model_dump_json().encode()
+        ),
+        routing_key="speech_done",
+    )
 
 
 @app.get("/recording/{session_id}")

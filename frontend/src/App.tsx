@@ -1,3 +1,4 @@
+import { Toaster } from 'sonner'
 import './App.css'
 import AudioRecorder from './components/AudioRecorder'
 
@@ -5,7 +6,8 @@ function App() {
 
   return (
     <>
-      <AudioRecorder/>
+      <AudioRecorder />
+      <Toaster richColors />
     </>
   )
 }

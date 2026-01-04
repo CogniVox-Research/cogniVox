@@ -1,8 +1,4 @@
-# service_name
-
-add description about service here
-
-# install dependencies
+# install dependencies - Demo 
 pip install sentence-transformers nltk numpy scikit-learn 
 
 

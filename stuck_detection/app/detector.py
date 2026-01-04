@@ -30,7 +30,7 @@ class StuckDetector:
         else:
             self.detections[data.session_id] = False
 
-    async def _detect_semantic_repetition(self, text: str):
+    def _detect_semantic_repetition(self, text: str):
         doc = self.model(text)
         sentences = [sentence for sentence in doc.sents]
         if len(sentences) > config.checked_sentences:
@@ -52,7 +52,7 @@ class StuckDetector:
 
         return len(repeated_pairs) > config.repeated_sentence_threshold
 
-    async def _detect_long_silence(self, data: ASRData):
+    def _detect_long_silence(self, data: ASRData):
         last_line = data.lines[-1]
         if not isinstance(last_line, Silence):
             logger.debug("No pause detected")

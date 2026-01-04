@@ -6,7 +6,6 @@ from shared import SharedBaseSettings
 
 
 class Settings(SharedBaseSettings):
-    port: int = Field()
     rabbitmq_url: str = Field()
 
     max_silence: float = Field()

@@ -11,6 +11,9 @@ export default class AudioStreamer {
     #connection: WebSocket | null = null;
     #recorder: MediaRecorder | null = null;
     #messageHandler: ((m: MessageEvent) => void) | null = null;
+    #stuckHandler: ((m: any) => void) | null = null;
+    #transcriptHandler: ((m: any) => void) | null = null;
+    #speechScoreHandler: ((m: any) => void) | null = null;
     #stateHandler: (() => void) | null = null;
     #isProcessing: boolean = false;
 
@@ -28,15 +31,36 @@ export default class AudioStreamer {
                     this.#connection = ws;
                 };
                 ws.onmessage = (event) => {
-                    const data = JSON.parse(event.data);
-                    if (data.event === "completed") {
+                    try {
+                        var data = JSON.parse(event.data);
+                    } catch (e) {
+                        console.error(event)
+                        return
+                    }
+
+                    console.log("type: " + data.type, data)
+                    if (data.type === "completed") {
                         this.#isProcessing = false;
                     }
 
-                    if (this.#messageHandler) {
-                        this.#messageHandler(event)
-                    } else {
-                        console.log(event)
+                    if (data.type === "completed" || data.type === "partial") {
+                        if (this.#messageHandler) {
+                            this.#messageHandler(data)
+                        } else {
+                            console.log(event)
+                        }
+                    } else if (data.type === "stuck_detection" || data.type === "unstuck_detection") {
+                        if (this.#stuckHandler) {
+                            this.#stuckHandler(data)
+                        }
+                    } else if (data.type === "transcript_similarity") {
+                        if (this.#transcriptHandler) {
+                            this.#transcriptHandler(data)
+                        }
+                    } else if (data.type === "speech_score") {
+                        if (this.#speechScoreHandler) {
+                            this.#speechScoreHandler(data)
+                        }
                     }
                 };
                 ws.onclose = () => {
@@ -54,8 +78,20 @@ export default class AudioStreamer {
         })
     }
 
-    onMessage(handler: (m: MessageEvent) => void) {
+    onMessage(handler: (m: any) => void) {
         this.#messageHandler = handler;
+    }
+
+    onStuck(handler: (m: any) => void) {
+        this.#stuckHandler = handler;
+    }
+
+    onTranscript(handler: (m: any) => void) {
+        this.#transcriptHandler = handler;
+    }
+
+    onSpeechScore(handler: (m: any) => void) {
+        this.#speechScoreHandler = handler;
     }
 
     onStateChange(handler: () => void) {

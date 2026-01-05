@@ -30,15 +30,15 @@ The ASR Service is a FastAPI-based microservice that converts spoken audio into 
 
 ```
 ┌─────────────┐         ┌──────────────┐         ┌─────────────┐
-│  Web Client │────────▶│  WebSocket   │────────▶│  Whisper    │
+│  Web Client │───────▶│  WebSocket   │───────▶│  Whisper    │ 
 │  (Audio)    │         │  Handler     │         │  Engine     │
 └─────────────┘         └──────────────┘         └─────────────┘
                                 │                        │
                                 │                        │
                                 ▼                        ▼
                         ┌──────────────┐         ┌─────────────┐
-                        │  RabbitMQ    │         │  Recording  │
-                        │  Publisher   │         │  Storage    │
+                        │  Recording   │         │  RabbitMQ   │
+                        │   Storage    │         │  Publisher  │
                         └──────────────┘         └─────────────┘
 ```
 
@@ -54,18 +54,21 @@ The ASR Service is a FastAPI-based microservice that converts spoken audio into 
 ### Setup
 
 1. **Navigate to the service directory**:
+
 ```bash
 cd asr_service
 ```
 
-2. **Install dependencies**:
+1. **Install dependencies**:
+
 ```bash
 poetry install
 ```
 
-3. **Configure the service**:
+1. **Configure the service**:
 
 Edit `config.toml`:
+
 ```toml
 cors_allow_origins = ["http://localhost:5173"]
 rabbitmq_url = "amqp://appuser:apppass@127.0.0.1/"
@@ -111,6 +114,7 @@ curl http://localhost:8000/
 ```
 
 Response:
+
 ```json
 {
   "Hello": "FastAPI is running"
@@ -124,9 +128,11 @@ Response:
 Stream audio for real-time transcription.
 
 **Parameters**:
+
 - `session_id` (path): Unique identifier for the transcription session
 
 **Client Example** (JavaScript):
+
 ```javascript
 const ws = new WebSocket('ws://localhost:8000/audio/session-123');
 
@@ -187,6 +193,7 @@ curl http://localhost:8000/recording/session-123 -o recording.wav
 ```
 
 **Fields**:
+
 - `type`: `"partial"` or `"complete"` - indicates if transcription is ongoing or finished
 - `lines`: Array of text segments and silences with timestamps
 - `full_text`: Complete transcribed text so far
@@ -197,6 +204,7 @@ curl http://localhost:8000/recording/session-123 -o recording.wav
 ### Line Types
 
 **Text Line**:
+
 ```json
 {
   "type": "text",
@@ -210,6 +218,7 @@ curl http://localhost:8000/recording/session-123 -o recording.wav
 ```
 
 **Silence Line**:
+
 ```json
 {
   "type": "silence",
@@ -261,6 +270,7 @@ recording_dir = "../recordings/"
 ### Environment-Specific Settings
 
 For production, update:
+
 - `cors_allow_origins`: Add your production domain
 - `rabbitmq_url`: Use production RabbitMQ credentials
 - `whisper_model`: Choose based on accuracy/speed requirements
@@ -269,12 +279,14 @@ For production, update:
 ## Audio Requirements
 
 ### Supported Formats
+
 - WAV (recommended)
 - MP3
 - FLAC
 - OGG
 
 ### Recommended Settings
+
 - Sample Rate: 16000 Hz
 - Channels: Mono (1 channel)
 - Bit Depth: 16-bit
@@ -302,11 +314,13 @@ asr_service/
 ## Performance Considerations
 
 ### Model Selection
+
 - **tiny/base**: Real-time on CPU, lower accuracy
 - **small**: Balanced performance, recommended for most use cases
 - **medium/large**: Requires GPU for real-time performance
 
 ### Optimization Tips
+
 1. Enable `warmup_model` for faster first transcription
 2. Use GPU acceleration when available
 3. Adjust model size based on accuracy requirements
@@ -326,21 +340,25 @@ This service integrates with:
 ### Common Issues
 
 **Service won't start**:
+
 - Verify RabbitMQ is running
 - Check `rabbitmq_url` in config
 - Ensure FFmpeg is installed
 
 **No transcription output**:
+
 - Verify audio format is supported
 - Check WebSocket connection
 - Review logs for Whisper model errors
 
 **Slow transcription**:
+
 - Use smaller Whisper model
 - Enable GPU acceleration
 - Reduce audio quality if acceptable
 
 **FFmpeg errors**:
+
 ```bash
 # Install FFmpeg
 # Ubuntu/Debian

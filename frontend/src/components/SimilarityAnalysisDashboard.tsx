@@ -174,7 +174,7 @@ const SimilarityAnalysisDashboard: React.FC<Props> = ({ data }) => {
                                     <div className="flex-1 bg-secondary rounded-full h-8 overflow-hidden relative">
                                         <div
                                             className="h-full bg-chart-1 flex items-center justify-end pr-3"
-                                            style={{ width: `${(data.structural_transcript.sentence_count / maxStructuralValue) * 100}%` }}
+                                            style={{ width: `100%` }}
                                         >
                                             <span className="text-xs font-semibold text-white">{data.structural_transcript.sentence_count}</span>
                                         </div>
@@ -185,7 +185,7 @@ const SimilarityAnalysisDashboard: React.FC<Props> = ({ data }) => {
                                     <div className="flex-1 bg-secondary rounded-full h-8 overflow-hidden relative">
                                         <div
                                             className="h-full bg-chart-2 flex items-center justify-end pr-3"
-                                            style={{ width: `${(data.structural_speech.sentence_count / maxStructuralValue) * 100}%` }}
+                                            style={{ width: `100%` }}
                                         >
                                             <span className="text-xs font-semibold text-white">{data.structural_speech.sentence_count}</span>
                                         </div>

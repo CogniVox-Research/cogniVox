@@ -1,9 +1,13 @@
-import testAudio from '../assets/micro-machines.wav';
+import { streamAudioFileToWebSocket, type AudioStreamController } from './test-stream';
 import { toBase64 } from './utils';
 
+import audioURL from "../assets/demo.opus?url";
+import audioText from "../assets/demo.txt?url";
+
 type SpeechOptions = {
-    doc: File
-    settings?: {}
+    doc: Blob | File,
+    settings?: {},
+    isTestStream?: boolean
 }
 
 export default class AudioStreamer {
@@ -16,6 +20,7 @@ export default class AudioStreamer {
     #speechScoreHandler: ((m: any) => void) | null = null;
     #stateHandler: (() => void) | null = null;
     #isProcessing: boolean = false;
+    #testStreamer: AudioStreamController | null = null;
 
     constructor(url: string) {
         this.#url = url;
@@ -109,6 +114,10 @@ export default class AudioStreamer {
 
         const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
 
+        if (options.isTestStream) {
+            return
+        }
+
         this.#recorder = new MediaRecorder(stream, {
             mimeType: 'audio/webm; codecs=opus'
         });
@@ -138,8 +147,8 @@ export default class AudioStreamer {
         await this.connectWS();
         this.#isProcessing = true;
 
-        const response = await fetch(testAudio);
-        const audioBlob = await response.blob();
+        await this.startStream({ doc: await (await fetch(audioText)).blob(), isTestStream: true })
+
 
         if (this.#connection == null) {
             return;
@@ -147,22 +156,20 @@ export default class AudioStreamer {
 
         if (this.#stateHandler) this.#stateHandler();
 
-        this.#connection.send(audioBlob);
-        console.log(`Test Stream: Sent ${audioBlob.size} bytes`);
+        const control = streamAudioFileToWebSocket(this.#connection, audioURL);
+        this.#testStreamer = control;
 
-        const audioUrl = URL.createObjectURL(audioBlob);
-        const audio = new Audio(audioUrl);
-        audio.onloadedmetadata = () => {
-            const length = audio.duration * 200;
-            setTimeout(() => {
-                this.#connection?.send(JSON.stringify({ "type": "speech_end" }))
-            }, length + 500);
-        }
+        this.#recorder = control.recorder;
+
+        await control.play();
+        await this.stopStreaming();
     }
 
     async stopStreaming() {
         console.trace("Stop called")
         this.#recorder?.stop();
+        this.#testStreamer?.stop();
+
         if (this.#recorder) {
             this.#recorder.onstop = () => {
                 setTimeout(() => {

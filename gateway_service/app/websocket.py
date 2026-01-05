@@ -93,6 +93,8 @@ class SpeechSession:
                     if "bytes" in message:
                         await con.send(message["bytes"])
                         continue
+                    elif "text" not in message:
+                        raise RuntimeError(f"Unexpected message {message}")
 
                     message = json.loads(message["text"])
                     if message["type"] != "speech_end":

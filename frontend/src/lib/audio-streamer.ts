@@ -19,7 +19,6 @@ export default class AudioStreamer {
     #transcriptHandler: ((m: any) => void) | null = null;
     #speechScoreHandler: ((m: any) => void) | null = null;
     #stateHandler: (() => void) | null = null;
-    #isProcessing: boolean = false;
     #testStreamer: AudioStreamController | null = null;
 
     constructor(url: string) {
@@ -44,9 +43,6 @@ export default class AudioStreamer {
                     }
 
                     console.log("type: " + data.type, data)
-                    if (data.type === "completed") {
-                        this.#isProcessing = false;
-                    }
 
                     if (data.type === "completed" || data.type === "partial") {
                         if (this.#messageHandler) {
@@ -71,7 +67,6 @@ export default class AudioStreamer {
                 ws.onclose = () => {
                     console.log("WebSocket Disconnected.");
                     this.#connection = null;
-                    this.#isProcessing = false;
                     if (this.#stateHandler) this.#stateHandler();
                 };
                 ws.onerror = (error) => console.error('WebSocket Error:', error);
@@ -145,8 +140,6 @@ export default class AudioStreamer {
 
     async startTestStream() {
         await this.connectWS();
-        this.#isProcessing = true;
-
         await this.startStream({ doc: await (await fetch(audioText)).blob(), isTestStream: true })
 
 
@@ -154,12 +147,12 @@ export default class AudioStreamer {
             return;
         }
 
-        if (this.#stateHandler) this.#stateHandler();
 
         const control = streamAudioFileToWebSocket(this.#connection, audioURL);
         this.#testStreamer = control;
-
         this.#recorder = control.recorder;
+
+        if (this.#stateHandler) this.#stateHandler();
 
         await control.play();
         await this.stopStreaming();
@@ -179,10 +172,12 @@ export default class AudioStreamer {
             this.#recorder = null;
         }
 
+        this.#testStreamer = null;
+
         if (this.#stateHandler) this.#stateHandler();
     }
 
     get isRecording() {
-        return this.#recorder != null || this.#isProcessing;
+        return this.#recorder != null;
     }
 }

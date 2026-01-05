@@ -90,7 +90,7 @@ const SimilarityAnalysisDashboard: React.FC<Props> = ({ data }) => {
     );
 
     return (
-        <div className="space-y-6 p-6 bg-background">
+        <div className="space-y-6 py-0.5 bg-background">
             {/* Header with Overall Similarity */}
             <Card className="bg-card border-border">
                 <CardHeader>

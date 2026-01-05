@@ -60,7 +60,7 @@ const AudioRecorder: React.FC = () => {
             setStuck(null)
 
         });
-    }, []);
+    }, [streamer.current, stuck, setStuck, results, setResults, setIsRecording]);
 
     const onSubmit: SubmitHandler<FormValues> = (data) => {
         streamer.current.startStream({ doc: data.fileUpload[0] });
@@ -84,9 +84,7 @@ const AudioRecorder: React.FC = () => {
         }
     }, [fileWatch]);
 
-    const transcriptText = content?.lines
-        ?.filter((v: { speaker: any }) => v.speaker)
-        .reduce((pv: string, c: { text: string }) => pv + c.text, "") || '';
+    const transcriptText = content?.full_text ?? '';
 
     return (
         <div className="min-h-screen bg-background p-6">
@@ -249,13 +247,13 @@ const AudioRecorder: React.FC = () => {
                             <div className="space-y-2">
                                 <h3 className="text-sm font-semibold text-muted-foreground">Detailed Lines</h3>
                                 <div className="space-y-2 max-h-64 overflow-y-auto">
-                                    {content.lines?.map((line: any, idx: number) => (
+                                    {content.lines?.filter((v: any) => !!v.text).map((line: any, idx: number) => (
                                         <div
                                             key={idx}
                                             className="p-3 rounded bg-muted/30 border border-border/50 hover:border-chart-1/50 transition-colors"
                                         >
                                             <pre className="text-xs text-muted-foreground whitespace-pre-wrap font-mono">
-                                                {JSON.stringify(line, null, 2)}
+                                                {line.text}
                                             </pre>
                                         </div>
                                     ))}

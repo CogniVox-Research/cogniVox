@@ -25,7 +25,7 @@ When stuck behavior is detected, the service can optionally generate contextual 
 
 ```
 ┌─────────────┐         ┌──────────────────┐         ┌─────────────┐
-│  ASR Stream │────────▶│ Stuck Detection  │────────▶│  Session    │
+│  ASR Stream │───────▶│ Stuck Detection  │───────▶│  Session    │
 │  (RabbitMQ) │         │     Service      │         │  Queue      │
 └─────────────┘         └──────────────────┘         └─────────────┘
                                │
@@ -58,18 +58,21 @@ When stuck behavior is detected, the service can optionally generate contextual 
 ### Setup
 
 1. **Install dependencies**:
+
    ```bash
    poetry install
    ```
 
 2. **Download spaCy model**:
+
    ```bash
    poetry run python -m spacy download en_core_web_md
    ```
 
 3. **Configure the service**:
-   
+
    Edit `config.toml` to customize detection parameters:
+
    ```toml
    rabbitmq_url = "amqp://appuser:apppass@127.0.0.1/"
    max_silence = 7.5  # Maximum silence duration in seconds
@@ -100,6 +103,7 @@ poetry run fastapi dev main.py
 ```
 
 The service will:
+
 - Connect to RabbitMQ at the configured URL
 - Subscribe to the `ASR_stream` queue
 - Process incoming ASR data in real-time
@@ -112,6 +116,7 @@ curl http://localhost:8000/
 ```
 
 Expected response:
+
 ```json
 "Running"
 ```
@@ -198,6 +203,7 @@ Expected response:
 ### Published Message Format
 
 **Stuck Detection**:
+
 ```json
 {
   "type": "stuck_detection",
@@ -211,6 +217,7 @@ Expected response:
 ```
 
 **Unstuck Detection**:
+
 ```json
 {
   "type": "unstuck_detection",
@@ -258,15 +265,18 @@ This service is part of the **CogniVox** ecosystem and integrates with:
 ### Common Issues
 
 **Service won't start**:
+
 - Verify RabbitMQ is running and accessible
 - Check `rabbitmq_url` in `config.toml`
 
 **No detections**:
+
 - Verify ASR data is being published to `ASR_stream` queue
 - Check detection thresholds in configuration
 - Review logs for semantic similarity scores
 
 **spaCy model not found**:
+
 ```bash
 poetry run python -m spacy download en_core_web_md
 ```

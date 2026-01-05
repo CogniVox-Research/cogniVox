@@ -29,16 +29,16 @@ The ASR Service is a FastAPI-based microservice that converts spoken audio into 
 ## Architecture
 
 ```
-┌─────────────┐         ┌──────────────┐         ┌─────────────┐
-│  Web Client │───────▶│  WebSocket   │───────▶│  Whisper    │ 
-│  (Audio)    │         │  Handler     │         │  Engine     │
-└─────────────┘         └──────────────┘         └─────────────┘
+┌─────────────┐         ┌──────────────┐         ┌─────────────┐          ┌─────────────┐
+│  Web Client │───────▶│  WebSocket   │───────▶│  Whisper    │ ───────▶│  Session    │
+│  (Audio)    │         │  Handler     │         │  Engine     │          │  Queue      │
+└─────────────┘         └──────────────┘         └─────────────┘          └─────────────┘
                                 │                        │
                                 │                        │
                                 ▼                        ▼
                         ┌──────────────┐         ┌─────────────┐
-                        │  Recording   │         │  RabbitMQ   │
-                        │   Storage    │         │  Publisher  │
+                        │  Recording   │         │  ASR_Stream │
+                        │   Storage    │         │   Queue     │
                         └──────────────┘         └─────────────┘
 ```
 

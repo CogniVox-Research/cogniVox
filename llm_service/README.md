@@ -28,7 +28,7 @@ The LLM Service is a FastAPI-based microservice that leverages the Qwen language
 
 ```
 ┌──────────────────┐         ┌──────────────┐         ┌──────────────────┐
-│  Stuck Detection │────────▶│  LLM Service │────────▶│ Document Service │
+│  Stuck Detection │───────▶│  LLM Service │───────▶│ Document Service │
 │     Service      │   RPC   │  (RPC Server)│   RPC   │   (RPC Client)   │
 └──────────────────┘         └──────────────┘         └──────────────────┘
                                      │
@@ -52,18 +52,21 @@ The LLM Service is a FastAPI-based microservice that leverages the Qwen language
 ### Setup
 
 1. **Navigate to the service directory**:
+
 ```bash
 cd llm_service
 ```
 
-2. **Install dependencies**:
+1. **Install dependencies**:
+
 ```bash
 poetry install
 ```
 
-3. **Configure the service**:
+1. **Configure the service**:
 
 Edit `config.toml`:
+
 ```toml
 port = 99999              # Service port (not currently used)
 enable_thinking = false   # Enable model thinking mode
@@ -88,6 +91,7 @@ poetry run fastapi dev main.py
 ```
 
 The service will:
+
 1. Connect to RabbitMQ
 2. Load the Qwen language model
 3. Register as an RPC server (`llm-server`)
@@ -102,13 +106,16 @@ The service exposes the following RPC methods:
 Generate suggestions for continuing a conversation.
 
 **Parameters**:
+
 - `session_id` (str): Session identifier
 - `current_text` (str): Current speech transcript
 
 **Returns**:
+
 - `str`: Generated suggestion for continuing the conversation
 
 **Example RPC Call** (from another service):
+
 ```python
 from shared import rpc
 
@@ -238,15 +245,18 @@ class LLMRPCServer:
 ## Performance Considerations
 
 ### Model Loading
+
 - First request may be slow due to model loading
 - Model is cached in memory after first use
 - Consider pre-warming model on startup for production
 
 ### Memory Requirements
+
 - **CPU**: ~2GB RAM
 - **GPU**: ~2GB VRAM (with GPU acceleration)
 
 ### Optimization Tips
+
 1. Use GPU acceleration for faster inference
 2. Enable model quantization for lower memory usage
 3. Adjust `max_new_tokens` based on use case
@@ -255,6 +265,7 @@ class LLMRPCServer:
 ## Dependencies
 
 ### Core Dependencies
+
 - `fastapi[standard]`: Web framework
 - `transformers`: Hugging Face model library
 - `torch`: PyTorch for model inference
@@ -262,6 +273,7 @@ class LLMRPCServer:
 - `shared`: Internal RPC and messaging utilities
 
 ### Version Requirements
+
 ```toml
 python = ">=3.12,<3.15"
 fastapi = "^0.119.0"
@@ -283,21 +295,25 @@ This service integrates with:
 ### Common Issues
 
 **Service won't start**:
+
 - Verify RabbitMQ is running
 - Check `rabbitmq_url` in config
 - Ensure Document Service is available
 
 **Model loading fails**:
+
 - Check internet connection (first run downloads model)
 - Verify disk space for model cache
 - Check Hugging Face Hub access
 
 **Out of memory errors**:
+
 - Reduce `max_new_tokens`
 - Use CPU instead of GPU
 - Enable model quantization
 
 **Slow generation**:
+
 - Enable GPU acceleration
 - Use smaller model variant
 - Disable thinking mode
@@ -305,10 +321,12 @@ This service integrates with:
 ### Model Cache Location
 
 Models are cached by default in:
+
 - Linux/Mac: `~/.cache/huggingface/`
 - Windows: `C:\Users\<username>\.cache\huggingface\`
 
 To change cache location:
+
 ```bash
 export TRANSFORMERS_CACHE=/path/to/cache
 ```

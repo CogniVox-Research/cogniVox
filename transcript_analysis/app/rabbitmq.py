@@ -19,6 +19,7 @@ async def queue_listener(conn: AbstractChannel):
 
 async def check_similarity(channel: AbstractChannel, data: ASRData):
     from . import document_server
+    from . import grammar
 
     comparer = SpeechComparer()
 
@@ -27,16 +28,20 @@ async def check_similarity(channel: AbstractChannel, data: ASRData):
     if not data.full_text:
         return
 
-    results = comparer.compare(expected_text, data.full_text)
+    similarity_results = comparer.compare(expected_text, data.full_text)
+    grammar_results = grammar.checker.check_errors(data.full_text)
 
-    print(f"Similarity result {results}")
+    print(f"Similarity result {similarity_results}")
 
     await channel.default_exchange.publish(
         aio_pika.Message(
             body=json.dumps(
                 {
                     "type": "transcript_similarity",
-                    "data": util.convert_numpy_to_python(results),
+                    "data": {
+                        "similarity": util.convert_numpy_to_python(similarity_results),
+                        "grammar": grammar_results
+                    },
                 }
             ).encode()
         ),

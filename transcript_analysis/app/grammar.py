@@ -3,6 +3,8 @@ from transformers import T5ForConditionalGeneration, T5Tokenizer
 import spacy
 import warnings
 
+__all__ = ["checker"]
+
 warnings.filterwarnings("ignore")
 
 class SpeechGrammarChecker:
@@ -42,34 +44,38 @@ class SpeechGrammarChecker:
             if original != corrected:
                 detected_errors.append((original, corrected))
 
-        return detected_errors
+        return [{"original": i[0], "corrected": i[1]} for i in detected_errors]
 
 
 checker = SpeechGrammarChecker()
 
 
 
-# ============================================================
-#                EXAMPLE APPLICATION USAGE
-# ============================================================
-# speech_paragraph = (
-#     "Yesterday I go to the market and I see a friend. "
-#     "He tell me that he want to discuss about the project. "
-#     "I says him that we can meets tomorrow at the office. "
-#     "The weather were really bad so I didnt stayed long."
-# )
+def test():
+    # ============================================================
+    #                EXAMPLE APPLICATION USAGE
+    # ============================================================
+    speech_paragraph = (
+        "Yesterday I go to the market and I see a friend. "
+        "I says him that we can meets tomorrow at the office. "
+        "He tell me that he want to discuss about the project. "
+        "The weather were really bad so I didnt stayed long."
+    )
 
-# # Get the list of errors
-# errors = checker.check_errors(speech_paragraph)
+    # Get the list of errors
+    errors = checker.check_errors(speech_paragraph)
 
-# # Print the Report
-# print(f"{'='*20} GRAMMAR ERROR REPORT {'='*20}\n")
+    # Print the Report
+    print(f"{'='*20} GRAMMAR ERROR REPORT {'='*20}\n")
 
-# if not errors:
-#     print("No errors found! Good job.")
-# else:
-#     for i, (original, corrected) in enumerate(errors, 1):
-#         print(f"❌ Error Found in Segment {i}:")
-#         print(f"   Original:  {original}")
-#         print(f"   Corrected: {corrected}")
-#         print("-" * 50)
+    if not errors:
+        print("No errors found! Good job.")
+    else:
+        for idx, err in enumerate(errors, 1):
+            print(f"❌ Error Found in Segment {idx}:")
+            print(f"   Original:  {err['original']}")
+            print(f"   Corrected: {err['corrected']}")
+            print("-" * 50)
+
+if __name__ == "__main__":
+    test()

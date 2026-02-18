@@ -12,3 +12,5 @@ ez-ffmpeg = "0.10.0"
 bytes = "1.11.1"
 ffmpeg-next = {version="7.1.0", features = ["default","build"] }
 ffmpeg-sys-next ={version= "7.1.0"}
+thiserror = "2.0.18"
+serde_json = "1.0.149"

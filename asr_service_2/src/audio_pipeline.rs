@@ -1,4 +1,5 @@
 use std::{
+    fs,
     io::{Cursor, Read, Seek, SeekFrom, Write},
     path::PathBuf,
     sync::mpsc,
@@ -8,20 +9,24 @@ use std::{
 use bytes::Buf;
 use ez_ffmpeg::{FfmpegContext, Output};
 
-use crate::error::Result;
+use crate::error::{Error, Result};
 
 pub fn audio_preprocessor(
-    recording_file: PathBuf,
+    recording_path: PathBuf,
 ) -> Result<(mpsc::Sender<Vec<u8>>, mpsc::Receiver<Vec<f32>>)> {
     let (audio_tx, audio_rx) = mpsc::channel::<Vec<u8>>();
     let (samples_tx, samples_rx) = mpsc::channel::<Vec<f32>>();
 
-    let input = reciever_input(audio_rx);
+    fs::create_dir_all(&recording_path).map_err(Error::Recording)?;
+
+    let original_path = recording_path.join("original");
+    let converted_path = recording_path.join("coverted.wav");
+    let input = reciever_input(audio_rx, original_path);
 
     thread::spawn(move || -> Result<()> {
         FfmpegContext::builder()
-            .input(input)
-            // .filter_desc("afftdn")
+            .input(input?)
+            .filter_desc("afftdn")
             .output(
                 sender_output(samples_tx)
                     .set_format("f32le")
@@ -29,7 +34,7 @@ pub fn audio_preprocessor(
                     .set_audio_sample_rate(16000),
             )
             .output(
-                Output::from(recording_file.to_str().unwrap())
+                Output::from(converted_path.to_str().unwrap())
                     .set_format("wav")
                     .set_audio_channels(1)
                     .set_audio_sample_rate(16000),
@@ -43,36 +48,33 @@ pub fn audio_preprocessor(
     Ok((audio_tx, samples_rx))
 }
 
-fn reciever_input(audio_rx: mpsc::Receiver<Vec<u8>>) -> ez_ffmpeg::Input {
+fn reciever_input(
+    audio_rx: mpsc::Receiver<Vec<u8>>,
+    record_path: PathBuf,
+) -> Result<ez_ffmpeg::Input> {
     let mut buffer = Cursor::new(vec![]);
     let audio_in = audio_rx;
 
-    ez_ffmpeg::Input::new_by_read_callback(move |buf| {
+    let mut out = fs::File::create(record_path).map_err(Error::Recording)?;
+
+    let input = ez_ffmpeg::Input::new_by_read_callback(move |buf| {
         let mut is_last_write = false;
 
-        while buffer.remaining() < buf.len() {
-            if let Ok(mut data) = audio_in.recv() {
-                let current = buffer.position();
-                buffer.seek(SeekFrom::End(0)).expect("seek should be valid");
+        if let Ok(data) = audio_in.recv() {
+            let current = buffer.position();
+            buffer.seek(SeekFrom::End(0)).expect("seek should be valid");
 
-                buffer
-                    .write_all(&mut data)
-                    .expect("write to memory buffer should succeed");
+            out.write_all(&data).expect("Recording should succeed");
 
-                // write buffered data.
-                while let Ok(mut data) = audio_in.try_recv() {
-                    buffer
-                        .write_all(&mut data)
-                        .expect("write to memory buffer should succeed");
-                }
+            buffer
+                .write_all(&data)
+                .expect("write to memory buffer should succeed");
 
-                buffer
-                    .seek(SeekFrom::Start(current))
-                    .expect("seek should be valid");
-            } else {
-                is_last_write = true;
-                break;
-            }
+            buffer
+                .seek(SeekFrom::Start(current))
+                .expect("seek should be valid");
+        } else {
+            is_last_write = true;
         }
 
         // TODO: compact buffer
@@ -86,6 +88,9 @@ fn reciever_input(audio_rx: mpsc::Receiver<Vec<u8>>) -> ez_ffmpeg::Input {
     })
     // disable seeking
     .set_seek_callback(|_offset, _whence| ffmpeg_sys_next::AVERROR(ffmpeg_sys_next::ESPIPE) as i64)
+    .set_readrate(1.0);
+
+    return Ok(input);
 }
 
 fn sender_output(samples_tx: mpsc::Sender<Vec<f32>>) -> Output {

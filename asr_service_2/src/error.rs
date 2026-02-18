@@ -13,4 +13,7 @@ pub enum Error {
 
     #[error("Failed to serialize: {0}")]
     Serialize(#[from] serde_json::Error),
+
+    #[error("Error while recording audio: {0}")]
+    Recording(std::io::Error),
 }

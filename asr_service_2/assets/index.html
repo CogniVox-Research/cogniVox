@@ -1,0 +1,109 @@
+<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="utf-8" />
+        <title>ASR Test</title>
+        <style>
+            body {
+                font-family: sans-serif;
+                margin: 2rem;
+            }
+            button,
+            input {
+                padding: 0.5rem 1rem;
+                font-size: 1rem;
+            }
+            #status {
+                margin-top: 1rem;
+            }
+        </style>
+    </head>
+    <body>
+        <button id="start-btn">Start Streaming</button>
+        <button id="stop-btn" disabled>Stop</button>
+
+        <p id="status"></p>
+
+        <script>
+            const startBtn = document.getElementById("start-btn");
+            const stopBtn = document.getElementById("stop-btn");
+            const statusPara = document.getElementById("status");
+
+            let mediaRecorder; // MediaRecorder instance
+            let socket; // WebSocket instance
+
+            function log(msg) {
+                console.log(msg);
+                statusPara.textContent = msg;
+            }
+
+            /* ------------------------------------------------------------------ */
+            async function init() {
+                const stream = await navigator.mediaDevices.getUserMedia({
+                    audio: true,
+                    video: false,
+                });
+                // We keep a reference to the AudioTrack in case you need it later
+                const audioTrack = stream.getAudioTracks()[0];
+
+                // MediaRecorder will output WebM (opus) by default; adjust if you need raw PCM.
+                mediaRecorder = new MediaRecorder(stream, {
+                    mimeType: "audio/webm",
+                });
+
+                mediaRecorder.ondataavailable = (evt) => {
+                    if (!socket || socket.readyState !== WebSocket.OPEN) return;
+                    // `evt.data` is a Blob – we rMicrophone → WebSocket Demoead it into ArrayBuffer for binary transfer
+                    const reader = new FileReader();
+                    reader.onloadend = () => socket.send(reader.result);
+                    reader.readAsArrayBuffer(evt.data);
+                };
+
+                mediaRecorder.onstop = () => {
+                    if (socket && socket.readyState === WebSocket.OPEN)
+                        socket.close();
+                    log("Recording stopped.");
+                };
+
+                mediaRecorder.start(1000); // 1s chunks
+                log("Started recording and streaming...");
+            }
+
+            function openSocket() {
+                const url = "ws://localhost:8000/audio/test";
+                socket = new WebSocket(url);
+                socket.binaryType = "arraybuffer"; // we send ArrayBuffer
+
+                socket.onopen = () => log(`WebSocket connected to ${url}`);
+                socket.onerror = (e) => {
+                    mediaRecorder.stop();
+                    log(`WebSocket error: ${e.message}`);
+                };
+                socket.onclose = () => {
+                    mediaRecorder.stop();
+                    log("WebSocket closed");
+                };
+            }
+
+            startBtn.onclick = async () => {
+                try {
+                    await init(); // request mic & start recorder
+                    openSocket(); // connect ws
+                    startBtn.disabled = true;
+                    stopBtn.disabled = false;
+                } catch (e) {
+                    log(`Error: ${e}`);
+                }
+            };
+
+            stopBtn.onclick = () => {
+                if (mediaRecorder && mediaRecorder.state === "recording")
+                    mediaRecorder.stop();
+                if (socket && socket.readyState === WebSocket.OPEN)
+                    socket.close();
+                startBtn.disabled = false;
+                stopBtn.disabled = true;
+            };
+        </script>
+    </body>
+</html>

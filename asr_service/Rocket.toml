@@ -11,4 +11,4 @@ segment_buffer=4
 
 [default.recording_store]
 type="local"
-path="../storage"
+path="/tmp"

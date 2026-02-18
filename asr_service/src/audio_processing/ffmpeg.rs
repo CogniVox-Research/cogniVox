@@ -3,46 +3,38 @@ use std::{
     io::{Cursor, Read, Seek, SeekFrom, Write},
     path::PathBuf,
     sync::mpsc,
-    thread,
 };
 
 use bytes::Buf;
+
+use crate::{
+    audio_processing::AudioConfig,
+    error::{Error, Result},
+};
 use ez_ffmpeg::{FfmpegContext, Output};
 
-use crate::error::{Error, Result};
+pub fn audio_preprocessor(cfg: AudioConfig) -> Result<()> {
+    let input = reciever_input(cfg.audio_rx, cfg.original_path);
 
-pub fn audio_preprocessor(
-    original_path: PathBuf,
-    converted_path: PathBuf,
-) -> Result<(mpsc::Sender<Vec<u8>>, mpsc::Receiver<Vec<f32>>)> {
-    let (audio_tx, audio_rx) = mpsc::channel::<Vec<u8>>();
-    let (samples_tx, samples_rx) = mpsc::channel::<Vec<f32>>();
-
-    let input = reciever_input(audio_rx, original_path);
-
-    thread::spawn(move || -> Result<()> {
-        FfmpegContext::builder()
-            .input(input?)
-            .filter_desc("afftdn")
-            .output(
-                sender_output(samples_tx)
-                    .set_format("f32le")
-                    .set_audio_channels(1)
-                    .set_audio_sample_rate(16000),
-            )
-            .output(
-                Output::from(converted_path.to_str().unwrap())
-                    .set_format("wav")
-                    .set_audio_channels(1)
-                    .set_audio_sample_rate(16000),
-            )
-            .build()?
-            .start()?
-            .wait()?;
-        Ok(())
-    });
-
-    Ok((audio_tx, samples_rx))
+    FfmpegContext::builder()
+        .input(input?)
+        .filter_desc("afftdn")
+        .output(
+            sender_output(cfg.samples_tx)
+                .set_format("f32le")
+                .set_audio_channels(1)
+                .set_audio_sample_rate(16000),
+        )
+        .output(
+            Output::from(cfg.converted_path.to_str().unwrap())
+                .set_format("wav")
+                .set_audio_channels(1)
+                .set_audio_sample_rate(16000),
+        )
+        .build()?
+        .start()?
+        .wait()?;
+    Ok(())
 }
 
 fn reciever_input(

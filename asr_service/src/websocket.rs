@@ -6,7 +6,7 @@ use rocket_ws::{Message, stream::DuplexStream};
 use tempdir::TempDir;
 
 use crate::{
-    RecordingStore, audio_pipeline,
+    RecordingStore, audio_processing,
     dto::TranscriptionResult,
     error::{self, Error},
     transcription,
@@ -22,9 +22,9 @@ pub(crate) async fn handle_websocket(
     let original_path = recording_dir.path().join("original");
     let converted_path = recording_dir.path().join("coverted.wav");
 
-    let (audio_tx, samples_rx) =
-        audio_pipeline::audio_preprocessor(original_path.clone(), converted_path.clone())?;
-    let mut text_rx = transcription::start_transcription(model_config, samples_rx);
+    let audio_pipeline =
+        audio_processing::AudioPipe::create(original_path.clone(), converted_path.clone());
+    let mut text_rx = transcription::start_transcription(model_config, audio_pipeline.samples_rx);
 
     loop {
         select! {
@@ -36,7 +36,7 @@ pub(crate) async fn handle_websocket(
 
                 match data? {
                     Message::Binary(items) => {
-                        audio_tx.send(items).unwrap();
+                        audio_pipeline.audio_tx.send(items).unwrap();
                     }
                     Message::Ping(items) => {
                         stream.send(Message::Pong(items)).await?;
@@ -61,6 +61,8 @@ pub(crate) async fn handle_websocket(
 
     let upload_path = format!("{session_id}/recordings/converted.wav");
     store.upload_file(upload_path, converted_path).await?;
+
+    drop(recording_dir);
 
     Ok(())
 }

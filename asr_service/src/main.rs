@@ -3,7 +3,7 @@ use rocket_ws::{Channel, WebSocket};
 
 use crate::config::Config;
 
-mod audio_pipeline;
+mod audio_processing;
 mod config;
 mod dto;
 pub mod error;
@@ -44,6 +44,11 @@ fn stream_audio(
 
 #[launch]
 async fn rocket() -> _ {
+    fern::Dispatch::new()
+        .level(log::LevelFilter::Trace)
+        .apply()
+        .unwrap();
+
     let rocket = rocket::build();
     let cfg: config::Config = rocket.figment().extract().expect("config");
     let store = RecordingStore::from_config(&cfg.recording_store);

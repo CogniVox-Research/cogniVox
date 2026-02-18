@@ -57,7 +57,7 @@ checksum = "5f0e0fee31ef5ed1ba1316088939cea399010ed7731dba877ed44aeb407a75ea"
 [[package]]
 name = "asr_rs"
 version = "0.1.0"
-source = "git+https://github.com/yehan2002/asr_rs.git#9b8711440181c5773e16eebe48e66f20e2ac851c"
+source = "git+https://github.com/yehan2002/asr_rs.git#256ba32bf3c0f6099b611b1eb9c5a2451095918d"
 dependencies = [
  "colored",
  "cpal",
@@ -71,7 +71,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "asr_service_2"
+name = "asr_service"
 version = "0.1.0"
 dependencies = [
  "asr_rs",

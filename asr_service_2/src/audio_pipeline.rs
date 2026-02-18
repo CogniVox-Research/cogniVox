@@ -12,15 +12,12 @@ use ez_ffmpeg::{FfmpegContext, Output};
 use crate::error::{Error, Result};
 
 pub fn audio_preprocessor(
-    recording_path: PathBuf,
+    original_path: PathBuf,
+    converted_path: PathBuf,
 ) -> Result<(mpsc::Sender<Vec<u8>>, mpsc::Receiver<Vec<f32>>)> {
     let (audio_tx, audio_rx) = mpsc::channel::<Vec<u8>>();
     let (samples_tx, samples_rx) = mpsc::channel::<Vec<f32>>();
 
-    fs::create_dir_all(&recording_path).map_err(Error::Recording)?;
-
-    let original_path = recording_path.join("original");
-    let converted_path = recording_path.join("coverted.wav");
     let input = reciever_input(audio_rx, original_path);
 
     thread::spawn(move || -> Result<()> {

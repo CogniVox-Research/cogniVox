@@ -8,3 +8,7 @@ model="Small"
 vad="Silero"
 model_dir="./models"
 segment_buffer=4
+
+[default.recording_store]
+type="local"
+path="../storage"

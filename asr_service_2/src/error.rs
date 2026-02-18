@@ -16,4 +16,7 @@ pub enum Error {
 
     #[error("Error while recording audio: {0}")]
     Recording(std::io::Error),
+
+    #[error("Error while uploading audio to storage: {0}")]
+    Upload(#[from] object_store::Error),
 }

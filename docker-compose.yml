@@ -1,0 +1,75 @@
+services:
+  rabbitmq:
+    image: rabbitmq:3-alpine
+    container_name: rabbitmq-light-mgmt
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    environment:
+      RABBITMQ_DEFAULT_USER: appuser
+      RABBITMQ_DEFAULT_PASS: apppass
+    command: >
+      sh -c "rabbitmq-plugins enable --offline rabbitmq_management &&
+             rabbitmq-server"
+  seaweedfs:
+    image: chrislusf/seaweedfs:latest
+    container_name: seaweedfs-master
+    command: master -ip=seaweedfs -volumeSizeLimitMB=1000
+    ports:
+    - "9333:9333"
+    - "19333:19333"
+    volumes:
+    - seaweedfs-master-data:/data
+    networks:
+    - seaweedfs-network
+    restart: unless-stopped
+  seaweedfs-volume:
+      image: chrislusf/seaweedfs:latest
+      container_name: seaweedfs-volume
+      command: volume -mserver="seaweedfs:9333" -ip=seaweedfs-volume -port=8080 -max=100
+      volumes:
+        - seaweedfs-volume-data:/data
+      ports:
+        - "8080:9334"
+      depends_on:
+        - seaweedfs
+      networks:
+        - seaweedfs-network
+      restart: unless-stopped
+  seaweedfs-filer:
+    image: chrislusf/seaweedfs:latest
+    container_name: seaweedfs-filer
+    command: filer -master="master:9333" -ip=seaweedfs-filer
+    ports:
+    - "8888:8888"
+    - "18888:18888"
+    volumes:
+    - seaweedfs-filer-data:/data
+    depends_on:
+    - seaweedfs
+    - seaweedfs-volume
+    networks:
+    - seaweedfs-network
+    restart: unless-stopped
+  s3:
+    image: chrislusf/seaweedfs:latest
+    container_name: seaweedfs-s3
+    command: s3 -filer="seaweedfs-filer:8888" -config=/etc/seaweedfs/s3.json
+    ports:
+    - "8333:8333"
+    volumes:
+    - ./s3.json:/etc/seaweedfs/s3.json:ro
+    depends_on:
+    - seaweedfs-filer
+    networks:
+    - seaweedfs-network
+    restart: unless-stopped
+
+networks: 
+  seaweedfs-network: 
+    driver: bridge
+
+volumes: 
+  seaweedfs-master-data: 
+  seaweedfs-volume-data: 
+  seaweedfs-filer-data: 

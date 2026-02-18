@@ -21,7 +21,7 @@ COPY src src
 COPY assets assets
 RUN --mount=type=cache,target=/usr/local/cargo/registry \
     --mount=type=cache,target=$SCCACHE_DIR \
-    cargo build --no-default-features --features vulkan
+    cargo build --no-default-features --features vulkan,ffmpeg
 
 FROM debian:trixie-slim
 WORKDIR /app

@@ -49,19 +49,15 @@
             async function init() {
                 const stream = await navigator.mediaDevices.getUserMedia({
                     audio: true,
-                    video: false,
                 });
-                const audioTrack = stream.getAudioTracks()[0];
 
                 mediaRecorder = new MediaRecorder(stream, {
-                    mimeType: "audio/webm",
+                    mimeType: "audio/webm; codecs=opus",
                 });
 
                 mediaRecorder.ondataavailable = (evt) => {
                     if (!socket || socket.readyState !== WebSocket.OPEN) return;
-                    const reader = new FileReader();
-                    reader.onloadend = () => socket.send(reader.result);
-                    reader.readAsArrayBuffer(evt.data);
+                    socket.send(evt.data);
                 };
 
                 mediaRecorder.onstop = () => {
@@ -75,10 +71,9 @@
             }
 
             function openSocket() {
-                const url = "ws://localhost:8000/audio/test";
+                const id = Math.floor(Math.random() * 1e15).toString(36);
+                const url = `ws://${window.location.host}/audio/test-${id}`;
                 socket = new WebSocket(url);
-                socket.binaryType = "arraybuffer";
-
                 socket.onopen = () => log(`WebSocket connected to ${url}`);
                 socket.onerror = (e) => {
                     stop();

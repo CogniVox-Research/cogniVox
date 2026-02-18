@@ -1,5 +1,3 @@
-use std::path::PathBuf;
-
 use rocket::tokio::sync::mpsc;
 
 use crate::error::Result;

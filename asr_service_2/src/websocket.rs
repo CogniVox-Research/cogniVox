@@ -1,17 +1,17 @@
 use std::path::PathBuf;
 
 use rocket::{
-    State,
     futures::{SinkExt, StreamExt},
     tokio::select,
 };
 use rocket_ws::{Message, stream::DuplexStream};
 
-use crate::{audio_pipeline, config::Config, error, transcription};
+use crate::{audio_pipeline, dto::TranscriptionResult, error, transcription};
 
 pub(crate) async fn handle_websocket(
     mut stream: DuplexStream,
     recording_file: PathBuf,
+    session_id: String,
     model_config: asr_rs::whisper::Config,
 ) -> error::Result<()> {
     let (audio_tx, samples_rx) = audio_pipeline::audio_preprocessor(recording_file)?;
@@ -39,7 +39,8 @@ pub(crate) async fn handle_websocket(
                 }
              },
              Some(t)= text_rx.recv() => {
-                let text = serde_json::ser::to_string(&t?)?;
+                let result = TranscriptionResult::new(session_id.clone(), t?);
+                let text = serde_json::ser::to_string(&result)?;
                 stream.send(Message::Text( text)).await?;
              },
              else => break

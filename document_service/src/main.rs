@@ -1,138 +1,74 @@
 #[macro_use]
 extern crate rocket;
 
-use std::fs;
-use std::path::PathBuf;
-
-use regex::Regex;
+use common::file_store::Store;
+use rocket::form::Form;
+use rocket::response::content::RawHtml;
 use rocket::response::status::Custom;
-use rocket::serde::Deserialize;
 use rocket::serde::json::Json;
-use rocket::tokio::fs as async_fs;
-use rocket::tokio::io::AsyncReadExt;
 use rocket::{State, fs::TempFile, http::Status};
-use serde::Serialize;
 
-#[derive(Debug, Clone, Deserialize)]
-struct AppConfig {
-    upload_dir: PathBuf,
-}
+mod config;
+mod dto;
+mod extractor;
+mod upload;
 
-#[derive(Debug, Serialize, Deserialize)]
-struct FileData {
-    filename: String,
-    file_type: String,
-    text: String,
-}
-
-type AllowedContentTypes = &'static [&'static str];
-const ALLOWED_TYPES: AllowedContentTypes = &["text/plain", "application/pdf"];
-
-async fn extract_text_from_pdf(pdf_bytes: &[u8]) -> Result<String, Box<dyn std::error::Error>> {
-    let doc = lopdf::Document::load_from(pdf_bytes)?;
-    let mut text = Vec::new();
-
-    for (_, page_ref) in doc.get_pages().iter() {
-        let mut page_content = doc.get_page_content(*page_ref)?.to_owned();
-        text.append(&mut page_content);
-        text.push('\n' as u8);
-    }
-
-    Ok(String::from_utf8_lossy(text.trim_ascii_end()).into_owned())
+#[rocket::get("/")]
+async fn index() -> RawHtml<&'static str> {
+    RawHtml(include_str!("../assets/index.html"))
 }
 
 #[rocket::post("/upload/<session_id>", data = "<file>")]
 async fn upload_file(
-    session_id: String,
-    file: TempFile<'_>,
-    config: &State<AppConfig>,
-) -> Result<Json<FileData>, Custom<String>> {
+    session_id: &str,
+    file: Form<TempFile<'_>>,
+    store: &State<Store>,
+) -> Result<Json<dto::FileContent>, Custom<Json<String>>> {
     let mime_type = match file.content_type() {
-        Some(mime) => mime.0.to_string(),
-        None => return Err(Custom(Status::BadRequest, "Missing MIME type".into())),
+        Some(mime) => mime.to_owned(),
+        None => return Err(Custom(Status::BadRequest, Json("Missing MIME type".into()))),
     };
 
-    if !ALLOWED_TYPES.contains(&mime_type.as_str()) {
-        return Err(Custom(
-            Status::BadRequest,
-            format!("Only TXT and PDF files are supported (got {})", mime_type),
-        ));
-    }
+    let extension = mime_type.extension().map(|v| v.as_str()).unwrap_or("bin");
 
-    let mut content = Vec::new();
-    file.open()
-        .await
-        .unwrap()
-        .read_to_end(&mut content)
-        .await
-        .map_err(|e| Custom(Status::InternalServerError, format!("Read error: {}", e)))?;
-
-    let text = if mime_type == "text/plain" {
-        String::from_utf8_lossy(&content).to_string()
-    } else {
-        extract_text_from_pdf(&content).await.map_err(|e| {
-            Custom(
+    let text = match extractor::extract_text(&file, &mime_type).await {
+        Ok(Some(text)) => text,
+        Ok(None) => {
+            return Err(Custom(
+                Status::BadRequest,
+                Json(format!("Unsupported file type (got {})", mime_type)),
+            ));
+        }
+        Err(err) => {
+            return Err(Custom(
                 Status::InternalServerError,
-                format!("PDF extraction error: {}", e),
-            )
-        })?
+                Json(format!("Failed to parse document: {}", err)),
+            ));
+        }
     };
 
-    let filename = file
-        .name()
-        .map_or_else(|| "unknown".to_string(), |n| n.to_string());
-    let file_data = FileData {
-        filename,
-        file_type: mime_type.into(),
+    let content = dto::FileContent {
+        filename: format!("original.{extension}"),
+        file_type: mime_type.to_string(),
         text,
     };
 
-    let re = Regex::new(r#"[/\\?%*:|"<>[\x7F\x00-\x1F]]"#).unwrap();
-    let clean_session_id = re.replace_all(&session_id, "-").into_owned();
-    let upload_dir = config.upload_dir.join(&clean_session_id);
-    if upload_dir.exists() {
-        println!("Upload dir already exists – removing it");
-        fs::remove_dir_all(&upload_dir)
-            .map_err(|e| Custom(Status::InternalServerError, format!("Remove error: {}", e)))?;
-    }
-    async_fs::create_dir_all(&upload_dir).await.map_err(|e| {
-        Custom(
-            Status::InternalServerError,
-            format!("Create dir error: {}", e),
-        )
-    })?;
+    upload::upload_to_store(store, session_id, &file, &content)
+        .await
+        .unwrap();
 
-    let doc_path = upload_dir.join("document");
-    async_fs::write(&doc_path, &content).await.map_err(|e| {
-        Custom(
-            Status::InternalServerError,
-            format!("Write document error: {}", e),
-        )
-    })?;
-
-    let meta_json = serde_json::to_string_pretty(&file_data).unwrap();
-    let meta_path = upload_dir.join("transcript.json");
-    async_fs::write(meta_path, &meta_json).await.map_err(|e| {
-        Custom(
-            Status::InternalServerError,
-            format!("Write json error: {}", e),
-        )
-    })?;
-
-    Ok(Json(file_data))
+    Ok(Json(content))
 }
 
 #[rocket::launch]
 fn rocket() -> _ {
     let rocket = rocket::build();
-    let config: AppConfig = rocket.figment().extract().expect("Config should load");
+    let figment = rocket.figment();
+    let config: config::AppConfig = figment.extract().expect("Config should load");
+    let store = Store::from_config(&config.file_store).expect("Store should should create");
 
-    fs::create_dir_all(&config.upload_dir).unwrap_or_else(|e| {
-        panic!(
-            "Could not create uploads dir {:?}: {}",
-            &config.upload_dir, e
-        );
-    });
-
-    rocket.manage(config).mount("/", routes![upload_file])
+    rocket
+        .manage(config)
+        .manage(store)
+        .mount("/", routes![index, upload_file])
 }

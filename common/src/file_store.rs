@@ -3,7 +3,10 @@ use std::{ops::Deref, os::unix::fs::MetadataExt, path::PathBuf, sync::Arc};
 use bytes::Bytes;
 use object_store::{ObjectStoreExt, PutPayload};
 use serde::Deserialize;
-use tokio::{fs, io::AsyncReadExt};
+use tokio::{
+    fs,
+    io::{AsyncRead, AsyncReadExt},
+};
 
 #[derive(Debug, thiserror::Error)]
 pub enum StoreError {
@@ -49,15 +52,31 @@ impl Store {
     }
 
     pub async fn upload_file(&self, path: String, file_path: PathBuf) -> Result<(), StoreError> {
-        let mut file = fs::File::open(file_path).await?;
+        let file = fs::File::open(file_path).await?;
         let metadata = file.metadata().await?;
 
         let size = metadata.size();
-        let mut data = Vec::with_capacity(size as usize);
-        file.read_to_end(&mut data).await?;
+        self.upload_from_reader(path, file, Some(size)).await
+    }
+
+    pub async fn upload_from_reader<T: AsyncRead>(
+        &self,
+        path: String,
+        mut reader: T,
+        size: Option<u64>,
+    ) -> Result<(), StoreError>
+    where
+        T: Unpin,
+    {
+        let mut data = Vec::with_capacity(size.unwrap_or(1000) as usize);
+        reader.read_to_end(&mut data).await?;
 
         // TODO: use multipart for large files
 
+        self.upload(path, data).await
+    }
+
+    pub async fn upload(&self, path: String, data: Vec<u8>) -> Result<(), StoreError> {
         let upload_path = object_store::path::Path::from(path);
 
         let result = self

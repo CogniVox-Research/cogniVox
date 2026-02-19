@@ -3,7 +3,7 @@ from contextlib import asynccontextmanager
 import json
 
 import aio_pika
-from shared import rabbitmq
+from shared import rabbitmq, rpc
 
 from .dto import ASRData, UnstuckDetection
 from .config import config
@@ -13,6 +13,13 @@ from .detector import detector
 __all__ = ["app", "config"]
 
 from fastapi import FastAPI
+
+
+class LLMService(rpc.RPCInterface):
+    async def get_continue_for(self, session_id: str, current_text: str): ...
+
+
+llm_server: LLMService = None  # pyright: ignore[reportAssignmentType]
 
 
 async def read_queue(conn: AbstractChannel):
@@ -56,10 +63,13 @@ async def read_queue(conn: AbstractChannel):
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    global llm_server
     async with rabbitmq.connect(config.rabbitmq_url) as con:
-        task = asyncio.create_task(read_queue(con))
-        yield
-        task.cancel()
+        async with rpc.RPCClient(con) as client:
+            llm_server = client.get_server("llm-server", LLMService)
+            task = asyncio.create_task(read_queue(con))
+            yield
+            task.cancel()
 
 
 app = FastAPI(lifespan=lifespan)

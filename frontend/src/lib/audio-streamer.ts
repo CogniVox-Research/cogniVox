@@ -1,9 +1,13 @@
-import testAudio from '../assets/micro-machines.wav';
+import { streamAudioFileToWebSocket, type AudioStreamController } from './test-stream';
 import { toBase64 } from './utils';
 
+import audioURL from "../assets/demo.opus?url";
+import audioText from "../assets/demo.txt?url";
+
 type SpeechOptions = {
-    doc: File
-    settings?: {}
+    doc: Blob | File,
+    settings?: {},
+    isTestStream?: boolean
 }
 
 export default class AudioStreamer {
@@ -15,7 +19,7 @@ export default class AudioStreamer {
     #transcriptHandler: ((m: any) => void) | null = null;
     #speechScoreHandler: ((m: any) => void) | null = null;
     #stateHandler: (() => void) | null = null;
-    #isProcessing: boolean = false;
+    #testStreamer: AudioStreamController | null = null;
 
     constructor(url: string) {
         this.#url = url;
@@ -39,9 +43,6 @@ export default class AudioStreamer {
                     }
 
                     console.log("type: " + data.type, data)
-                    if (data.type === "completed") {
-                        this.#isProcessing = false;
-                    }
 
                     if (data.type === "completed" || data.type === "partial") {
                         if (this.#messageHandler) {
@@ -66,7 +67,6 @@ export default class AudioStreamer {
                 ws.onclose = () => {
                     console.log("WebSocket Disconnected.");
                     this.#connection = null;
-                    this.#isProcessing = false;
                     if (this.#stateHandler) this.#stateHandler();
                 };
                 ws.onerror = (error) => console.error('WebSocket Error:', error);
@@ -109,6 +109,10 @@ export default class AudioStreamer {
 
         const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
 
+        if (options.isTestStream) {
+            return
+        }
+
         this.#recorder = new MediaRecorder(stream, {
             mimeType: 'audio/webm; codecs=opus'
         });
@@ -136,33 +140,29 @@ export default class AudioStreamer {
 
     async startTestStream() {
         await this.connectWS();
-        this.#isProcessing = true;
+        await this.startStream({ doc: await (await fetch(audioText)).blob(), isTestStream: true })
 
-        const response = await fetch(testAudio);
-        const audioBlob = await response.blob();
 
         if (this.#connection == null) {
             return;
         }
 
+
+        const control = streamAudioFileToWebSocket(this.#connection, audioURL);
+        this.#testStreamer = control;
+        this.#recorder = control.recorder;
+
         if (this.#stateHandler) this.#stateHandler();
 
-        this.#connection.send(audioBlob);
-        console.log(`Test Stream: Sent ${audioBlob.size} bytes`);
-
-        const audioUrl = URL.createObjectURL(audioBlob);
-        const audio = new Audio(audioUrl);
-        audio.onloadedmetadata = () => {
-            const length = audio.duration * 200;
-            setTimeout(() => {
-                this.#connection?.send(JSON.stringify({ "type": "speech_end" }))
-            }, length + 500);
-        }
+        await control.play();
+        await this.stopStreaming();
     }
 
     async stopStreaming() {
         console.trace("Stop called")
         this.#recorder?.stop();
+        this.#testStreamer?.stop();
+
         if (this.#recorder) {
             this.#recorder.onstop = () => {
                 setTimeout(() => {
@@ -172,10 +172,12 @@ export default class AudioStreamer {
             this.#recorder = null;
         }
 
+        this.#testStreamer = null;
+
         if (this.#stateHandler) this.#stateHandler();
     }
 
     get isRecording() {
-        return this.#recorder != null || this.#isProcessing;
+        return this.#recorder != null;
     }
 }

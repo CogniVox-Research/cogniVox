@@ -29,12 +29,18 @@ class StuckDetector:
         if data.session_id in self.detections:
             if not self.detections[data.session_id]:
                 logger.debug("Generating suggestions")
+
+                # from . import llm_server
+                # suggestions = await llm_server.get_continue_for(data.session_id, data.full_text)
+
+                suggestion = "test"
+
                 # suggestion generation
                 self.detections[data.session_id] = True
                 return dto.StuckDetection(
                     stuck_id="PLACEHOLDER",
                     reason="repetition" if is_repeating else "silence",
-                    suggestions=["test"],
+                    suggestions=[suggestion],
                     at=datetime.datetime.now(),
                 )
 

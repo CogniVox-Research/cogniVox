@@ -6,3 +6,8 @@ services:
     build:
       context: .
       dockerfile: ./asr_service/Dockerfile
+
+  document_service:
+    build:
+      context: .
+      dockerfile: ./document_service/Dockerfile

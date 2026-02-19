@@ -1,4 +1,4 @@
-use std::{ops::Deref, os::unix::fs::MetadataExt, path::PathBuf, sync::Arc};
+use std::{fmt::Binary, ops::Deref, os::unix::fs::MetadataExt, path::PathBuf, sync::Arc};
 
 use bytes::Bytes;
 use object_store::{ObjectStoreExt, PutPayload};
@@ -24,14 +24,22 @@ pub enum StoreError {
 #[serde(rename_all = "snake_case", tag = "type")]
 pub enum StoreConfig {
     InMemory,
-    Local { path: PathBuf },
-    S3,
+    Local {
+        path: PathBuf,
+    },
+    S3 {
+        endpoint: String,
+        bucket: String,
+        access_key_id: String,
+        secret_access_key: String,
+    },
 }
 
 #[derive(Clone)]
 pub enum Store {
     InMemory(Arc<object_store::memory::InMemory>),
     Local(Arc<object_store::local::LocalFileSystem>),
+    S3(Arc<object_store::aws::AmazonS3>),
 }
 
 impl Store {
@@ -45,7 +53,23 @@ impl Store {
                     .map_err(StoreError::Create)?;
                 Store::Local(Arc::new(ls))
             }
-            StoreConfig::S3 => todo!(),
+            StoreConfig::S3 {
+                endpoint,
+                bucket,
+                access_key_id,
+                secret_access_key,
+            } => {
+                let s3 = object_store::aws::AmazonS3Builder::new()
+                    .with_allow_http(true)
+                    .with_endpoint(endpoint)
+                    .with_access_key_id(access_key_id)
+                    .with_secret_access_key(secret_access_key)
+                    .with_bucket_name(bucket)
+                    .build()
+                    .unwrap();
+
+                Store::S3(Arc::new(s3))
+            }
         };
 
         Ok(store)
@@ -99,6 +123,7 @@ impl Deref for Store {
         match self {
             Store::InMemory(in_memory) => in_memory,
             Store::Local(local) => local,
+            Self::S3(s3) => s3,
         }
     }
 }

@@ -1,3 +1,4 @@
+use common::file_store::Store;
 use rocket::{
     futures::{SinkExt, StreamExt},
     tokio::select,
@@ -6,7 +7,7 @@ use rocket_ws::{Message, stream::DuplexStream};
 use tempdir::TempDir;
 
 use crate::{
-    RecordingStore, audio_processing,
+    audio_processing,
     dto::TranscriptionResult,
     error::{self, Error},
     transcription,
@@ -16,7 +17,7 @@ pub(crate) async fn handle_websocket(
     mut stream: DuplexStream,
     session_id: String,
     model_config: asr_rs::whisper::Config,
-    store: RecordingStore,
+    store: Store,
 ) -> error::Result<()> {
     let recording_dir = TempDir::new("asr_recording").map_err(Error::Recording)?;
     let original_path = recording_dir.path().join("original");

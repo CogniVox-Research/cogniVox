@@ -1,4 +1,5 @@
-use rocket::{State, fs::NamedFile};
+use common::file_store::Store;
+use rocket::{State, response::content::RawHtml};
 use rocket_ws::{Channel, WebSocket};
 
 use crate::config::Config;
@@ -7,25 +8,22 @@ mod audio_processing;
 mod config;
 mod dto;
 pub mod error;
-mod file_store;
 mod transcription;
 mod websocket;
-
-pub use file_store::RecordingStore;
 
 #[macro_use]
 extern crate rocket;
 
 #[get("/")]
-async fn index() -> Result<NamedFile, std::io::Error> {
-    NamedFile::open("assets/index.html").await
+async fn index() -> RawHtml<&'static str> {
+    RawHtml(include_str!("../assets/index.html"))
 }
 
 #[get("/audio/<session_id>")]
 fn stream_audio(
     ws: WebSocket,
     config: &State<Config>,
-    store: &State<RecordingStore>,
+    store: &State<Store>,
     session_id: &str,
 ) -> Channel<'static> {
     let model_config = config.model.clone();
@@ -44,14 +42,9 @@ fn stream_audio(
 
 #[launch]
 async fn rocket() -> _ {
-    fern::Dispatch::new()
-        .level(log::LevelFilter::Trace)
-        .apply()
-        .unwrap();
-
     let rocket = rocket::build();
     let cfg: config::Config = rocket.figment().extract().expect("config");
-    let store = RecordingStore::from_config(&cfg.recording_store);
+    let store = Store::from_config(&cfg.recording_store);
 
     rocket
         .manage(cfg)

@@ -58,6 +58,7 @@ version = "0.1.0"
 dependencies = [
  "asr_rs",
  "bytes",
+ "common",
  "ez-ffmpeg",
  "fern",
  "ffmpeg-next",
@@ -286,6 +287,17 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "faf9468729b8cbcea668e36183cb69d317348c2e08e994829fb56ebfdfbaac34"
 dependencies = [
  "windows-sys 0.61.2",
+]
+
+[[package]]
+name = "common"
+version = "0.1.0"
+dependencies = [
+ "bytes",
+ "object_store",
+ "serde",
+ "thiserror 2.0.18",
+ "tokio",
 ]
 
 [[package]]

@@ -19,7 +19,7 @@ pub enum StoreError {
 
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "snake_case", tag = "type")]
-pub enum StoreMode {
+pub enum StoreConfig {
     InMemory,
     Local { path: PathBuf },
     S3,
@@ -32,15 +32,17 @@ pub enum Store {
 }
 
 impl Store {
-    pub fn from_config(cfg: &StoreMode) -> Result<Store, StoreError> {
+    pub fn from_config(cfg: &StoreConfig) -> Result<Store, StoreError> {
         let store = match cfg {
-            StoreMode::InMemory => Store::InMemory(Arc::new(object_store::memory::InMemory::new())),
-            StoreMode::Local { path } => {
+            StoreConfig::InMemory => {
+                Store::InMemory(Arc::new(object_store::memory::InMemory::new()))
+            }
+            StoreConfig::Local { path } => {
                 let ls = object_store::local::LocalFileSystem::new_with_prefix(path)
                     .map_err(StoreError::Create)?;
                 Store::Local(Arc::new(ls))
             }
-            StoreMode::S3 => todo!(),
+            StoreConfig::S3 => todo!(),
         };
 
         Ok(store)

@@ -1,3 +1,5 @@
+use common::file_store;
+
 pub type Result<T> = std::result::Result<T, Error>;
 
 #[derive(Debug, thiserror::Error)]
@@ -23,5 +25,5 @@ pub enum Error {
     Recording(std::io::Error),
 
     #[error("Error while uploading audio to storage: {0}")]
-    Upload(#[from] object_store::Error),
+    Upload(#[from] file_store::StoreError),
 }

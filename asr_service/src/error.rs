@@ -5,12 +5,12 @@ pub type Result<T> = std::result::Result<T, Error>;
 #[derive(Debug, thiserror::Error)]
 pub enum Error {
     #[cfg(feature = "ffmpeg")]
-    #[error("FFmpeg returned an error: {0}")]
-    FFmpeg(#[from] ez_ffmpeg::error::Error),
+    #[error("Error while processing audio: {0}")]
+    Audio(#[from] ez_ffmpeg::error::Error),
 
-    #[cfg(feature = "symphonia")]
-    #[error("Symphonia returned an error: {0}")]
-    Symphonia(#[from] symphonia::core::errors::Error),
+    #[cfg(feature = "rust_audio")]
+    #[error("Error while processing audio: {0}")]
+    Audio(crate::audio_processing::AudioError),
 
     #[error("ASR returned an error: {0}")]
     ASR(#[from] asr_rs::Error),

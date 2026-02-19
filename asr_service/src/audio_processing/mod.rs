@@ -6,11 +6,19 @@ mod ffmpeg;
 #[cfg(feature = "ffmpeg")]
 use ffmpeg::audio_preprocessor;
 
-#[cfg(feature = "symphonia")]
-mod symphonia;
+#[cfg(feature = "rust_audio")]
+mod rust;
 
-#[cfg(feature = "symphonia")]
-use symphonia::audio_preprocessor;
+#[cfg(feature = "rust_audio")]
+pub use rust::AudioError;
+
+#[cfg(feature = "rust_audio")]
+use rust::audio_preprocessor;
+
+#[cfg(all(feature = "ffmpeg", feature = "rust_audio"))]
+compile_error!("ffmpeg and rust_audio are mutually exclusive and cannot be enabled together");
+#[cfg(all(not(feature = "ffmpeg"), not(feature = "rust_audio")))]
+compile_error!("One of the following features should be enabled: ffmpeg or rust_audio");
 
 pub struct AudioPipe {
     pub audio_tx: mpsc::Sender<Vec<u8>>,
@@ -18,8 +26,8 @@ pub struct AudioPipe {
 }
 
 pub struct AudioConfig {
-    pub(crate) original_path: PathBuf,
-    pub(crate) converted_path: PathBuf,
+    pub(crate) original: std::fs::File,
+    pub(crate) converted: std::fs::File,
 
     pub(crate) audio_rx: mpsc::Receiver<Vec<u8>>,
     pub(crate) samples_tx: mpsc::Sender<Vec<f32>>,
@@ -31,8 +39,8 @@ impl AudioPipe {
         let (samples_tx, samples_rx) = mpsc::channel::<Vec<f32>>();
 
         let cfg = AudioConfig {
-            original_path,
-            converted_path,
+            original: std::fs::File::create(original_path).unwrap(),
+            converted: std::fs::File::create(converted_path).unwrap(),
             audio_rx,
             samples_tx,
         };

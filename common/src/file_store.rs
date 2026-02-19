@@ -1,0 +1,83 @@
+use std::{ops::Deref, os::unix::fs::MetadataExt, path::PathBuf, sync::Arc};
+
+use bytes::Bytes;
+use object_store::{ObjectStoreExt, PutPayload};
+use serde::Deserialize;
+use tokio::{fs, io::AsyncReadExt};
+
+#[derive(Debug, thiserror::Error)]
+pub enum StoreError {
+    #[error("Failed to create store: {0}")]
+    Create(object_store::Error),
+
+    #[error(transparent)]
+    IO(#[from] std::io::Error),
+
+    #[error("Failed to upload file {0} to store: {1}")]
+    Upload(object_store::path::Path, object_store::Error),
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "snake_case", tag = "type")]
+pub enum StoreMode {
+    InMemory,
+    Local { path: PathBuf },
+    S3,
+}
+
+#[derive(Clone)]
+pub enum Store {
+    InMemory(Arc<object_store::memory::InMemory>),
+    Local(Arc<object_store::local::LocalFileSystem>),
+}
+
+impl Store {
+    pub fn from_config(cfg: &StoreMode) -> Result<Store, StoreError> {
+        let store = match cfg {
+            StoreMode::InMemory => Store::InMemory(Arc::new(object_store::memory::InMemory::new())),
+            StoreMode::Local { path } => {
+                let ls = object_store::local::LocalFileSystem::new_with_prefix(path)
+                    .map_err(StoreError::Create)?;
+                Store::Local(Arc::new(ls))
+            }
+            StoreMode::S3 => todo!(),
+        };
+
+        Ok(store)
+    }
+
+    pub async fn upload_file(&self, path: String, file_path: PathBuf) -> Result<(), StoreError> {
+        let mut file = fs::File::open(file_path).await?;
+        let metadata = file.metadata().await?;
+
+        let size = metadata.size();
+        let mut data = Vec::with_capacity(size as usize);
+        file.read_to_end(&mut data).await?;
+
+        // TODO: use multipart for large files
+
+        let upload_path = object_store::path::Path::from(path);
+
+        let result = self
+            .put(&upload_path, PutPayload::from_bytes(Bytes::from(data)))
+            .await;
+
+        if let Err(err) = result {
+            return Err(StoreError::Upload(upload_path, err));
+        }
+
+        Ok(())
+    }
+}
+
+impl Deref for Store {
+    type Target = dyn object_store::ObjectStore;
+
+    #[inline(always)]
+    fn deref(&self) -> &Self::Target {
+        match self {
+            Store::InMemory(in_memory) => in_memory,
+            Store::Local(local) => local,
+        }
+    }
+}

@@ -44,7 +44,7 @@ fn stream_audio(
 async fn rocket() -> _ {
     let rocket = rocket::build();
     let cfg: config::Config = rocket.figment().extract().expect("config");
-    let store = Store::from_config(&cfg.recording_store);
+    let store = Store::from_config(&cfg.recording_store).expect("store should load");
 
     rocket
         .manage(cfg)

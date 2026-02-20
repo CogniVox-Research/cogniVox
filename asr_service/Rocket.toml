@@ -7,6 +7,7 @@ model="Small"
 vad="Silero"
 model_dir="./models"
 segment_buffer=4
+silence_threshold=3
 
 [default.recording_store]
 type="local"

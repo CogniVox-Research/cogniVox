@@ -25,7 +25,7 @@ pub fn get_header(data: &[u8]) -> Result<Header, AudioError> {
         let tag = tag?;
         match &tag {
             MatroskaSpec::Channels(v) => {
-                log::debug!("Got Num channels: {v}");
+                log::debug!(target:"opus_decode", "Got Num channels: {v}");
                 channels = match *v {
                     1 => Some(Channels::Mono),
                     2 => Some(Channels::Stereo),
@@ -35,15 +35,17 @@ pub fn get_header(data: &[u8]) -> Result<Header, AudioError> {
                 };
             }
             MatroskaSpec::SamplingFrequency(v) => {
-                log::debug!("Frequency: {v}");
-                if v % 1.0 == 0.0 {
+                log::debug!(target:"opus_decode", "Frequency: {v}");
+                if v % 1.0 != 0.0 {
                     return Err(AudioError::Custom("Frequency is not an integer".to_owned()));
                 }
                 sample_rate = *v as usize;
             }
             MatroskaSpec::CodecName(n) => {
-                log::debug!("Codec {n}");
-                return Err(AudioError::Custom("Unsupported codec".to_owned()));
+                log::debug!(target:"opus_decode", "Codec {n}");
+                if n.to_ascii_lowercase() != "opus" {
+                    return Err(AudioError::Custom(format!("Unsupported codec: {n}")));
+                }
             }
             MatroskaSpec::SimpleBlock(packet) => {
                 if channels.is_none() || sample_rate == 0 {
@@ -73,7 +75,7 @@ pub fn get_header(data: &[u8]) -> Result<Header, AudioError> {
                 n_chunks += 1;
             }
             _ => {
-                println!("tag : {tag:?}");
+                log::debug!(target:"opus_decode", "tag : {tag:?}");
             }
         }
 
@@ -82,7 +84,7 @@ pub fn get_header(data: &[u8]) -> Result<Header, AudioError> {
         // }
     }
 
-    println!("chunk size: {chunk_size} {n_chunks}");
+    log::debug!(target:"opus_decode", "chunk size: {chunk_size} {n_chunks}");
 
     if let Some(channels) = channels
         && sample_rate != 0

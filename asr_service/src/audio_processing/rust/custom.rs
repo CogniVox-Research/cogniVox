@@ -27,12 +27,12 @@ pub fn audio_preprocessor(mut cfg: AudioConfig) -> Result<(), AudioError> {
             sample_format: hound::SampleFormat::Float,
         },
     )?;
-    log::debug!("Parsed header {header:?}");
+    log::debug!(target:"opus_decode", "Parsed header {header:?}");
 
     let mut decoder = WebmAudioDecoder::new(header)?;
 
     let samples = decoder.decode_webm_chunk(&chunk)?;
-    println!("Received {} samples", samples.len());
+    log::debug!(target:"opus_decode", "Received {} samples", samples.len());
 
     cfg.original.write(&chunk).map_err(AudioError::Recording)?;
     for sample in &samples {
@@ -46,7 +46,7 @@ pub fn audio_preprocessor(mut cfg: AudioConfig) -> Result<(), AudioError> {
         let samples = decoder.decode_webm_chunk(&chunk)?;
         cfg.original.write(&chunk).map_err(AudioError::Recording)?;
 
-        println!("Received {} samples", samples.len());
+        log::debug!(target:"opus_decode", "Received {} samples", samples.len());
 
         cfg.original.write(&chunk).map_err(AudioError::Recording)?;
         for sample in &samples {

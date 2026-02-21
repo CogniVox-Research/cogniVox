@@ -1,81 +1,25 @@
 use rocket_ws::Message;
 use serde::{Deserialize, Serialize};
-use validator::Validate;
 
-use crate::error::Error;
-
-#[derive(Debug, Deserialize)]
-pub struct Stress {
-    pub eda_mean: Option<f64>,
-    pub eda_std: Option<f64>,
-    pub eda_min: Option<f64>,
-    pub eda_max: Option<f64>,
-    pub bvp_mean: f64,
-    pub bvp_std: f64,
-    pub temp_mean: Option<f64>,
-    pub temp_std: Option<f64>,
-    pub acc_mag_mean: Option<f64>,
-    pub acc_mag_std: Option<f64>,
-
-    // Lite specific
-    pub bvp_min: Option<f64>,
-    pub bvp_max: Option<f64>,
-    pub bvp_range: Option<f64>,
-    pub bvp_energy: Option<f64>,
-    pub acc_mean: Option<f64>,
-    pub acc_std: Option<f64>,
-    pub acc_max: Option<f64>,
-}
-
-#[derive(Debug, Serialize)]
-pub struct StressResult {
-    model_used: String,
-    label: i64,
-    stress_score: f64,
-    suggestion: String,
-}
-
-#[derive(Debug, Serialize)]
-pub struct ClientSettings {
-    #[serde(flatten)]
-    pub scene: SceneType,
-    pub distractions: bool,
-    pub qa: bool,
-    pub difficulty: AudienceDifficulty,
-}
-#[derive(Debug, Serialize)]
-#[serde(tag = "scene")]
-pub enum SceneType {
-    Interview,
-    BoardRoom { size: i64 },
-    Stage { size: i64 },
-}
-
-#[derive(Debug, Serialize)]
-#[serde(rename_all = "snake_case")]
-pub enum AudienceDifficulty {
-    Easy,
-    Medium,
-    Hard,
-}
+use crate::{dto, error::Error};
 
 /// Protocol for communication Game -> Server
 #[derive(Debug, Deserialize)]
-#[serde(tag = "type")]
+#[serde(tag = "type", content = "data")]
 pub enum GameInbound {
     #[serde(skip)]
     Audio(Vec<u8>),
-    Stress(Stress),
+    Stress(dto::stress::StressRequest),
     SpeechEnd,
     QuestionEnd,
 }
 
 /// Protocol for communication Server -> Game
 #[derive(Debug, Serialize)]
-#[serde(tag = "type")]
+#[serde(tag = "type", content = "data")]
 pub enum GameOutbound {
-    Init(ClientSettings),
-    Stress(StressResult),
+    Init(dto::settings::Settings),
+    Stress(dto::stress::StressResponse),
     Stuck,
     StuckSuggestion(String),
     Err(String),
@@ -87,10 +31,11 @@ pub enum GameOutbound {
 pub enum WebInbound {}
 
 #[derive(Debug, Serialize)]
-#[serde(tag = "type")]
+#[serde(tag = "type", content = "data")]
 pub enum WebOutbound {
-    ASR,
-    Stress(StressResult),
+    ASR(dto::asr::ASR),
+    Stress(dto::stress::StressResponse),
+    QR(String),
 }
 
 impl TryFrom<Message> for GameInbound {

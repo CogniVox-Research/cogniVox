@@ -2,8 +2,9 @@
 address = "0.0.0.0"
 port=8000
 
-[default.model]
-model="Small"
+[default.asr]
+backend="whisper"
+model="Tiny"
 vad="Silero"
 model_dir="./models"
 segment_buffer=4

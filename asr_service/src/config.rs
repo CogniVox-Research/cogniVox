@@ -3,6 +3,6 @@ use serde::Deserialize;
 
 #[derive(Debug, Deserialize)]
 pub struct Config {
-    pub model: asr_rs::whisper::Config,
+    pub asr: asr_rs::Config,
     pub recording_store: StoreConfig,
 }

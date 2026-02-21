@@ -2,8 +2,6 @@ use common::file_store::Store;
 use rocket::{State, response::content::RawHtml};
 use rocket_ws::{Channel, WebSocket};
 
-use crate::config::Config;
-
 mod audio_processing;
 mod config;
 mod dto;
@@ -22,17 +20,17 @@ async fn index() -> RawHtml<&'static str> {
 #[get("/audio/<session_id>")]
 fn stream_audio(
     ws: WebSocket,
-    config: &State<Config>,
+    transcriber: &State<asr_rs::Transcriber>,
     store: &State<Store>,
     session_id: &str,
 ) -> Channel<'static> {
-    let model_config = config.model.clone();
+    let transcriber = transcriber.inner().clone();
     let session_id = session_id.to_owned();
     let store = store.inner().clone();
 
     ws.channel(move |stream| {
         Box::pin(async move {
-            websocket::handle_websocket(stream, session_id, model_config, store)
+            websocket::handle_websocket(stream, session_id, transcriber, store)
                 .await
                 .unwrap();
             Ok(())
@@ -45,9 +43,14 @@ async fn rocket() -> _ {
     let rocket = rocket::build();
     let cfg: config::Config = rocket.figment().extract().expect("config");
     let store = Store::from_config(&cfg.recording_store).expect("store should load");
+    let transcriber = asr_rs::Transcriber::new(cfg.asr).expect("transcriber should be created");
+
+    transcriber
+        .download_models()
+        .expect("Models should download successfully");
 
     rocket
-        .manage(cfg)
+        .manage(transcriber)
         .manage(store)
         .mount("/", routes![index, stream_audio])
 }

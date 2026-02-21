@@ -16,7 +16,7 @@ use crate::{
 pub(crate) async fn handle_websocket(
     mut stream: DuplexStream,
     session_id: String,
-    model_config: asr_rs::whisper::Config,
+    transcriber: asr_rs::Transcriber,
     store: Store,
 ) -> error::Result<()> {
     let recording_dir = TempDir::new("asr_recording").map_err(Error::Recording)?;
@@ -25,7 +25,7 @@ pub(crate) async fn handle_websocket(
 
     let audio_pipeline =
         audio_processing::AudioPipe::create(original_path.clone(), converted_path.clone());
-    let mut text_rx = transcription::start_transcription(model_config, audio_pipeline.samples_rx);
+    let mut text_rx = transcription::start_transcription(transcriber, audio_pipeline.samples_rx);
 
     loop {
         select! {

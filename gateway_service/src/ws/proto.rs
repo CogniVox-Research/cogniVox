@@ -10,7 +10,9 @@ pub enum GameInbound {
     #[serde(skip)]
     Audio(Vec<u8>),
     Stress(dto::stress::StressRequest),
+    SpeechStart,
     SpeechEnd,
+    QuestionStart,
     QuestionEnd,
 }
 

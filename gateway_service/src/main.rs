@@ -7,13 +7,13 @@ use common::file_store::Store;
 use rocket::{
     State,
     futures::lock::Mutex,
+    response::content::RawHtml,
     tokio::{self},
 };
 use rocket_ws::{Channel, WebSocket};
-use uuid::Uuid;
 
 use crate::{
-    proto::{WebInbound, WebOutbound},
+    proto::{GameInbound, GameOutbound, WebInbound, WebOutbound},
     ws::{Recv, socket_handler},
 };
 
@@ -24,11 +24,11 @@ mod proto;
 mod ws;
 
 #[rocket::get("/")]
-async fn index() -> &'static str {
-    "Hello World!"
+async fn index() -> RawHtml<&'static str> {
+    RawHtml(include_str!("../assets/index.html"))
 }
 
-type Pending = Mutex<HashMap<Uuid, Recv<WebInbound, WebOutbound>>>;
+type Pending = Mutex<HashMap<uuid::Uuid, Recv<WebInbound, WebOutbound>>>;
 
 #[rocket::get("/test")]
 async fn test(state: &State<Pending>) {
@@ -40,6 +40,32 @@ async fn test(state: &State<Pending>) {
         }
         f.1.1.send(WebOutbound::QR("Hello".to_owned())).await;
     }
+}
+
+#[rocket::get("/ws/game/<session_id>")]
+async fn game_session(
+    ws: WebSocket,
+    session_id: uuid::Uuid,
+    state: &State<Pending>,
+) -> Channel<'_> {
+    let (inp, out) = crate::ws::make_con_pair::<GameInbound, GameOutbound>();
+
+    let mut cache_guard = state.lock().await;
+    let Some(web) = cache_guard.remove(&session_id) else {
+        panic!("Invalid")
+    };
+
+    web.1.send(WebOutbound::GameConnected).await.unwrap();
+
+    ws.channel(move |stream| {
+        Box::pin(async move {
+            tokio::spawn(async {
+                socket_handler(stream, out).await;
+                // TODO: remove from pending
+            });
+            Ok(())
+        })
+    })
 }
 
 #[rocket::get("/ws/web")]
@@ -77,8 +103,9 @@ fn rocket() -> _ {
     rocket
         .manage(config)
         .manage(store)
-        .manage(Mutex::new(
-            HashMap::<Uuid, Recv<WebInbound, WebOutbound>>::new(),
-        ))
-        .mount("/", routes![index, web_session, test])
+        .manage(Mutex::new(HashMap::<
+            uuid::Uuid,
+            Recv<WebInbound, WebOutbound>,
+        >::new()))
+        .mount("/", routes![index, web_session, test, game_session])
 }

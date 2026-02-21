@@ -1,62 +1,199 @@
 <!doctype html>
 <html lang="en">
     <head>
-        <meta charset="utf-8" />
-        <title>upload test</title>
-
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>Game Protocol Debugger</title>
         <style>
             body {
-                font-family: Arial, sans-serif;
-                margin: 2rem;
+                font-family: sans-serif;
+                display: flex;
+                height: 100vh;
+                margin: 0;
+                background: #f4f4f9;
             }
-            form {
-                margin-bottom: 1.5rem;
+            #sidebar {
+                width: 350px;
+                padding: 20px;
+                border-right: 1px solid #ccc;
+                overflow-y: auto;
+                background: #fff;
             }
-            #response {
+            #log-container {
+                flex-grow: 1;
+                padding: 20px;
+                display: flex;
+                flex-direction: column;
+            }
+            #logs {
+                flex-grow: 1;
+                background: #1e1e1e;
+                color: #d4d4d4;
+                padding: 15px;
+                border-radius: 8px;
+                overflow-y: auto;
+                font-family: monospace;
                 white-space: pre-wrap;
-                background: #f8f8f8;
-                padding: 1rem;
-                border: 1px solid #ddd;
+            }
+            .btn-group {
+                margin-bottom: 20px;
+                border-bottom: 1px solid #eee;
+                padding-bottom: 10px;
+            }
+            button {
+                display: block;
+                width: 100%;
+                padding: 10px;
+                margin: 5px 0;
+                cursor: pointer;
+                background: #007bff;
+                color: white;
+                border: none;
+                border-radius: 4px;
+                font-weight: bold;
+            }
+            button:hover {
+                background: #0056b3;
+            }
+            button.secondary {
+                background: #6c757d;
+            }
+            .status {
+                padding: 5px;
+                margin-bottom: 10px;
+                border-radius: 4px;
+                font-weight: bold;
+                text-align: center;
+            }
+            .connected {
+                background: #d4edda;
+                color: #155724;
+            }
+            .disconnected {
+                background: #f8d7da;
+                color: #721c24;
+            }
+            h3 {
+                margin-top: 0;
+                font-size: 1.1rem;
+                color: #333;
             }
         </style>
     </head>
-
     <body>
-        <form id="uploadForm">
-            <input type="file" name="file" required />
-            <button type="submit">Upload</button>
-        </form>
+        <div id="sidebar">
+            <div id="status" class="status disconnected">Disconnected</div>
+            <button onclick="connect()" class="secondary">Reconnect</button>
 
-        <div id="response"></div>
+            <hr />
+
+            <div class="btn-group">
+                <button onclick="sendStress()">Send Stress Request</button>
+                <button onclick="sendMessage('speech_end')">
+                    Send SpeechEnd
+                </button>
+                <button onclick="sendMessage('question_end')">
+                    Send QuestionEnd
+                </button>
+            </div>
+        </div>
+
+        <div id="log-container">
+            <div
+                style="
+                    display: flex;
+                    justify-content: space-between;
+                    align-items: center;
+                "
+            >
+                <h3>Message Log (Game -> Server)</h3>
+                <button
+                    onclick="clearLogs()"
+                    style="width: auto; padding: 5px 15px"
+                >
+                    Clear
+                </button>
+            </div>
+            <div id="logs">Waiting for connection...</div>
+        </div>
 
         <script>
-            const onUpload = async (e) => {
-                e.preventDefault();
+            let socket;
+            const logs = document.getElementById("logs");
+            const status = document.getElementById("status");
 
-                const form = e.target;
-                const fileInput = form.querySelector("input[type=file]");
-                if (!fileInput.files.length) {
-                    alert("Please select a file first.");
+            function connect() {
+                const protocol =
+                    window.location.protocol === "https:" ? "wss:" : "ws:";
+                // Adjust the URL if your server is hosted elsewhere
+                const wsUrl = `${protocol}//${window.location.host}/ws/web`;
+
+                log(`Connecting to ${wsUrl}...`, "system");
+                socket = new WebSocket(wsUrl);
+
+                socket.onopen = () => {
+                    status.innerText = "Connected";
+                    status.className = "status connected";
+                    log("WebSocket Connected", "success");
+                };
+
+                socket.onmessage = (event) => {
+                    log(`INBOUND: ${event.data}`, "in");
+                };
+
+                socket.onclose = () => {
+                    status.innerText = "Disconnected";
+                    status.className = "status disconnected";
+                    log("WebSocket Disconnected", "error");
+                };
+
+                socket.onerror = (error) => {
+                    log(`WebSocket Error: ${error}`, "error");
+                };
+            }
+
+            function log(msg, type) {
+                const time = new Date().toLocaleTimeString();
+                let color = "#fff";
+                if (type === "in") color = "#4fc3f7";
+                if (type === "out") color = "#8bc34a";
+                if (type === "error") color = "#f44336";
+
+                logs.innerHTML += `<span style="color: ${color}">[${time}] ${msg}</span>\n`;
+                logs.scrollTop = logs.scrollHeight;
+            }
+
+            function sendMessage(type, data = null) {
+                if (!socket || socket.readyState !== WebSocket.OPEN) {
+                    alert("Not connected!");
                     return;
                 }
+                const payload = { type: type };
+                if (data) payload.data = data;
 
-                const file = fileInput.files[0];
-                const fd = new FormData();
-                fd.append(fileInput.name, file);
+                const json = JSON.stringify(payload);
+                socket.send(json);
+                log(`OUTBOUND: ${json}`, "out");
+            }
 
-                const resp = await fetch("/upload/test", {
-                    method: "POST",
-                    body: fd,
-                });
+            function sendStress() {
+                const mockStress = {
+                    bvp_mean: 75.2,
+                    bvp_std: 5.4,
+                    eda_mean: 0.02,
+                    temp_mean: 36.6,
+                    // Including some optional fields
+                    acc_mag_mean: 1.1,
+                };
+                sendMessage("stress", mockStress);
+            }
 
-                const json = await resp.json();
+            function clearLogs() {
+                logs.innerHTML = "";
+            }
 
-                document.getElementById("response").textContent =
-                    JSON.stringify(json, null, 2);
-            };
-            document
-                .getElementById("uploadForm")
-                .addEventListener("submit", onUpload);
+            // Initialize connection
+            connect();
         </script>
     </body>
 </html>

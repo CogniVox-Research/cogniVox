@@ -5,7 +5,7 @@ use crate::{dto, error::Error};
 
 /// Protocol for communication Game -> Server
 #[derive(Debug, Deserialize)]
-#[serde(tag = "type", content = "data")]
+#[serde(tag = "type", content = "data", rename_all = "snake_case")]
 pub enum GameInbound {
     #[serde(skip)]
     Audio(Vec<u8>),
@@ -16,7 +16,7 @@ pub enum GameInbound {
 
 /// Protocol for communication Server -> Game
 #[derive(Debug, Serialize)]
-#[serde(tag = "type", content = "data")]
+#[serde(tag = "type", content = "data", rename_all = "snake_case")]
 pub enum GameOutbound {
     Init(dto::settings::Settings),
     Stress(dto::stress::StressResponse),
@@ -27,15 +27,16 @@ pub enum GameOutbound {
 }
 
 #[derive(Debug, Deserialize)]
-#[serde(tag = "type")]
+#[serde(tag = "type", rename_all = "snake_case")]
 pub enum WebInbound {}
 
 #[derive(Debug, Serialize)]
-#[serde(tag = "type", content = "data")]
+#[serde(tag = "type", content = "data", rename_all = "snake_case")]
 pub enum WebOutbound {
     ASR(dto::asr::ASR),
     Stress(dto::stress::StressResponse),
     QR(String),
+    GameConnected,
 }
 
 impl TryFrom<Message> for GameInbound {

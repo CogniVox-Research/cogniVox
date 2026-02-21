@@ -12,4 +12,4 @@ silence_threshold=3
 
 [default.recording_store]
 type="local"
-path="/tmp"
+path="../store"

@@ -49,6 +49,9 @@ impl Store {
                 Store::InMemory(Arc::new(object_store::memory::InMemory::new()))
             }
             StoreConfig::Local { path } => {
+                if !path.exists() {
+                    std::fs::create_dir_all(path)?;
+                }
                 let ls = object_store::local::LocalFileSystem::new_with_prefix(path)
                     .map_err(StoreError::Create)?;
                 Store::Local(Arc::new(ls))

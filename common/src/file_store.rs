@@ -1,4 +1,4 @@
-use std::{fmt::Binary, ops::Deref, os::unix::fs::MetadataExt, path::PathBuf, sync::Arc};
+use std::{ops::Deref, os::unix::fs::MetadataExt, path::PathBuf, sync::Arc};
 
 use bytes::Bytes;
 use object_store::{ObjectStoreExt, PutPayload};

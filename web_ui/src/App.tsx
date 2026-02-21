@@ -1,35 +1,62 @@
-import { useState } from 'react'
-import reactLogo from './assets/react.svg'
-import viteLogo from '/vite.svg'
-import './App.css'
+import {
+  createRouter,
+  createRoute,
+  createRootRoute,
+  RouterProvider,
+  Navigate,
+  Outlet,
+} from '@tanstack/react-router';
+import { LoginPage } from './features/auth';
+import { RegisterPage } from './features/auth';
+import { PairingPage } from './features/pairing';
+import { OptionsPage } from './features/options';
 
-function App() {
-  const [count, setCount] = useState(0)
+// ─── Route tree (manual — no Vite plugin needed) ───────────────────────────
+const rootRoute = createRootRoute({
+  component: Outlet,
+});
 
-  return (
-    <>
-      <div>
-        <a href="https://vite.dev" target="_blank">
-          <img src={viteLogo} className="logo" alt="Vite logo" />
-        </a>
-        <a href="https://react.dev" target="_blank">
-          <img src={reactLogo} className="logo react" alt="React logo" />
-        </a>
-      </div>
-      <h1>Vite + React</h1>
-      <div className="card">
-        <button onClick={() => setCount((count) => count + 1)}>
-          count is {count}
-        </button>
-        <p>
-          Edit <code>src/App.tsx</code> and save to test HMR
-        </p>
-      </div>
-      <p className="read-the-docs">
-        Click on the Vite and React logos to learn more
-      </p>
-    </>
-  )
+const indexRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/',
+  component: () => <Navigate to="/login" />,
+});
+
+const loginRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/login',
+  component: LoginPage,
+});
+
+const registerRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/register',
+  component: RegisterPage,
+});
+
+const pairingRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/pair',
+  component: PairingPage,
+});
+
+const optionsRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/options',
+  component: OptionsPage,
+});
+
+const routeTree = rootRoute.addChildren([indexRoute, loginRoute, registerRoute, pairingRoute, optionsRoute]);
+
+const router = createRouter({ routeTree });
+
+declare module '@tanstack/react-router' {
+  interface Register {
+    router: typeof router;
+  }
 }
 
-export default App
+// ─── App ────────────────────────────────────────────────────────────────────
+export default function App() {
+  return <RouterProvider router={router} />;
+}

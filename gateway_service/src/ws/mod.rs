@@ -1,3 +1,3 @@
+mod connection;
 pub mod proto;
-mod ws;
-pub use ws::*;
+pub use connection::*;

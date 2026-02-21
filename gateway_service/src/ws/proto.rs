@@ -1,7 +1,10 @@
 use rocket_ws::Message;
 use serde::{Deserialize, Serialize};
 
-use crate::{dto, error::Error};
+use crate::{
+    dto,
+    error::{Error, Result},
+};
 
 /// Protocol for communication Game -> Server
 #[derive(Debug, Deserialize)]
@@ -41,48 +44,50 @@ pub enum WebOutbound {
     GameConnected,
 }
 
-impl TryFrom<Message> for GameInbound {
-    type Error = Error;
+pub trait Inbound: Sized + Send + 'static {
+    fn from_message(m: Message) -> Result<Self>;
+}
 
-    fn try_from(value: Message) -> Result<Self, Self::Error> {
+pub trait Outbound: Sized + Send + 'static {
+    fn into_message(self) -> Result<Message>;
+}
+
+impl Inbound for GameInbound {
+    fn from_message(value: Message) -> Result<Self> {
         match value {
-            Message::Text(text) => Ok(serde_json::de::from_str(&text)?),
+            Message::Text(text) => serde_json::de::from_str(&text).map_err(Error::Serialize),
             Message::Binary(items) => Ok(GameInbound::Audio(items)),
             Message::Ping(items) => Err(Error::SocketPing(items)),
-            Message::Pong(_) => Err(Error::UnexpectedMessage(format!("Pong"))),
+            Message::Pong(items) => Err(Error::SocketPong(items)),
             Message::Close(_) => Err(Error::SocketClose),
             Message::Frame(v) => Err(Error::UnexpectedMessage(format!("Frame {}", v))),
         }
     }
 }
 
-impl TryInto<Message> for GameOutbound {
-    type Error = Error;
-
-    fn try_into(self) -> Result<Message, Self::Error> {
-        Ok(Message::Text(serde_json::ser::to_string(&self)?))
+impl Outbound for GameOutbound {
+    fn into_message(self) -> Result<Message> {
+        let data = serde_json::ser::to_string(&self).map_err(Error::Deserialize)?;
+        Ok(Message::Text(data))
     }
 }
 
-impl TryFrom<Message> for WebInbound {
-    type Error = Error;
-
-    fn try_from(value: Message) -> Result<Self, Self::Error> {
+impl Inbound for WebInbound {
+    fn from_message(value: Message) -> Result<Self> {
         match value {
-            Message::Text(text) => Ok(serde_json::de::from_str(&text)?),
+            Message::Text(text) => serde_json::de::from_str(&text).map_err(Error::Serialize),
             Message::Ping(items) => Err(Error::SocketPing(items)),
-            Message::Binary(_) => Err(Error::UnexpectedMessage(format!("Binary"))),
-            Message::Pong(_) => Err(Error::UnexpectedMessage(format!("Pong"))),
+            Message::Pong(items) => Err(Error::SocketPong(items)),
             Message::Close(_) => Err(Error::SocketClose),
+            Message::Binary(_) => Err(Error::UnexpectedMessage(format!("Binary"))),
             Message::Frame(v) => Err(Error::UnexpectedMessage(format!("Frame {}", v))),
         }
     }
 }
 
-impl TryInto<Message> for WebOutbound {
-    type Error = Error;
-
-    fn try_into(self) -> Result<Message, Self::Error> {
-        Ok(Message::Text(serde_json::ser::to_string(&self)?))
+impl Outbound for WebOutbound {
+    fn into_message(self) -> Result<Message> {
+        let data = serde_json::ser::to_string(&self).map_err(Error::Deserialize)?;
+        Ok(Message::Text(data))
     }
 }

@@ -9,7 +9,7 @@ vulkan=["asr_rs/vulkan"]
 ffmpeg=["dep:ffmpeg-next", "dep:ffmpeg-sys-next","dep:ez-ffmpeg"]
 rust_audio=["dep:webm-iterable", "dep:opus","dep:rubato", "dep:hound"]
 build-ffmpeg=["ffmpeg", "ffmpeg-next/build"]
-default=["cuda", "rust_audio"]
+default=["rust_audio"]
 
 [dependencies]
 rocket = "0.5.1"

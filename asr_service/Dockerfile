@@ -1,14 +1,10 @@
 FROM rust:1.93.1-slim-trixie AS build-base
 RUN apt update
-RUN --mount=type=cache,target=/var/cache/apt \
+RUN --mount=type=cache,target=/var/cache/apt/archives \
     apt install -y build-essential pkg-config clang-18 cmake openssl libssl-dev git
-RUN --mount=type=cache,target=/var/cache/apt \
+RUN --mount=type=cache,target=/var/cache/apt/archives \
     apt install sccache
 
-
-FROM build-base AS base
-# RUN --mount=type=cache,target=/var/cache/apt \
-#     apt install -y libvulkan-dev glslc
 
 
 FROM base AS builder

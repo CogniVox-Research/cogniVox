@@ -10,6 +10,7 @@ import { LoginPage } from './features/auth';
 import { RegisterPage } from './features/auth';
 import { PairingPage } from './features/pairing';
 import { OptionsPage } from './features/options';
+import { SessionPage } from './features/session';
 
 // ─── Route tree (manual — no Vite plugin needed) ───────────────────────────
 const rootRoute = createRootRoute({
@@ -46,7 +47,13 @@ const optionsRoute = createRoute({
   component: OptionsPage,
 });
 
-const routeTree = rootRoute.addChildren([indexRoute, loginRoute, registerRoute, pairingRoute, optionsRoute]);
+const sessionRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/session',
+  component: SessionPage,
+});
+
+const routeTree = rootRoute.addChildren([indexRoute, loginRoute, registerRoute, pairingRoute, optionsRoute, sessionRoute]);
 
 const router = createRouter({ routeTree });
 

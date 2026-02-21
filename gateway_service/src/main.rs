@@ -5,6 +5,8 @@ use common::file_store::Store;
 
 mod config;
 mod dto;
+mod error;
+mod proto;
 
 #[rocket::get("/")]
 async fn index() -> &'static str {

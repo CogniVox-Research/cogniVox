@@ -1,0 +1,27 @@
+services:
+  seaweedfs:
+    image: chrislusf/seaweedfs:latest
+    container_name: seaweedfs
+    command: mini -s3.config=/etc/seaweedfs/s3.json
+    ports:
+      # Master UI
+      - "9333:9333"
+      # Filer UI
+      - "8888:8888"
+      # S3 Endpoint
+      - "8333:8333"
+      # WebDAV
+      - "7333:7333"
+      # Admin UI
+      - "23646:23646"
+      # Volume Server
+      - "9340:9340"
+    volumes:
+      - seaweedfs-master-data:/data
+      - ./config/s3.json:/etc/seaweedfs/s3.json:ro
+    restart: unless-stopped
+
+volumes:
+  seaweedfs-master-data:
+  seaweedfs-volume-data:
+  seaweedfs-filer-data:

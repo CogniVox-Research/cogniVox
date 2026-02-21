@@ -1,0 +1,13 @@
+include:
+  - compose/rabbitmq.yml
+  - compose/seaweedfs.yml
+services:
+  asr_service:
+    build:
+      context: .
+      dockerfile: ./asr_service/Dockerfile
+
+  document_service:
+    build:
+      context: .
+      dockerfile: ./document_service/Dockerfile

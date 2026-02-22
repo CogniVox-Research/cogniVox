@@ -23,7 +23,7 @@ pub enum GameInbound {
 #[derive(Debug, Serialize)]
 #[serde(tag = "type", content = "data", rename_all = "snake_case")]
 pub enum GameOutbound {
-    Init(dto::settings::Settings),
+    Init(dto::settings::GameSettings),
     Stress(dto::stress::StressResponse),
     Stuck,
     StuckSuggestion(String),
@@ -61,8 +61,7 @@ impl Inbound for GameInbound {
             Message::Binary(items) => Ok(GameInbound::Audio(items)),
             Message::Pong(items) => Err(Error::SocketPong(items)),
             Message::Close(_) => Err(Error::SocketClose),
-            Message::Ping(_) => Err(Error::UnexpectedMessage(format!("Ping"))),
-            Message::Frame(v) => Err(Error::UnexpectedMessage(format!("Frame {}", v))),
+            _ => Err(Error::UnexpectedMessage(value)),
         }
     }
 }
@@ -80,9 +79,7 @@ impl Inbound for WebInbound {
             Message::Text(text) => serde_json::de::from_str(&text).map_err(Error::Deserialize),
             Message::Pong(items) => Err(Error::SocketPong(items)),
             Message::Close(_) => Err(Error::SocketClose),
-            Message::Ping(_) => Err(Error::UnexpectedMessage(format!("Ping"))),
-            Message::Binary(_) => Err(Error::UnexpectedMessage(format!("Binary"))),
-            Message::Frame(v) => Err(Error::UnexpectedMessage(format!("Frame {}", v))),
+            _ => Err(Error::UnexpectedMessage(value)),
         }
     }
 }

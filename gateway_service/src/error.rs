@@ -1,9 +1,11 @@
+use rocket_ws::Message;
+
 pub type Result<T> = std::result::Result<T, Error>;
 
 #[derive(Debug, thiserror::Error)]
 pub enum Error {
     #[error("Protocol error: unexpected message: {0}")]
-    UnexpectedMessage(String),
+    UnexpectedMessage(Message),
 
     #[error("Websocket closed by client")]
     SocketClose,

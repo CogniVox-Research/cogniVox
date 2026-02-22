@@ -13,3 +13,4 @@ common = {path="../common"}
 rocket_ws = "0.1.1"
 log = "0.4.29"
 uuid = {version="1.21.0", features=["v7"]}
+rand = "0.10.0"

@@ -33,7 +33,9 @@ pub enum GameOutbound {
 
 #[derive(Debug, Deserialize)]
 #[serde(tag = "type", rename_all = "snake_case")]
-pub enum WebInbound {}
+pub enum WebInbound {
+    Start(dto::settings::Settings),
+}
 
 #[derive(Debug, Serialize)]
 #[serde(tag = "type", content = "data", rename_all = "snake_case")]
@@ -55,11 +57,11 @@ pub trait Outbound: Sized + Send + 'static {
 impl Inbound for GameInbound {
     fn from_message(value: Message) -> Result<Self> {
         match value {
-            Message::Text(text) => serde_json::de::from_str(&text).map_err(Error::Serialize),
+            Message::Text(text) => serde_json::de::from_str(&text).map_err(Error::Deserialize),
             Message::Binary(items) => Ok(GameInbound::Audio(items)),
-            Message::Ping(items) => Err(Error::SocketPing(items)),
             Message::Pong(items) => Err(Error::SocketPong(items)),
             Message::Close(_) => Err(Error::SocketClose),
+            Message::Ping(_) => Err(Error::UnexpectedMessage(format!("Ping"))),
             Message::Frame(v) => Err(Error::UnexpectedMessage(format!("Frame {}", v))),
         }
     }
@@ -67,7 +69,7 @@ impl Inbound for GameInbound {
 
 impl Outbound for GameOutbound {
     fn into_message(self) -> Result<Message> {
-        let data = serde_json::ser::to_string(&self).map_err(Error::Deserialize)?;
+        let data = serde_json::ser::to_string(&self).map_err(Error::Serialize)?;
         Ok(Message::Text(data))
     }
 }
@@ -75,10 +77,10 @@ impl Outbound for GameOutbound {
 impl Inbound for WebInbound {
     fn from_message(value: Message) -> Result<Self> {
         match value {
-            Message::Text(text) => serde_json::de::from_str(&text).map_err(Error::Serialize),
-            Message::Ping(items) => Err(Error::SocketPing(items)),
+            Message::Text(text) => serde_json::de::from_str(&text).map_err(Error::Deserialize),
             Message::Pong(items) => Err(Error::SocketPong(items)),
             Message::Close(_) => Err(Error::SocketClose),
+            Message::Ping(_) => Err(Error::UnexpectedMessage(format!("Ping"))),
             Message::Binary(_) => Err(Error::UnexpectedMessage(format!("Binary"))),
             Message::Frame(v) => Err(Error::UnexpectedMessage(format!("Frame {}", v))),
         }
@@ -87,7 +89,7 @@ impl Inbound for WebInbound {
 
 impl Outbound for WebOutbound {
     fn into_message(self) -> Result<Message> {
-        let data = serde_json::ser::to_string(&self).map_err(Error::Deserialize)?;
+        let data = serde_json::ser::to_string(&self).map_err(Error::Serialize)?;
         Ok(Message::Text(data))
     }
 }

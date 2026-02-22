@@ -1,3 +1,5 @@
+use std::time::Duration;
+
 use rocket::{futures::stream::SplitSink, tokio::sync::mpsc};
 
 use rocket::{
@@ -14,7 +16,7 @@ use crate::{
 pub type WebConnection = Connection<WebInbound, WebOutbound>;
 pub type GameConnection = Connection<GameInbound, GameOutbound>;
 
-pub struct Connection<In, Out> {
+pub struct Connection<In: Inbound, Out: Outbound> {
     inbound: mpsc::Receiver<In>,
     outbound: mpsc::Sender<Out>,
 
@@ -56,6 +58,9 @@ impl<In: Inbound, Out: Outbound> Connection<In, Out> {
             panic!("multiple calls to handle_websocket");
         };
 
+        let mut timer = tokio::time::interval(Duration::from_secs(5));
+        let mut last_ping = None;
+
         ws.channel(move |stream| {
             Box::pin(async move {
                 tokio::spawn(async move {
@@ -66,8 +71,11 @@ impl<In: Inbound, Out: Outbound> Connection<In, Out> {
                                 Self::send_message(&mut ws_sink, msg).await.err()
                             }
                             Some(Ok(msg)) = ws_stream.next() => {
-                                Self::read_message(&mut ws_sink, &inbound_tx, msg).await.err()
+                                Self::read_message(&inbound_tx, &mut last_ping, msg).await.err()
                             }
+                            _ = timer.tick() =>{
+                                Self::ping_client(&mut ws_sink, &mut last_ping).await.err()
+                            },
                             else => Some(Error::SocketClose),
                         };
 
@@ -84,6 +92,29 @@ impl<In: Inbound, Out: Outbound> Connection<In, Out> {
         })
     }
 
+    async fn ping_client(
+        ws_sink: &mut SplitSink<DuplexStream, Message>,
+        last_ping: &mut Option<Vec<u8>>,
+    ) -> Result<()> {
+        if last_ping.is_some() {
+            return Err(Error::SocketTimeout);
+        }
+
+        let mut ping = vec![0; 32];
+        rand::fill(&mut ping);
+
+        *last_ping = Some(ping.clone());
+        let result = ws_sink.send(Message::Ping(ping)).await;
+
+        match result {
+            Ok(_) => Ok(()),
+            Err(e) => {
+                log::error!("Websocket write returned error {e}");
+                Err(Error::SocketClose)
+            }
+        }
+    }
+
     async fn send_message(ws_sink: &mut SplitSink<DuplexStream, Message>, msg: Out) -> Result<()> {
         let message = msg.into_message()?;
         match ws_sink.send(message).await {
@@ -96,8 +127,8 @@ impl<In: Inbound, Out: Outbound> Connection<In, Out> {
     }
 
     async fn read_message(
-        ws_sink: &mut SplitSink<DuplexStream, Message>,
         inbound_tx: &mpsc::Sender<In>,
+        last_ping: &mut Option<Vec<u8>>,
         message: Message,
     ) -> Result<()> {
         let result = In::from_message(message);
@@ -109,15 +140,12 @@ impl<In: Inbound, Out: Outbound> Connection<In, Out> {
                     Ok(())
                 }
             }
-            Err(Error::SocketPing(v)) => {
-                if let Err(_e) = ws_sink.send(Message::Pong(v)).await {
-                    Err(Error::SocketClose)
-                } else {
-                    Ok(())
+            Err(Error::SocketPong(data)) => {
+                if let Some(expected_pong) = last_ping {
+                    if *expected_pong == data {
+                        last_ping.take();
+                    }
                 }
-            }
-            Err(Error::SocketPong(_v)) => {
-                // TODO: handle this
                 Ok(())
             }
             Err(e) => Err(e),

@@ -12,6 +12,7 @@ use crate::ws::{GameConnection, WebConnection, proto::WebOutbound};
 mod config;
 mod dto;
 mod error;
+mod game;
 mod ws;
 
 #[rocket::get("/")]

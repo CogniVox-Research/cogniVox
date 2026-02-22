@@ -14,11 +14,11 @@ pub enum Error {
     #[error("Failed to deserialize message: {0}")]
     Deserialize(serde_json::Error),
 
-    /// Not an error. Returned by From<rocket_rs::Message> for ping message.
+    /// Not an error. Returned by From<rocket_rs::Message> for pong message.
     /// This should not be returned by out of the ws crate.
-    #[error("Ping")]
-    SocketPing(Vec<u8>),
-    /// Same as ping
     #[error("Pong")]
     SocketPong(Vec<u8>),
+
+    #[error("Socket timeout")]
+    SocketTimeout,
 }

@@ -4,6 +4,16 @@ use serde::{Deserialize, Serialize};
 pub struct Settings {
     #[serde(flatten)]
     pub scene: SceneType,
+    pub document_id: String,
+    pub distractions: bool,
+    pub qa: bool,
+    pub difficulty: AudienceDifficulty,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct GameSettings {
+    #[serde(flatten)]
+    pub scene: SceneType,
     pub distractions: bool,
     pub qa: bool,
     pub difficulty: AudienceDifficulty,

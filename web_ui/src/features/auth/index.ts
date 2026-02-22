@@ -1,5 +1,3 @@
-export { LoginForm } from './components/LoginForm';
-export { RegisterForm } from './components/RegisterForm';
-export { LoginPage } from './routes/LoginPage';
-export { RegisterPage } from './routes/RegisterPage';
-export type { LoginInput, RegisterInput, AuthResponse } from './types';
+export { LoginForm } from "./components/login-form";
+export { RegisterForm } from "./components/register-form";
+export type { LoginInput, RegisterInput, AuthResponse } from "./types";

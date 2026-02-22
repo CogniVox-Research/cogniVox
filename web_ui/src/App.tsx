@@ -1,76 +1,18 @@
-import {
-  createRouter,
-  createRoute,
-  createRootRoute,
-  RouterProvider,
-  Navigate,
-  Outlet,
-} from '@tanstack/react-router';
-import { LoginPage } from './features/auth';
-import { RegisterPage } from './features/auth';
-import { PairingPage } from './features/pairing';
-import { OptionsPage } from './features/options';
-import { SessionPage } from './features/session';
-import { ResultsPage } from './features/results';
+import { createRouter, RouterProvider } from "@tanstack/react-router";
 
-// ─── Route tree (manual — no Vite plugin needed) ───────────────────────────
-const rootRoute = createRootRoute({
-  component: Outlet,
-});
+// Import the generated route tree
+import { routeTree } from "./routeTree.gen";
 
-const indexRoute = createRoute({
-  getParentRoute: () => rootRoute,
-  path: '/',
-  component: () => <Navigate to="/login" />,
-});
-
-const loginRoute = createRoute({
-  getParentRoute: () => rootRoute,
-  path: '/login',
-  component: LoginPage,
-});
-
-const registerRoute = createRoute({
-  getParentRoute: () => rootRoute,
-  path: '/register',
-  component: RegisterPage,
-});
-
-const pairingRoute = createRoute({
-  getParentRoute: () => rootRoute,
-  path: '/pair',
-  component: PairingPage,
-});
-
-const optionsRoute = createRoute({
-  getParentRoute: () => rootRoute,
-  path: '/options',
-  component: OptionsPage,
-});
-
-const sessionRoute = createRoute({
-  getParentRoute: () => rootRoute,
-  path: '/session',
-  component: SessionPage,
-});
-
-const resultsRoute = createRoute({
-  getParentRoute: () => rootRoute,
-  path: '/results',
-  component: ResultsPage,
-});
-
-const routeTree = rootRoute.addChildren([indexRoute, loginRoute, registerRoute, pairingRoute, optionsRoute, sessionRoute, resultsRoute]);
-
+// Create a new router instance
 const router = createRouter({ routeTree });
 
-declare module '@tanstack/react-router' {
+// Register the router instance for type safety
+declare module "@tanstack/react-router" {
   interface Register {
     router: typeof router;
   }
 }
 
-// ─── App ────────────────────────────────────────────────────────────────────
 export default function App() {
   return <RouterProvider router={router} />;
 }

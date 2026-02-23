@@ -1,34 +1,69 @@
+use common::dto::asr;
 use serde::Serialize;
 
 #[derive(Debug, Serialize)]
-#[serde(rename_all = "snake_case")]
-pub enum ResultType {
-    Partial,
-    Complete,
-}
-
-#[derive(Debug, Serialize)]
 pub struct TranscriptionResult {
-    #[serde(rename = "type")]
-    type_of: ResultType,
-    session_id: String,
-    lines: Vec<asr_rs::Line>,
-    full_text: String,
-    current_silence: Option<asr_rs::Silence>,
+    #[serde(flatten)]
+    dto: asr::ASR,
 }
 
 impl TranscriptionResult {
     pub fn new(session_id: String, data: asr_rs::Transcription) -> Self {
         TranscriptionResult {
-            lines: data.clone().into_lines(),
-            current_silence: data.current_silence,
-            full_text: data.full_text,
-            session_id: session_id,
-            type_of: if !data.is_complete {
-                ResultType::Partial
-            } else {
-                ResultType::Complete
+            dto: asr::ASR {
+                full_text: data.full_text.clone(),
+                session_id: session_id,
+                type_of: if !data.is_complete {
+                    asr::ResultType::Partial
+                } else {
+                    asr::ResultType::Complete
+                },
+                current_silence: data.current_silence.clone().map(convert_silence),
+                lines: convert_lines(data.into_lines()),
             },
         }
+    }
+}
+
+fn convert_lines(lines: Vec<asr_rs::Line>) -> Vec<asr::Line> {
+    let mut result = Vec::with_capacity(lines.len());
+
+    for line in lines {
+        result.push(match line {
+            asr_rs::Line::Complete(s) => asr::Line::Complete(convert_segment(s)),
+            asr_rs::Line::Partial(s) => asr::Line::Partial(convert_segment(s)),
+            asr_rs::Line::Silence(s) => asr::Line::Silence(convert_silence(s)),
+        });
+    }
+
+    result
+}
+
+fn convert_silence(s: asr_rs::Silence) -> asr::Silence {
+    asr::Silence {
+        timestamp: convert_timestamp(s.timestamp),
+    }
+}
+
+fn convert_segment(s: asr_rs::Segment) -> asr::Segment {
+    asr::Segment {
+        text: s.text,
+        tokens: s
+            .tokens
+            .into_iter()
+            .map(|v| asr::Token {
+                text: v.text,
+                probability: v.probability,
+            })
+            .collect(),
+        probability: s.probability,
+        timestamp: convert_timestamp(s.timestamp),
+    }
+}
+
+fn convert_timestamp(t: asr_rs::Timestamp) -> asr::Timestamp {
+    asr::Timestamp {
+        start: t.start,
+        end: t.end,
     }
 }

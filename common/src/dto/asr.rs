@@ -44,9 +44,9 @@ pub enum Line {
 #[derive(Debug, Serialize, Deserialize)]
 pub struct ASR {
     #[serde(rename = "type")]
-    type_of: ResultType,
-    session_id: String,
-    lines: Vec<Line>,
-    full_text: String,
-    current_silence: Option<Silence>,
+    pub type_of: ResultType,
+    pub session_id: String,
+    pub lines: Vec<Line>,
+    pub full_text: String,
+    pub current_silence: Option<Silence>,
 }

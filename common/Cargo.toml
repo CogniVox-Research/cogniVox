@@ -4,7 +4,7 @@ version = "0.1.0"
 edition = "2024"
 
 [features]
-mq=["dep:lapin", "dep:futures-lite", "dep:async-rs", "dep:rabbitmq-stream-client"]
+mq=["dep:lapin", "dep:futures-lite", "dep:async-rs"]
 store=["dep:object_store", "tokio/fs"]
 default=["store", "mq"]
 

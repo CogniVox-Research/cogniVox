@@ -7,64 +7,55 @@ use common::file_store::Store;
 use rocket::{State, futures::lock::Mutex, response::content::RawHtml};
 use rocket_ws::{Channel, WebSocket};
 
-use crate::ws::{GameConnection, WebConnection, proto::WebOutbound};
+use crate::game::proto::{GameConnection, WebConnection, WebOutbound};
 
 mod config;
 mod dto;
 mod error;
 mod game;
-mod ws;
+mod service;
 
 #[rocket::get("/")]
 async fn index() -> RawHtml<&'static str> {
     RawHtml(include_str!("../assets/index.html"))
 }
 
-type Pending = Mutex<HashMap<uuid::Uuid, WebConnection>>;
-
-#[rocket::get("/test")]
-async fn test(state: &State<Pending>) {
-    let mut data = state.lock().await;
-    for (session_id, con) in data.iter_mut() {
-        println!("id: {}", session_id);
-        while let Ok(s) = con.try_recv() {
-            println!("Got: {:?}", s);
-        }
-
-        con.send(WebOutbound::QR("Hello".to_owned())).await.unwrap();
-    }
+#[derive(Debug, Default)]
+pub struct AppState {
+    pending: Mutex<HashMap<uuid::Uuid, WebConnection>>,
 }
 
 #[rocket::get("/ws/game/<session_id>")]
 async fn game_session(
     ws: WebSocket,
     session_id: uuid::Uuid,
-    state: &State<Pending>,
+    state: &State<AppState>,
 ) -> Channel<'_> {
-    let mut cache_guard = state.lock().await;
+    let mut cache_guard = state.pending.lock().await;
     let Some(web) = cache_guard.remove(&session_id) else {
         panic!("Invalid")
     };
 
-    let mut game = GameConnection::new();
-    let channel = game.handle_websocket(ws);
+    let mut con = GameConnection::new();
+    let channel = con.handle_websocket(ws);
 
-    web.send(WebOutbound::GameConnected).await.unwrap();
+    game::start_game(session_id, con, web).await.unwrap();
+
     channel
 }
 
 #[rocket::get("/ws/web")]
-async fn web_session(ws: WebSocket, state: &State<Pending>) -> Channel<'_> {
+async fn web_session(ws: WebSocket, state: &State<AppState>) -> Channel<'_> {
     let session_id = uuid::Uuid::now_v7();
 
     let mut con = WebConnection::new();
-    con.send(WebOutbound::QR(session_id.to_string()))
+    con.send(WebOutbound::Pair(session_id.to_string()))
         .await
         .unwrap();
 
     let channel = con.handle_websocket(ws);
 
-    let mut pending = state.lock().await;
+    let mut pending = state.pending.lock().await;
     pending.insert(session_id, con);
     channel
 }
@@ -79,6 +70,6 @@ fn rocket() -> _ {
     rocket
         .manage(config)
         .manage(store)
-        .manage(Mutex::new(HashMap::<uuid::Uuid, WebConnection>::new()))
-        .mount("/", routes![index, web_session, test, game_session])
+        .manage(AppState::default())
+        .mount("/", routes![index, web_session, game_session])
 }

@@ -12,8 +12,9 @@ use crate::{
 pub enum GameInbound {
     #[serde(skip)]
     Audio(Vec<u8>),
-    Stress(dto::stress::StressRequest),
+    Ready(dto::settings::GameFeatures),
     SpeechStart,
+    Stress(dto::stress::StressRequest),
     SpeechEnd,
     QuestionStart,
     QuestionEnd,
@@ -27,8 +28,8 @@ pub enum GameOutbound {
     Stress(dto::stress::StressResponse),
     Stuck,
     StuckSuggestion(String),
-    Err(String),
-    Questions(usize),
+    Question(String),
+    Error(String),
 }
 
 #[derive(Debug, Deserialize)]
@@ -42,8 +43,9 @@ pub enum WebInbound {
 pub enum WebOutbound {
     ASR(dto::asr::ASR),
     Stress(dto::stress::StressResponse),
-    QR(String),
+    Pair(String),
     GameConnected,
+    Error(String),
 }
 
 pub trait Inbound: Sized + Send + 'static {

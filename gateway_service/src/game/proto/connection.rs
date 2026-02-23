@@ -8,22 +8,20 @@ use rocket::{
 };
 use rocket_ws::{Channel, Message, WebSocket, stream::DuplexStream};
 
-use crate::{
-    error::{Error, Result},
-    ws::proto::{GameInbound, GameOutbound, Inbound, Outbound, WebInbound, WebOutbound},
-};
+use crate::error::{Error, Result};
+use crate::game::proto;
 
-pub type WebConnection = Connection<WebInbound, WebOutbound>;
-pub type GameConnection = Connection<GameInbound, GameOutbound>;
+pub type WebConnection = Connection<proto::WebInbound, proto::WebOutbound>;
+pub type GameConnection = Connection<proto::GameInbound, proto::GameOutbound>;
 
-pub struct Connection<In: Inbound, Out: Outbound> {
+pub struct Connection<In: proto::Inbound, Out: proto::Outbound> {
     inbound: mpsc::Receiver<In>,
     outbound: mpsc::Sender<Out>,
 
     handler: Option<(mpsc::Sender<In>, mpsc::Receiver<Out>)>,
 }
 
-impl<In: Inbound, Out: Outbound> Connection<In, Out> {
+impl<In: proto::Inbound, Out: proto::Outbound> Connection<In, Out> {
     pub fn new() -> Self {
         let (inbound_tx, inbound_rx) = mpsc::channel::<In>(100);
         let (outbound_tx, outbound_rx) = mpsc::channel::<Out>(100);
@@ -43,14 +41,6 @@ impl<In: Inbound, Out: Outbound> Connection<In, Out> {
 
     pub async fn recv(&mut self) -> Result<In> {
         self.inbound.recv().await.ok_or(Error::SocketClose)
-    }
-
-    pub fn try_recv(&mut self) -> Result<Option<In>> {
-        match self.inbound.try_recv() {
-            Ok(data) => Ok(Some(data)),
-            Err(mpsc::error::TryRecvError::Empty) => Ok(None),
-            Err(mpsc::error::TryRecvError::Disconnected) => Err(Error::SocketClose),
-        }
     }
 
     pub fn handle_websocket<'r>(&mut self, ws: WebSocket) -> Channel<'r> {
@@ -152,3 +142,58 @@ impl<In: Inbound, Out: Outbound> Connection<In, Out> {
         }
     }
 }
+
+/// waits until the given message is recieved from the connection and returns its content.
+/// Other messages and unexpected websocket messages are ignored.
+#[macro_export]
+macro_rules! recv_message {
+    ($expression:expr, $variant:path) => {{
+        loop {
+            let result = match $expression.recv().await {
+                #[allow(unreachable_patterns)]
+                Ok(message) => match message {
+                    $variant(v) => Ok(v),
+                    _ => {
+                        log::debug!("Recieved unexpected message: {message:?}");
+                        continue;
+                    }
+                },
+                Err(Error::UnexpectedMessage(err)) => {
+                    log::debug!("Recieved unexpected message: {err}");
+                    continue;
+                }
+                Err(e) => Err(e),
+            };
+            break result;
+        }
+    }};
+}
+
+/// waits until the given message is recieved from the connection.
+/// Other messages and unexpected websocket messages are ignored.
+#[macro_export]
+macro_rules! wait_for {
+    ($expression:expr, $variant:path) => {{
+        loop {
+            let result = match $expression.recv().await {
+                #[allow(unreachable_patterns)]
+                Ok(message) => match message {
+                    $variant => Ok(()),
+                    _ => {
+                        log::debug!("Recieved unexpected message: {message:?}");
+                        continue;
+                    }
+                },
+                Err(Error::UnexpectedMessage(err)) => {
+                    log::debug!("Recieved unexpected message: {err}");
+                    continue;
+                }
+                Err(e) => Err(e),
+            };
+            break result;
+        }
+    }};
+}
+
+pub use recv_message;
+pub use wait_for;

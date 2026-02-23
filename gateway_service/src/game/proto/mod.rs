@@ -1,3 +1,5 @@
 mod connection;
-pub mod proto;
+mod proto;
+
 pub use connection::*;
+pub use proto::*;

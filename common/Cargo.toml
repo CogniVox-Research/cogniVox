@@ -3,9 +3,21 @@ name = "common"
 version = "0.1.0"
 edition = "2024"
 
+[features]
+mq=["dep:lapin", "dep:futures-lite", "dep:async-rs", "dep:rabbitmq-stream-client"]
+store=["dep:object_store", "tokio/fs"]
+default=["store", "mq"]
+
 [dependencies]
+serde = {version="1.0.228", features=["derive"]}
 bytes = "1.11.1"
-object_store ={version= "0.13.1", features=["aws"]}
-serde = {version="1.0.228",features=["derive"]}
+tokio = "1.49.0"
 thiserror = "2.0.18"
-tokio = {version="1.49.0", features=["fs"]}
+log = "0.4.29"
+serde_json = "1.0.149"
+
+object_store ={version= "0.13.1", features=["aws"], optional=true}
+
+lapin = {version="4.0.3", optional=true}
+futures-lite = {version="2.6.1", optional=true}
+async-rs = {version="0.8.0", optional=true}

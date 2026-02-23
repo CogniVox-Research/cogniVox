@@ -962,7 +962,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "gateway_service"
+name = "game_service"
 version = "0.1.0"
 dependencies = [
  "bytes",

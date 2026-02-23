@@ -41,7 +41,7 @@ pub enum WebInbound {
 #[derive(Debug, Serialize)]
 #[serde(tag = "type", content = "data", rename_all = "snake_case")]
 pub enum WebOutbound {
-    ASR(dto::asr::ASR),
+    ASR(common::dto::asr::ASR),
     Stress(dto::stress::StressResponse),
     Pair(String),
     GameConnected,

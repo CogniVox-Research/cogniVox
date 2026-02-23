@@ -78,6 +78,9 @@ where
 
     /// gets a message from the queue.
     /// This automatically acks the message.
+    ///
+    /// # Cancel Safety
+    /// This cannot be safely canceled and cancelling will result in message loss.
     pub async fn read(&mut self) -> Option<Result<T>> {
         self.read_inner().await.transpose()
     }

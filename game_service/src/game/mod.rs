@@ -1,14 +1,14 @@
 use crate::{
-    app::{AppState, SessionCreate},
-    dto::{
-        self,
-        settings::{GameFeatures, Settings},
-    },
+    app::AppState,
+    dto::{self, settings::Settings},
     error::{Error, Result},
     game::proto::{ServiceInbound, WebOutbound},
 };
 pub mod proto;
-use common::mq::{self, MQError, Message};
+use common::{
+    dto::{GameFeatures, SessionCreate},
+    mq::{self, MQError, Message},
+};
 use proto::{GameConnection, GameInbound, GameOutbound, WebConnection, WebInbound};
 use rocket::tokio::{self, select};
 
@@ -33,7 +33,9 @@ impl Game {
         let features = proto::recv_message!(self.game, GameInbound::Ready)?;
         log::info!("Game ready with features {features:?}");
 
+        log::info!("Waiting for speech to start");
         proto::wait_for!(self.game, GameInbound::SpeechStart)?;
+        log::info!("Speech started");
         self.speech_loop().await?;
 
         Ok(())
@@ -117,10 +119,7 @@ pub async fn start_game(
     mut web: WebConnection,
 ) -> Result<()> {
     web.send(WebOutbound::GameConnected).await?;
-
-    let settings = proto::recv_message!(web, WebInbound::Start)?;
-
-    // TODO: validate document and settings.
+    log::info!("Game connected successfully");
 
     state
         .session_queue
@@ -150,17 +149,27 @@ pub async fn start_game(
         .bind_exchange("results".to_owned(), session_id_str)
         .await?;
 
-    let mut game = Game {
-        session_id,
-        game,
-        web,
-        settings,
-        audio_tx,
-        stress_tx,
-        result_rx,
-    };
+    tokio::spawn(async move {
+        let settings = proto::recv_message!(web, WebInbound::Start).unwrap();
 
-    tokio::spawn(async move { game.run().await });
+        // TODO: validate document and settings.
+        log::info!("Got game settings {settings:?}");
+
+        let mut game = Game {
+            session_id,
+            game,
+            web,
+            settings,
+            audio_tx,
+            stress_tx,
+            result_rx,
+        };
+
+        let result = game.run().await;
+        if let Err(e) = result {
+            log::error!("Game WS Error {e}")
+        }
+    });
 
     Ok(())
 }

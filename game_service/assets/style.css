@@ -1,0 +1,82 @@
+body {
+    font-family: sans-serif;
+    display: flex;
+    height: 100vh;
+    margin: 0;
+    background: #f4f4f9;
+}
+#sidebar {
+    width: 350px;
+    padding: 20px;
+    border-right: 1px solid #ccc;
+    overflow-y: auto;
+    background: #fff;
+}
+
+#log-container {
+    flex-grow: 1;
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+}
+
+#logs {
+    flex-grow: 1;
+    background: #1e1e1e;
+    color: #d4d4d4;
+    padding: 15px;
+    border-radius: 8px;
+    overflow-y: auto;
+    font-family: monospace;
+}
+
+.btn-group {
+    margin-bottom: 20px;
+    border-bottom: 1px solid #eee;
+    padding-bottom: 10px;
+}
+
+button {
+    display: block;
+    width: 100%;
+    padding: 10px;
+    margin: 5px 0;
+    cursor: pointer;
+    background: #007bff;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    font-weight: bold;
+}
+
+button:disabled {
+    filter: grayscale(100);
+    cursor: unset;
+}
+
+button:hover:not(:disabled) {
+    background: #0056b3;
+}
+button.secondary {
+    background: #6c757d;
+}
+.status {
+    padding: 5px;
+    margin-bottom: 10px;
+    border-radius: 4px;
+    font-weight: bold;
+    text-align: center;
+}
+.connected {
+    background: #d4edda;
+    color: #155724;
+}
+.disconnected {
+    background: #f8d7da;
+    color: #721c24;
+}
+h3 {
+    margin-top: 0;
+    font-size: 1.1rem;
+    color: #333;
+}

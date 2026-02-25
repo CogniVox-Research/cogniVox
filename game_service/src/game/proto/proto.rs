@@ -12,7 +12,7 @@ use crate::{
 pub enum GameInbound {
     #[serde(skip)]
     Audio(Vec<u8>),
-    Ready(dto::settings::GameFeatures),
+    Ready(common::dto::GameFeatures),
     SpeechStart,
     Stress(dto::stress::StressRequest),
     SpeechEnd,
@@ -33,8 +33,8 @@ pub enum GameOutbound {
     Error(String),
 }
 
-#[derive(Debug, Deserialize)]
-#[serde(tag = "type", rename_all = "snake_case")]
+#[derive(Debug, Deserialize, Serialize)]
+#[serde(tag = "type", content = "data", rename_all = "snake_case")]
 pub enum WebInbound {
     Start(dto::settings::Settings),
 }

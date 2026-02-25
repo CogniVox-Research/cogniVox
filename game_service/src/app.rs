@@ -1,14 +1,7 @@
-use crate::{dto, error::Result, game::proto::WebConnection};
-use common::mq;
+use crate::{error::Result, game::proto::WebConnection};
+use common::{dto::SessionCreate, mq};
 use rocket::futures::lock::Mutex;
-use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
-
-#[derive(Debug, Serialize, Deserialize)]
-pub struct SessionCreate {
-    pub session_id: uuid::Uuid,
-    pub features: dto::settings::GameFeatures,
-}
 
 #[derive(Debug)]
 pub struct AppState {

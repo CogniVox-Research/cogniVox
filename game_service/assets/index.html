@@ -4,97 +4,30 @@
         <meta charset="UTF-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1.0" />
         <title>Game Protocol Debugger</title>
-        <style>
-            body {
-                font-family: sans-serif;
-                display: flex;
-                height: 100vh;
-                margin: 0;
-                background: #f4f4f9;
-            }
-            #sidebar {
-                width: 350px;
-                padding: 20px;
-                border-right: 1px solid #ccc;
-                overflow-y: auto;
-                background: #fff;
-            }
-            #log-container {
-                flex-grow: 1;
-                padding: 20px;
-                display: flex;
-                flex-direction: column;
-            }
-            #logs {
-                flex-grow: 1;
-                background: #1e1e1e;
-                color: #d4d4d4;
-                padding: 15px;
-                border-radius: 8px;
-                overflow-y: auto;
-                font-family: monospace;
-                white-space: pre-wrap;
-            }
-            .btn-group {
-                margin-bottom: 20px;
-                border-bottom: 1px solid #eee;
-                padding-bottom: 10px;
-            }
-            button {
-                display: block;
-                width: 100%;
-                padding: 10px;
-                margin: 5px 0;
-                cursor: pointer;
-                background: #007bff;
-                color: white;
-                border: none;
-                border-radius: 4px;
-                font-weight: bold;
-            }
-            button:hover {
-                background: #0056b3;
-            }
-            button.secondary {
-                background: #6c757d;
-            }
-            .status {
-                padding: 5px;
-                margin-bottom: 10px;
-                border-radius: 4px;
-                font-weight: bold;
-                text-align: center;
-            }
-            .connected {
-                background: #d4edda;
-                color: #155724;
-            }
-            .disconnected {
-                background: #f8d7da;
-                color: #721c24;
-            }
-            h3 {
-                margin-top: 0;
-                font-size: 1.1rem;
-                color: #333;
-            }
-        </style>
+        <link rel="stylesheet" href="style.css" />
     </head>
-    <body>
+    <body x-data="app">
         <div id="sidebar">
-            <div id="status" class="status disconnected">Disconnected</div>
-            <button onclick="connect()" class="secondary">Reconnect</button>
+            <div
+                :class="connected ? 'status connected' : 'status disconnected'"
+                x-text="connected ? 'Connected' : 'Disconnected'"
+            >
+                Disconnected
+            </div>
+            <button @click="reconnect()" class="secondary">Reconnect</button>
 
             <hr />
 
             <div class="btn-group">
-                <button onclick="sendStress()">Send Stress Request</button>
-                <button onclick="sendMessage('speech_end')">
-                    Send SpeechEnd
-                </button>
-                <button onclick="sendMessage('question_end')">
-                    Send QuestionEnd
-                </button>
+                <template x-for="action in actions">
+                    <button
+                        @click="
+                            sendMessage(action)
+                        "
+                        x-text="`Send ${action.name}`"
+                        :disabled="state != action.state"
+                    ></button>
+                </template>
             </div>
         </div>
 
@@ -106,94 +39,29 @@
                     align-items: center;
                 "
             >
-                <h3>Message Log (Game -> Server)</h3>
+                <h3>Message Log</h3>
                 <button
-                    onclick="clearLogs()"
+                    @click="clearLogs()"
                     style="width: auto; padding: 5px 15px"
                 >
                     Clear
                 </button>
             </div>
-            <div id="logs">Waiting for connection...</div>
+            <div id="logs">
+                <template x-for="log in logs">
+                    <div
+                        :style="`color: ${log.color}`"
+                        x-text="`[${log.time}][${log.mode.charAt(0).toUpperCase()}] ${log.message}`"
+                    ></div>
+                </template>
+                <div x-show="logs.length === 0">Waiting for connection...</div>
+            </div>
         </div>
 
-        <script>
-            let socket;
-            const logs = document.getElementById("logs");
-            const status = document.getElementById("status");
-
-            function connect() {
-                const protocol =
-                    window.location.protocol === "https:" ? "wss:" : "ws:";
-                // Adjust the URL if your server is hosted elsewhere
-                const wsUrl = `${protocol}//${window.location.host}/ws/web`;
-
-                log(`Connecting to ${wsUrl}...`, "system");
-                socket = new WebSocket(wsUrl);
-
-                socket.onopen = () => {
-                    status.innerText = "Connected";
-                    status.className = "status connected";
-                    log("WebSocket Connected", "success");
-                };
-
-                socket.onmessage = (event) => {
-                    log(`INBOUND: ${event.data}`, "in");
-                };
-
-                socket.onclose = () => {
-                    status.innerText = "Disconnected";
-                    status.className = "status disconnected";
-                    log("WebSocket Disconnected", "error");
-                };
-
-                socket.onerror = (error) => {
-                    log(`WebSocket Error: ${error}`, "error");
-                };
-            }
-
-            function log(msg, type) {
-                const time = new Date().toLocaleTimeString();
-                let color = "#fff";
-                if (type === "in") color = "#4fc3f7";
-                if (type === "out") color = "#8bc34a";
-                if (type === "error") color = "#f44336";
-
-                logs.innerHTML += `<span style="color: ${color}">[${time}] ${msg}</span>\n`;
-                logs.scrollTop = logs.scrollHeight;
-            }
-
-            function sendMessage(type, data = null) {
-                if (!socket || socket.readyState !== WebSocket.OPEN) {
-                    alert("Not connected!");
-                    return;
-                }
-                const payload = { type: type };
-                if (data) payload.data = data;
-
-                const json = JSON.stringify(payload);
-                socket.send(json);
-                log(`OUTBOUND: ${json}`, "out");
-            }
-
-            function sendStress() {
-                const mockStress = {
-                    bvp_mean: 75.2,
-                    bvp_std: 5.4,
-                    eda_mean: 0.02,
-                    temp_mean: 36.6,
-                    // Including some optional fields
-                    acc_mag_mean: 1.1,
-                };
-                sendMessage("stress", mockStress);
-            }
-
-            function clearLogs() {
-                logs.innerHTML = "";
-            }
-
-            // Initialize connection
-            connect();
-        </script>
+        <script
+            defer
+            src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"
+        ></script>
+        <script src="index.js"></script>
     </body>
 </html>

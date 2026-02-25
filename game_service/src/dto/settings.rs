@@ -18,13 +18,8 @@ pub struct GameSettings {
     pub difficulty: AudienceDifficulty,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
-pub struct GameFeatures {
-    pub stress: bool,
-}
-
 #[derive(Debug, Serialize, Deserialize, Clone, Copy)]
-#[serde(tag = "scene")]
+#[serde(tag = "scene", rename_all = "snake_case")]
 pub enum SceneType {
     Interview,
     BoardRoom { size: i64 },

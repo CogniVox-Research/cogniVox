@@ -1,8 +1,14 @@
 #[macro_use]
 extern crate rocket;
 
+use std::path::PathBuf;
+
 use common::file_store::Store;
-use rocket::{State, response::content::RawHtml};
+use rocket::{
+    State,
+    fs::{FileServer, Options},
+    response::content::{RawHtml, RawJavaScript},
+};
 use rocket_ws::{Channel, WebSocket};
 
 use crate::{
@@ -21,6 +27,11 @@ async fn index() -> RawHtml<&'static str> {
     RawHtml(include_str!("../assets/index.html"))
 }
 
+#[rocket::get("/index.js")]
+async fn index_js() -> RawJavaScript<&'static str> {
+    RawJavaScript(include_str!("../assets/index.js"))
+}
+
 #[rocket::get("/ws/game/<session_id>")]
 async fn game_session(
     ws: WebSocket,
@@ -35,9 +46,10 @@ async fn game_session(
     let mut con = GameConnection::new();
     let channel = con.handle_websocket(ws);
 
-    game::start_game(state.inner(), session_id, con, web)
-        .await
-        .unwrap();
+    let result = game::start_game(state.inner(), session_id, con, web).await;
+    if let Err(e) = result {
+        log::error!("WS Error {e}")
+    }
 
     channel
 }
@@ -84,5 +96,9 @@ async fn rocket() -> _ {
         .manage(config)
         .manage(store)
         .manage(app_state)
-        .mount("/", routes![index, web_session, game_session])
+        .mount("/", routes![index, index_js, web_session, game_session])
+        .mount(
+            "/ui",
+            FileServer::new("../assets", Options::Index | Options::NormalizeDirs),
+        )
 }

@@ -9,3 +9,7 @@ path="../store"
 
 [default.jwt]
 key=""
+
+[default.rabbitmq]
+connection_name="game"
+address="amqp://appuser:apppass@127.0.0.1"

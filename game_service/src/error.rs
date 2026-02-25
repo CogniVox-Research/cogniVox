@@ -1,3 +1,4 @@
+use common::mq;
 use rocket_ws::Message;
 
 pub type Result<T> = std::result::Result<T, Error>;
@@ -15,6 +16,9 @@ pub enum Error {
 
     #[error("Failed to deserialize message: {0}")]
     Deserialize(serde_json::Error),
+
+    #[error(transparent)]
+    MQ(#[from] mq::MQError),
 
     /// Not an error. Returned by From<rocket_rs::Message> for pong message.
     /// This should not be returned by out of the ws crate.

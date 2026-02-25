@@ -967,6 +967,7 @@ version = "0.1.0"
 dependencies = [
  "bytes",
  "common",
+ "lapin",
  "log",
  "rand 0.10.0",
  "rocket",

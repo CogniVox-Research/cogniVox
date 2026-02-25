@@ -20,7 +20,7 @@ pub struct GameSettings {
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct GameFeatures {
-    stress: bool,
+    pub stress: bool,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone, Copy)]

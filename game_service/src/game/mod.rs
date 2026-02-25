@@ -1,9 +1,14 @@
 use crate::{
-    dto::settings::Settings,
+    app::{AppState, SessionCreate},
+    dto::{
+        self,
+        settings::{GameFeatures, Settings},
+    },
     error::{Error, Result},
     game::proto::WebOutbound,
 };
 pub mod proto;
+use common::mq::{self, ConsumerConfig};
 use proto::{GameConnection, GameInbound, GameOutbound, WebConnection, WebInbound};
 use rocket::tokio::{self, select};
 
@@ -19,6 +24,11 @@ pub struct Game {
 
     game: GameConnection,
     web: WebConnection,
+
+    audio_tx: mq::Sender<Vec<u8>>,
+    stress_tx: mq::Sender<dto::stress::StressRequest>,
+    transcript_rx: mq::Consumer<common::dto::asr::ASR>,
+    result_rx: mq::Consumer<serde_json::Value>,
 
     settings: Settings,
 }
@@ -50,6 +60,14 @@ impl Game {
                         Err(e)=> Err(e)
                     }
                 },
+                Some(data) = self.result_rx.recv()=>{
+                    println!("{:?}", data);
+                    continue;
+                },
+                Some(data) = self.transcript_rx.recv()=>{
+                    println!("{:?}", data);
+                    continue;
+                },
                 else => Err(Error::SocketClose)
             };
 
@@ -60,12 +78,11 @@ impl Game {
     async fn speech_loop_game_inbound(&mut self, message: GameInbound) -> Result<bool> {
         match message {
             GameInbound::Audio(audio_chunk) => {
-                // TODO: send asr service
+                self.audio_tx.send(audio_chunk).await?;
                 Ok(false)
             }
             GameInbound::Stress(stress_request) => {
-                // TODO: send to stress service
-
+                self.stress_tx.send(stress_request).await?;
                 Ok(false)
             }
             GameInbound::SpeechEnd => Ok(true),
@@ -79,6 +96,7 @@ impl Game {
 }
 
 pub async fn start_game(
+    state: &AppState,
     session_id: uuid::Uuid,
     game: GameConnection,
     mut web: WebConnection,
@@ -89,11 +107,52 @@ pub async fn start_game(
 
     // TODO: validate document and settings.
 
+    state
+        .session_queue
+        .send(SessionCreate {
+            session_id,
+            features: GameFeatures { stress: false },
+        })
+        .await?;
+
+    let session_id_str = session_id.to_string();
+
+    let audio_tx = state
+        .mq_connection
+        .sender(&session_id_str, Some("audio".to_owned()))
+        .await?;
+    let stress_tx = state
+        .mq_connection
+        .sender(&session_id_str, Some("stress".to_owned()))
+        .await?;
+
+    let transcript_rx = state
+        .mq_connection
+        .recieve(ConsumerConfig {
+            routing_key: Some(session_id_str.clone()),
+            exchange_name: Some("asr".to_owned()),
+            queue_name: None,
+        })
+        .await?;
+
+    let result_rx = state
+        .mq_connection
+        .recieve(ConsumerConfig {
+            routing_key: Some(session_id_str.clone()),
+            exchange_name: Some("result".to_owned()),
+            queue_name: None,
+        })
+        .await?;
+
     let mut game = Game {
         session_id,
         game,
         web,
         settings,
+        audio_tx,
+        stress_tx,
+        result_rx,
+        transcript_rx,
     };
 
     tokio::spawn(async move { game.run().await });

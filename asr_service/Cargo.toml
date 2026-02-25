@@ -34,3 +34,4 @@ ffmpeg-sys-next ={version= "7.1.0", optional=true}
 fern = "0.7.1"
 log = "0.4.29"
 anyhow = "1.0.101"
+tar = {version="0.4.44", no_default_features=true}

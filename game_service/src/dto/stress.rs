@@ -1,6 +1,6 @@
 use serde::{Deserialize, Serialize};
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Serialize)]
 pub struct StressRequest {
     pub eda_mean: Option<f64>,
     pub eda_std: Option<f64>,

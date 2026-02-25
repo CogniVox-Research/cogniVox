@@ -1,28 +1,24 @@
 #[macro_use]
 extern crate rocket;
 
-use std::collections::HashMap;
-
 use common::file_store::Store;
-use rocket::{State, futures::lock::Mutex, response::content::RawHtml};
+use rocket::{State, response::content::RawHtml};
 use rocket_ws::{Channel, WebSocket};
 
-use crate::game::proto::{GameConnection, WebConnection, WebOutbound};
+use crate::{
+    app::AppState,
+    game::proto::{GameConnection, WebConnection, WebOutbound},
+};
 
+mod app;
 mod config;
 mod dto;
 mod error;
 mod game;
-mod service;
 
 #[rocket::get("/")]
 async fn index() -> RawHtml<&'static str> {
     RawHtml(include_str!("../assets/index.html"))
-}
-
-#[derive(Debug, Default)]
-pub struct AppState {
-    pending: Mutex<HashMap<uuid::Uuid, WebConnection>>,
 }
 
 #[rocket::get("/ws/game/<session_id>")]
@@ -39,7 +35,9 @@ async fn game_session(
     let mut con = GameConnection::new();
     let channel = con.handle_websocket(ws);
 
-    game::start_game(session_id, con, web).await.unwrap();
+    game::start_game(state.inner(), session_id, con, web)
+        .await
+        .unwrap();
 
     channel
 }
@@ -61,15 +59,29 @@ async fn web_session(ws: WebSocket, state: &State<AppState>) -> Channel<'_> {
 }
 
 #[rocket::launch]
-fn rocket() -> _ {
+async fn rocket() -> _ {
     let rocket = rocket::build();
     let figment = rocket.figment();
     let config: config::AppConfig = figment.extract().expect("Config should load");
     let store = Store::from_config(&config.file_store).expect("Store should should create");
+    let rabbitmq = common::mq::Connection::for_config(config.rabbitmq.clone())
+        .await
+        .expect("Connection should succeed");
+
+    rabbitmq
+        .create_exchange("session_start", true)
+        .await
+        .unwrap();
+    rabbitmq.create_exchange("audio", false).await.unwrap();
+    rabbitmq.create_exchange("asr", false).await.unwrap();
+    rabbitmq.create_exchange("stress", false).await.unwrap();
+    rabbitmq.create_exchange("results", false).await.unwrap();
+
+    let app_state = AppState::create(rabbitmq).await.expect("App should init");
 
     rocket
         .manage(config)
         .manage(store)
-        .manage(AppState::default())
+        .manage(app_state)
         .mount("/", routes![index, web_session, game_session])
 }

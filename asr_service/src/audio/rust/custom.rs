@@ -1,5 +1,6 @@
-use std::io::Write;
+use std::fmt::Debug;
 
+use once_cell::sync::OnceCell;
 use opus::Decoder as OpusDecoder;
 use rubato::{FftFixedIn, Resampler};
 use webm_iterable::{
@@ -7,67 +8,54 @@ use webm_iterable::{
     matroska_spec::{MatroskaSpec, SimpleBlock},
 };
 
-use crate::audio_processing::{
-    AudioConfig,
-    rust::{AudioError, Header, TARGET_SAMPLE_RATE, get_header},
+use crate::audio::{
+    AudioError, PipelineStep, TARGET_SAMPLE_RATE,
+    rust::{Header, get_header},
 };
 
-pub fn audio_preprocessor(mut cfg: AudioConfig) -> Result<(), AudioError> {
-    let Ok(chunk) = cfg.audio_rx.recv() else {
-        return Ok(());
-    };
-
-    let header = get_header(&chunk)?;
-    let mut writer = hound::WavWriter::new(
-        cfg.converted,
-        hound::WavSpec {
-            channels: 1,
-            sample_rate: TARGET_SAMPLE_RATE as u32,
-            bits_per_sample: 32,
-            sample_format: hound::SampleFormat::Float,
-        },
-    )?;
-    log::debug!(target:"opus_decode", "Parsed header {header:?}");
-
-    let mut decoder = WebmAudioDecoder::new(header)?;
-
-    let samples = decoder.decode_webm_chunk(&chunk)?;
-    log::debug!(target:"opus_decode", "Received {} samples", samples.len());
-
-    cfg.original.write(&chunk).map_err(AudioError::Recording)?;
-    for sample in &samples {
-        writer.write_sample(*sample)?;
-    }
-    if cfg.samples_tx.send(samples).is_err() {
-        return Ok(());
-    }
-
-    while let Ok(chunk) = cfg.audio_rx.recv() {
-        let samples = decoder.decode_webm_chunk(&chunk)?;
-        cfg.original.write(&chunk).map_err(AudioError::Recording)?;
-
-        log::debug!(target:"opus_decode", "Received {} samples", samples.len());
-
-        cfg.original.write(&chunk).map_err(AudioError::Recording)?;
-        for sample in &samples {
-            writer.write_sample(*sample)?;
-        }
-        if cfg.samples_tx.send(samples).is_err() {
-            return Ok(());
-        }
-    }
-
-    Ok(())
-}
-
-pub struct WebmAudioDecoder {
+struct WebmAudioDecoderInner {
     opus_decoder: OpusDecoder,
     resampler: FftFixedIn<f32>,
     channels: usize,
     decoder_buf: Vec<f32>,
 }
 
+pub struct WebmAudioDecoder {
+    inner: OnceCell<WebmAudioDecoderInner>,
+}
+
+impl Debug for WebmAudioDecoder {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("WebmAudioDecoder").finish()
+    }
+}
+
 impl WebmAudioDecoder {
+    pub fn new() -> Self {
+        return Self {
+            inner: OnceCell::new(),
+        };
+    }
+}
+
+impl PipelineStep for WebmAudioDecoder {
+    fn process_audio(&mut self, input: Vec<u8>) -> crate::error::Result<Vec<f32>> {
+        self.inner.get_or_try_init(|| {
+            let header = get_header(&input)?;
+            WebmAudioDecoderInner::new(header)
+        })?;
+
+        let inner = self.inner.get_mut().expect("should init");
+
+        Ok(inner.decode_webm_chunk(&input)?)
+    }
+
+    async fn finish(self) -> crate::error::Result<Option<Vec<f32>>> {
+        Ok(None)
+    }
+}
+
+impl WebmAudioDecoderInner {
     pub fn new(header: Header) -> Result<Self, AudioError> {
         let opus_decoder = OpusDecoder::new(header.sample_rate as u32, header.channels)?;
 

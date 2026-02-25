@@ -4,7 +4,7 @@ use webm_iterable::{
     matroska_spec::{MatroskaSpec, SimpleBlock},
 };
 
-use crate::audio_processing::rust::{AudioError, TARGET_SAMPLE_RATE};
+use crate::audio::{AudioError, TARGET_SAMPLE_RATE};
 
 #[derive(Debug)]
 pub struct Header {
@@ -78,10 +78,6 @@ pub fn get_header(data: &[u8]) -> Result<Header, AudioError> {
                 log::debug!(target:"opus_decode", "tag : {tag:?}");
             }
         }
-
-        // if sample_rate.is_some() && channels.is_some() {
-        //     break;
-        // }
     }
 
     log::debug!(target:"opus_decode", "chunk size: {chunk_size} {n_chunks}");

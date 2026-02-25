@@ -5,19 +5,12 @@ use crate::{
         settings::{GameFeatures, Settings},
     },
     error::{Error, Result},
-    game::proto::WebOutbound,
+    game::proto::{ServiceInbound, WebOutbound},
 };
 pub mod proto;
-use common::mq::{self, ConsumerConfig};
+use common::mq::{self, MQError, Message};
 use proto::{GameConnection, GameInbound, GameOutbound, WebConnection, WebInbound};
 use rocket::tokio::{self, select};
-
-pub enum GameState {
-    /// Waiting for user to start the game.
-    Waiting,
-    Speech,
-    Question,
-}
 
 pub struct Game {
     session_id: uuid::Uuid,
@@ -27,8 +20,7 @@ pub struct Game {
 
     audio_tx: mq::Sender<Vec<u8>>,
     stress_tx: mq::Sender<dto::stress::StressRequest>,
-    transcript_rx: mq::Consumer<common::dto::asr::ASR>,
-    result_rx: mq::Consumer<serde_json::Value>,
+    result_rx: mq::Consumer<proto::ServiceInbound>,
 
     settings: Settings,
 }
@@ -40,8 +32,6 @@ impl Game {
 
         let features = proto::recv_message!(self.game, GameInbound::Ready)?;
         log::info!("Game ready with features {features:?}");
-
-        // TODO: start asr, stuck, stress services
 
         proto::wait_for!(self.game, GameInbound::SpeechStart)?;
         self.speech_loop().await?;
@@ -61,17 +51,39 @@ impl Game {
                     }
                 },
                 Some(data) = self.result_rx.recv()=>{
-                    println!("{:?}", data);
-                    continue;
-                },
-                Some(data) = self.transcript_rx.recv()=>{
-                    println!("{:?}", data);
-                    continue;
+                    match self.on_transctipt_recieve(data).await{
+                        Ok(())=>continue,
+                        Err(e)=> Err(e)
+                    }
                 },
                 else => Err(Error::SocketClose)
             };
 
             break result;
+        }
+    }
+
+    async fn on_transctipt_recieve(
+        &mut self,
+        tr: Result<Message<ServiceInbound>, MQError>,
+    ) -> Result<()> {
+        let message = tr?.get().await?;
+
+        log::info!("Got message {:?}", message);
+
+        match message {
+            ServiceInbound::ASR(asr) => {
+                self.web.send(WebOutbound::ASR(asr.clone())).await?;
+                self.game.send(GameOutbound::ASR(asr)).await
+            }
+            ServiceInbound::Stress(st) => {
+                self.web.send(WebOutbound::Stress(st.clone())).await?;
+                self.game.send(GameOutbound::Stress(st)).await
+            }
+            ServiceInbound::Stuck => self.game.send(GameOutbound::Stuck).await,
+            ServiceInbound::StuckSuggestion(sg) => {
+                self.game.send(GameOutbound::StuckSuggestion(sg)).await
+            }
         }
     }
 
@@ -85,7 +97,10 @@ impl Game {
                 self.stress_tx.send(stress_request).await?;
                 Ok(false)
             }
-            GameInbound::SpeechEnd => Ok(true),
+            GameInbound::SpeechEnd => {
+                self.audio_tx.send("END".as_bytes().to_vec()).await?;
+                Ok(true)
+            }
             _ => {
                 // ignore other messages
                 log::warn!("Got unexpected message {message:?}");
@@ -126,22 +141,13 @@ pub async fn start_game(
         .sender(&session_id_str, Some("stress".to_owned()))
         .await?;
 
-    let transcript_rx = state
-        .mq_connection
-        .recieve(ConsumerConfig {
-            routing_key: Some(session_id_str.clone()),
-            exchange_name: Some("asr".to_owned()),
-            queue_name: None,
-        })
-        .await?;
-
     let result_rx = state
         .mq_connection
-        .recieve(ConsumerConfig {
-            routing_key: Some(session_id_str.clone()),
-            exchange_name: Some("result".to_owned()),
-            queue_name: None,
-        })
+        .recieve(None)
+        .await?
+        .bind_exchange("asr".to_owned(), session_id_str.clone())
+        .await?
+        .bind_exchange("results".to_owned(), session_id_str)
         .await?;
 
     let mut game = Game {
@@ -152,7 +158,6 @@ pub async fn start_game(
         audio_tx,
         stress_tx,
         result_rx,
-        transcript_rx,
     };
 
     tokio::spawn(async move { game.run().await });

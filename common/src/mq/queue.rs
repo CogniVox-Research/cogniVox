@@ -8,14 +8,7 @@ use lapin::{
     options::{BasicAckOptions, BasicConsumeOptions, QueueBindOptions, QueueDeclareOptions},
     types::FieldTable,
 };
-use serde::{Deserialize, de::DeserializeOwned};
-
-#[derive(Debug, Deserialize, Clone)]
-pub struct ConsumerConfig {
-    pub routing_key: Option<String>,
-    pub exchange_name: Option<String>,
-    pub queue_name: Option<String>,
-}
+use serde::de::DeserializeOwned;
 
 #[derive(Debug)]
 pub struct Message<T> {
@@ -35,7 +28,9 @@ pub struct Consumer<T>
 where
     T: DeserializeOwned + Sized,
 {
+    con: Connection,
     consumer: lapin::Consumer,
+    queue_name: String,
 
     _msg_type: PhantomData<T>,
 }
@@ -44,8 +39,17 @@ impl<T> Consumer<T>
 where
     T: DeserializeOwned + Sized,
 {
-    pub(crate) async fn create(con: Connection, cfg: ConsumerConfig) -> Result<Consumer<T>> {
-        let (queue_name, _exchabge) = declare_and_bind(&con, cfg).await?;
+    pub(crate) async fn create(con: Connection, queue_name: Option<String>) -> Result<Consumer<T>> {
+        let queue = con
+            .channel
+            .queue_declare(
+                queue_name.unwrap_or_default().into(),
+                QueueDeclareOptions::default(),
+                FieldTable::default(),
+            )
+            .await?;
+
+        let queue_name = queue.name().to_string();
 
         let name = format!("{}_consumer", queue_name);
         let consumer = con
@@ -60,6 +64,8 @@ where
 
         Ok(Consumer {
             consumer,
+            con,
+            queue_name,
             _msg_type: PhantomData,
         })
     }
@@ -80,37 +86,18 @@ where
             },
         }
     }
-}
 
-async fn declare_and_bind(con: &Connection, cfg: ConsumerConfig) -> Result<(String, String)> {
-    let mut q_cfg = QueueDeclareOptions::default();
-    q_cfg.auto_delete = true;
-
-    let queue = con
-        .channel
-        .queue_declare(
-            cfg.queue_name.unwrap_or_default().into(),
-            q_cfg,
-            FieldTable::default(),
-        )
-        .await?;
-
-    let queue_name = queue.name().to_string();
-
-    log::debug!("Created queue {}: {:#?}", queue_name, queue);
-
-    if let Some(ref ex) = cfg.exchange_name {
-        con.channel
+    pub async fn bind_exchange(self, exhange: String, route_key: String) -> Result<Self> {
+        self.con
+            .channel
             .queue_bind(
-                queue_name.as_str().into(),
-                ex.as_str().into(),
-                cfg.routing_key.unwrap_or_default().into(),
+                self.queue_name.as_str().into(),
+                exhange.as_str().into(),
+                route_key.as_str().into(),
                 QueueBindOptions::default(),
                 FieldTable::default(),
             )
             .await?;
-        log::debug!("Bound {} to exchange {}", queue_name, ex);
+        Ok(self)
     }
-
-    Ok((queue_name, cfg.exchange_name.clone().unwrap_or_default()))
 }

@@ -25,6 +25,7 @@ pub enum GameInbound {
 #[serde(tag = "type", content = "data", rename_all = "snake_case")]
 pub enum GameOutbound {
     Init(dto::settings::GameSettings),
+    ASR(common::dto::asr::ASR),
     Stress(dto::stress::StressResponse),
     Stuck,
     StuckSuggestion(String),
@@ -46,6 +47,15 @@ pub enum WebOutbound {
     Pair(String),
     GameConnected,
     Error(String),
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+#[serde(tag = "type", content = "data", rename_all = "snake_case")]
+pub enum ServiceInbound {
+    ASR(common::dto::asr::ASR),
+    Stress(dto::stress::StressResponse),
+    Stuck,
+    StuckSuggestion(String),
 }
 
 pub trait Inbound: Sized + Send + 'static {

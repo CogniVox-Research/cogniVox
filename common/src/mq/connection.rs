@@ -1,4 +1,4 @@
-use crate::mq::{Consumer, ConsumerConfig, Sender, error::Result};
+use crate::mq::{Consumer, Sender, error::Result};
 use async_rs::Runtime;
 use lapin::{
     BasicProperties, Channel, ConnectionProperties, options::BasicPublishOptions, types::FieldTable,
@@ -35,8 +35,16 @@ impl Connection {
         Ok(Connection { channel })
     }
 
+    pub async fn create_exchange(&self, exchange_name: &str) -> Result<()> {
+        self._create_exchange(exchange_name, false).await
+    }
+
+    pub async fn create_broadcast_exchange(&self, exchange_name: &str) -> Result<()> {
+        self._create_exchange(exchange_name, true).await
+    }
+
     /// Creates a new exchange for message.
-    pub async fn create_exchange(&self, exchange_name: &str, is_broadcast: bool) -> Result<()> {
+    async fn _create_exchange(&self, exchange_name: &str, is_broadcast: bool) -> Result<()> {
         self.channel
             .exchange_declare(
                 exchange_name.into(),
@@ -67,8 +75,11 @@ impl Connection {
         .await
     }
 
-    pub async fn recieve<T: DeserializeOwned>(&self, cfg: ConsumerConfig) -> Result<Consumer<T>> {
-        Consumer::create(self.to_owned(), cfg).await
+    pub async fn recieve<T: DeserializeOwned>(
+        &self,
+        queue_name: Option<String>,
+    ) -> Result<Consumer<T>> {
+        Consumer::create(self.to_owned(), queue_name).await
     }
 
     pub(crate) async fn send_message(
@@ -90,14 +101,4 @@ impl Connection {
             .await?;
         Ok(())
     }
-}
-
-#[cfg(test)]
-pub(crate) async fn create_test_connection() -> Connection {
-    let cfg = Config {
-        connection_name: "test".to_string(),
-        address: "amqp://appuser:apppass@127.0.0.1".to_string(),
-    };
-
-    Connection::for_config(cfg).await.unwrap()
 }

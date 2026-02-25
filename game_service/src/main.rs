@@ -69,13 +69,14 @@ async fn rocket() -> _ {
         .expect("Connection should succeed");
 
     rabbitmq
-        .create_exchange("session_start", true)
+        .create_broadcast_exchange("session_start")
         .await
         .unwrap();
-    rabbitmq.create_exchange("audio", false).await.unwrap();
-    rabbitmq.create_exchange("asr", false).await.unwrap();
-    rabbitmq.create_exchange("stress", false).await.unwrap();
-    rabbitmq.create_exchange("results", false).await.unwrap();
+
+    rabbitmq.create_exchange("audio").await.unwrap();
+    rabbitmq.create_exchange("asr").await.unwrap();
+    rabbitmq.create_exchange("stress").await.unwrap();
+    rabbitmq.create_exchange("results").await.unwrap();
 
     let app_state = AppState::create(rabbitmq).await.expect("App should init");
 

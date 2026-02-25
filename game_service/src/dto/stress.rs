@@ -23,7 +23,7 @@ pub struct StressRequest {
     pub acc_max: Option<f64>,
 }
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct StressResponse {
     model_used: String,
     label: i64,

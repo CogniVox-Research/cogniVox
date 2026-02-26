@@ -18,6 +18,7 @@ body {
     padding: 20px;
     display: flex;
     flex-direction: column;
+    max-width: calc(100vw - 350px);
 }
 
 #logs {

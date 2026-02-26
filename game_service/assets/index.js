@@ -46,12 +46,33 @@ const ACTIONS = [
 
     type: "audio",
     data: {
-      name: "micro_machines",
+      name: "micro-machines",
       chunk_size: 1000,
       chunks: 30,
     },
 
     state: 4,
+  },
+  {
+    name: "Silence",
+    mode: "game",
+
+    type: "audio",
+    data: {
+      name: "silence",
+      chunk_size: 1000,
+      chunks: 10,
+    },
+
+    state: 4,
+  },
+  {
+    name: "Speech End",
+    mode: "game",
+    type: "speech_end",
+
+    state: 4,
+    new_state: true,
   },
 ];
 
@@ -77,10 +98,13 @@ class App {
     };
 
     socket.onmessage = (event) => {
-      this.log(mode, `INBOUND: ${event.data}`, "in");
-
-      let message = JSON.parse(event.data);
-      this.handle_message(mode, message);
+      try {
+        let message = JSON.parse(event.data);
+        this.handle_message(mode, message);
+        this.log(mode, `INBOUND: ${JSON.stringify(message)}`, "in");
+      } catch (e) {
+        this.log(mode, `INBOUND: Failed to parse ${event.data} ${e}`, "error");
+      }
     };
 
     socket.onclose = () => {
@@ -123,14 +147,14 @@ class App {
 
       const play_chunk = () => {
         fetch(
-          `./audio/micro-machines/chunk_${idx.toString().padStart(3, "0")}.webm`,
+          `./audio/${message.data.name}/chunk_${idx.toString().padStart(3, "0")}.webm`,
         ).then((data) => {
           data.blob().then((data) => socket.send(data));
         });
         idx += 1;
 
         if (idx < message.data.chunks) {
-          setTimeout(play_chunk, message.data.chunks);
+          setTimeout(play_chunk, 1000);
         }
       };
 
@@ -152,6 +176,9 @@ class App {
   handle_message(mode, message) {
     if (mode === "web" && message.type === "pair") {
       this.connect("game", message.data);
+    } else if (message.type === "a_s_r") {
+      message.data.lines = undefined;
+      message.data.session_id = undefined;
     }
   }
 

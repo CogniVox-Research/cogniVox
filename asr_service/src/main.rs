@@ -2,12 +2,11 @@ use common::file_store::Store;
 use rocket::{State, response::content::RawHtml};
 use rocket_ws::{Channel, WebSocket};
 
-mod audio_processing;
+mod audio;
 mod config;
 mod dto;
 pub mod error;
-mod transcription;
-mod websocket;
+mod transcript;
 
 #[macro_use]
 extern crate rocket;
@@ -30,9 +29,14 @@ fn stream_audio(
 
     ws.channel(move |stream| {
         Box::pin(async move {
-            websocket::handle_websocket(stream, session_id, transcriber, store)
-                .await
-                .unwrap();
+            transcript::run_transcription(
+                transcript::Input::WS(stream),
+                session_id,
+                transcriber,
+                store,
+            )
+            .await
+            .unwrap();
             Ok(())
         })
     })

@@ -1,16 +1,11 @@
-use common::file_store;
+use common::{file_store, mq};
 
 pub type Result<T> = std::result::Result<T, Error>;
 
 #[derive(Debug, thiserror::Error)]
 pub enum Error {
-    #[cfg(feature = "ffmpeg")]
     #[error("Error while processing audio: {0}")]
-    Audio(#[from] ez_ffmpeg::error::Error),
-
-    #[cfg(feature = "rust_audio")]
-    #[error("Error while processing audio: {0}")]
-    Audio(crate::audio_processing::AudioError),
+    Audio(#[from] crate::audio::AudioError),
 
     #[error("ASR returned an error: {0}")]
     ASR(#[from] asr_rs::Error),
@@ -26,4 +21,7 @@ pub enum Error {
 
     #[error("Error while uploading audio to storage: {0}")]
     Upload(#[from] file_store::StoreError),
+
+    #[error("RabbitMQ error: {0}")]
+    MQ(#[from] mq::MQError),
 }

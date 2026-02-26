@@ -13,3 +13,7 @@ silence_threshold=3
 [default.recording_store]
 type="local"
 path="../store"
+
+[default.rabbitmq]
+connection_name="game"
+address="amqp://appuser:apppass@127.0.0.1"

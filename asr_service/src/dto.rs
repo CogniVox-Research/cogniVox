@@ -4,15 +4,15 @@ use serde::Serialize;
 #[derive(Debug, Serialize)]
 pub struct TranscriptionResult {
     #[serde(flatten)]
-    dto: asr::ASR,
+    pub dto: asr::ASR,
 }
 
 impl TranscriptionResult {
-    pub fn new(session_id: String, data: asr_rs::Transcription) -> Self {
+    pub fn new(session_id: &str, data: asr_rs::Transcription) -> Self {
         TranscriptionResult {
             dto: asr::ASR {
                 full_text: data.full_text.clone(),
-                session_id: session_id,
+                session_id: session_id.to_owned(),
                 type_of: if !data.is_complete {
                     asr::ResultType::Partial
                 } else {

@@ -45,7 +45,7 @@
                 if (mediaRecorder && mediaRecorder.state === "recording")
                     mediaRecorder.stop();
                 if (socket && socket.readyState === WebSocket.OPEN)
-                    socket.close();
+                    socket.send("END");
                 startBtn.disabled = false;
                 stopBtn.disabled = true;
             };

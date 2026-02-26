@@ -40,11 +40,15 @@ where
     T: DeserializeOwned + Sized,
 {
     pub(crate) async fn create(con: Connection, queue_name: Option<String>) -> Result<Consumer<T>> {
+        let mut options = QueueDeclareOptions::default();
+        options.auto_delete = queue_name.is_none();
+        options.exclusive = queue_name.is_none();
+
         let queue = con
             .channel
             .queue_declare(
                 queue_name.unwrap_or_default().into(),
-                QueueDeclareOptions::default(),
+                options,
                 FieldTable::default(),
             )
             .await?;

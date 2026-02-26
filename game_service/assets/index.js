@@ -54,6 +54,20 @@ const ACTIONS = [
     state: 4,
   },
   {
+    name: "Stress",
+    mode: "game",
+    type: "stress",
+    data: {
+      bvp_mean: 75.2,
+      bvp_std: 5.4,
+      eda_mean: 0.02,
+      temp_mean: 36.6,
+      // Including some optional fields
+      acc_mag_mean: 1.1,
+    },
+    state: 4,
+  },
+  {
     name: "Silence",
     mode: "game",
 

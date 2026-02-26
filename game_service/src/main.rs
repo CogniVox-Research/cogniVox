@@ -87,7 +87,7 @@ async fn rocket() -> _ {
 
     rabbitmq.create_exchange("audio").await.unwrap();
     rabbitmq.create_topic_exchange("asr").await.unwrap();
-    rabbitmq.create_exchange("stress").await.unwrap();
+    rabbitmq.create_broadcast_exchange("stress").await.unwrap();
     rabbitmq.create_exchange("results").await.unwrap();
 
     let app_state = AppState::create(rabbitmq).await.expect("App should init");

@@ -21,6 +21,8 @@ pub struct StressRequest {
     pub acc_mean: Option<f64>,
     pub acc_std: Option<f64>,
     pub acc_max: Option<f64>,
+
+    pub session_id: Option<uuid::Uuid>,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]

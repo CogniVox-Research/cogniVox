@@ -50,7 +50,9 @@ impl Game {
                             self.audio_tx.send(audio_chunk).await?;
                         }
                         GameInbound::Stress(stress_request) => {
-                            self.stress_tx.send(stress_request).await?;
+                            let mut request = stress_request;
+                            request.session_id = Some(self.session_id);
+                            self.stress_tx.send(request).await?;
                         }
                         GameInbound::SpeechEnd => {
                             self.audio_tx.send("END".as_bytes().to_vec()).await?;

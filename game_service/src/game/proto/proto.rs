@@ -31,7 +31,6 @@ pub enum GameOutbound {
     Unstuck,
     StuckSuggestion(String),
     Question(String),
-    Error(String),
 }
 
 #[derive(Debug, Deserialize, Serialize)]
@@ -47,7 +46,6 @@ pub enum WebOutbound {
     Stress(dto::stress::StressResponse),
     Pair(String),
     GameConnected,
-    Error(String),
 }
 
 #[derive(Debug, Serialize, Deserialize)]

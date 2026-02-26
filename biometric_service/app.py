@@ -1,10 +1,19 @@
-from fastapi import FastAPI, HTTPException
-from pydantic import BaseModel
+import asyncio
+import json
+import os
+from contextlib import asynccontextmanager
 from typing import Optional
+
+import aio_pika
 import joblib
 import numpy as np
-
-import os
+import pydantic
+import shared
+from aio_pika.abc import AbstractChannel
+from fastapi import FastAPI, HTTPException
+from pydantic import BaseModel
+from shared import rabbitmq
+from typing_extensions import Literal
 
 # Load models
 current_dir = os.path.dirname(os.path.abspath(__file__))
@@ -32,7 +41,6 @@ except Exception as e:
     lite_model = None
     lite_feature_cols = []
 
-app = FastAPI()
 
 class FeatureInput(BaseModel):
     # Common or RF specific
@@ -46,7 +54,7 @@ class FeatureInput(BaseModel):
     temp_std: Optional[float] = None
     acc_mag_mean: Optional[float] = None
     acc_mag_std: Optional[float] = None
-    
+
     # Lite specific
     bvp_min: Optional[float] = None
     bvp_max: Optional[float] = None
@@ -56,13 +64,64 @@ class FeatureInput(BaseModel):
     acc_std: Optional[float] = None
     acc_max: Optional[float] = None
 
+    session_id: Optional[str] = None
+
+
+class StressData(pydantic.BaseModel):
+    type: Literal["stress"]
+    data: FeatureInput
+
+
+class Config(shared.config.SharedBaseSettings):
+    rabbitmq_url: str = pydantic.Field()
+
+
+config = Config.load()
+
+
+async def read_queue(conn: AbstractChannel):
+    try:
+        queue_reader = rabbitmq.read_queue(
+            conn, "stress_predictor", FeatureInput, "stress"
+        )
+        output = await conn.get_exchange("results")
+        async for features in queue_reader:
+            print("Got Request", features)
+            session_id = features.session_id
+            assert session_id is not None
+
+            response = predict_stress(features)
+            print("Response", response)
+
+            await output.publish(
+                aio_pika.Message(
+                    body=json.dumps({"type": "stress", "data": response}).encode()
+                ),
+                routing_key=session_id,
+                mandatory=False,
+            )
+    except Exception as e:
+        print(e)
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    global llm_server
+    async with rabbitmq.connect(config.rabbitmq_url) as con:
+        task = asyncio.create_task(read_queue(con))
+        yield
+        task.cancel()
+
+
+app = FastAPI(lifespan=lifespan)
+
 
 def predict_stress_from_features_dict(model, feature_cols, feat_dict, threshold=0.6):
     try:
         x = np.array([[feat_dict[col] for col in feature_cols]])
     except KeyError as e:
         raise ValueError(f"Missing feature for selected model: {e}")
-        
+
     proba = model.predict_proba(x)[0, 1]
     label = 1 if proba >= threshold else 0
     return label, float(proba)
@@ -70,50 +129,57 @@ def predict_stress_from_features_dict(model, feature_cols, feat_dict, threshold=
 
 def generate_suggestion(label, stress_score):
     # Use stress_score for more granular feedback
-    
+
     # Zone 1: Deep Relaxation (0.0 - 0.2)
     if stress_score < 0.2:
-        return "State: Deeply Relaxed. Excellent condition. Great for focus or recovery."
-        
+        return (
+            "State: Deeply Relaxed. Excellent condition. Great for focus or recovery."
+        )
+
     # Zone 2: Calm / Balanced (0.2 - 0.45)
     elif stress_score < 0.45:
         return "State: Calm. You are balanced and doing well. Keep it up."
-        
+
     # Zone 3: Mild Arousal / Warning (0.45 - 0.6)
     # Approaching the threshold (0.6)
     elif stress_score < 0.6:
         return "State: Elevated. You may be experiencing slight pressure. Consider a short break soon."
-        
+
     # Zone 4: Moderate Stress (0.6 - 0.8)
     # The model flipped to label 1 here (>= 0.6)
     elif stress_score < 0.8:
         return "State: Stressed. Detected physiological stress. Try 'Box Breathing' (4s in, 4s hold, 4s out, 4s hold)."
-        
+
     # Zone 5: High Stress (0.8 - 1.0)
     else:
         return "State: Highly Stressed. Strong markers detected. Stop what you are doing, close your eyes, and take 5 deep breaths."
 
+
 @app.post("/predict_stress")
+def predict_stress_route(input: FeatureInput):
+    predict_stress(input)
+
+
 def predict_stress(input: FeatureInput):
     feat_dict = input.dict()
-    
+
     # Logic: If EDA is present, use RF model. Else use Lite model.
     # We check eda_mean as a proxy for EDA data availability.
-    use_rf = (feat_dict.get("eda_mean") is not None)
-    
+    use_rf = feat_dict.get("eda_mean") is not None
+
     if use_rf:
         print("DEBUG: EDA data detected. Using RF Model.")
         if rf_model is None:
-             raise HTTPException(status_code=500, detail="RF model is not loaded.")
-        
+            raise HTTPException(status_code=500, detail="RF model is not loaded.")
+
         model_name = "RF"
         model = rf_model
         cols = rf_feature_cols
     else:
         print("DEBUG: No EDA data detected. Using Lite Model.")
         if lite_model is None:
-             raise HTTPException(status_code=500, detail="Lite model is not loaded.")
-        
+            raise HTTPException(status_code=500, detail="Lite model is not loaded.")
+
         model_name = "Lite"
         model = lite_model
         cols = lite_feature_cols
@@ -130,11 +196,13 @@ def predict_stress(input: FeatureInput):
         "model_used": model_name,
         "label": int(label),
         "stress_score": score,
-        "suggestion": suggestion
+        "suggestion": suggestion,
     }
+
 
 if __name__ == "__main__":
     import uvicorn
+
     print("Starting BioSync Server...")
     print("Listening on 0.0.0.0:8000 (Accessible via local IP)")
     uvicorn.run(app, host="0.0.0.0", port=8000)

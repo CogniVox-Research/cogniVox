@@ -1,7 +1,8 @@
 use crate::mq::{Consumer, Sender, error::Result};
 use async_rs::Runtime;
 use lapin::{
-    BasicProperties, Channel, ConnectionProperties, options::BasicPublishOptions, types::FieldTable,
+    BasicProperties, Channel, ConnectionProperties, ExchangeKind, options::BasicPublishOptions,
+    types::FieldTable,
 };
 use serde::{Deserialize, Serialize, de::DeserializeOwned};
 
@@ -36,23 +37,26 @@ impl Connection {
     }
 
     pub async fn create_exchange(&self, exchange_name: &str) -> Result<()> {
-        self._create_exchange(exchange_name, false).await
+        self._create_exchange(exchange_name, ExchangeKind::Direct)
+            .await
+    }
+
+    pub async fn create_topic_exchange(&self, exchange_name: &str) -> Result<()> {
+        self._create_exchange(exchange_name, ExchangeKind::Topic)
+            .await
     }
 
     pub async fn create_broadcast_exchange(&self, exchange_name: &str) -> Result<()> {
-        self._create_exchange(exchange_name, true).await
+        self._create_exchange(exchange_name, ExchangeKind::Fanout)
+            .await
     }
 
     /// Creates a new exchange for message.
-    async fn _create_exchange(&self, exchange_name: &str, is_broadcast: bool) -> Result<()> {
+    async fn _create_exchange(&self, exchange_name: &str, type_of: ExchangeKind) -> Result<()> {
         self.channel
             .exchange_declare(
                 exchange_name.into(),
-                if is_broadcast {
-                    lapin::ExchangeKind::Fanout
-                } else {
-                    lapin::ExchangeKind::Direct
-                },
+                type_of,
                 lapin::options::ExchangeDeclareOptions::default(),
                 FieldTable::default(),
             )
@@ -69,8 +73,8 @@ impl Connection {
     ) -> Result<Sender<T>> {
         Sender::create(
             self.to_owned(),
-            routing_key.to_owned(),
             exchange_name.unwrap_or_default(),
+            routing_key.to_owned(),
         )
         .await
     }
@@ -89,6 +93,7 @@ impl Connection {
         route_key: &str,
         content_type: &'static str,
     ) -> Result<()> {
+        log::debug!("Sending to {exchange_name} with key {route_key}");
         self.channel
             .basic_publish(
                 exchange_name.into(),

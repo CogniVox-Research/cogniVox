@@ -26,7 +26,7 @@ pub struct Timestamp {
     pub end: f64,
 }
 
-#[derive(Debug, Serialize, Deserialize, Clone)]
+#[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
 #[serde(rename_all = "snake_case")]
 pub enum ResultType {
     Partial,

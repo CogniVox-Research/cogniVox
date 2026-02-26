@@ -14,8 +14,8 @@ pub struct Sender<T: Serialize + Sized> {
 impl<T: Serialize + Sized> Sender<T> {
     pub(crate) async fn create(
         con: Connection,
-        routing_key: String,
         exchange_name: String,
+        routing_key: String,
     ) -> Result<Sender<T>> {
         Ok(Sender {
             con,

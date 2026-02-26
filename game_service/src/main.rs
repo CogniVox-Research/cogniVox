@@ -86,7 +86,7 @@ async fn rocket() -> _ {
         .unwrap();
 
     rabbitmq.create_exchange("audio").await.unwrap();
-    rabbitmq.create_exchange("asr").await.unwrap();
+    rabbitmq.create_topic_exchange("asr").await.unwrap();
     rabbitmq.create_exchange("stress").await.unwrap();
     rabbitmq.create_exchange("results").await.unwrap();
 
@@ -99,6 +99,6 @@ async fn rocket() -> _ {
         .mount("/", routes![index, index_js, web_session, game_session])
         .mount(
             "/ui",
-            FileServer::new("../assets", Options::Index | Options::NormalizeDirs),
+            FileServer::new("assets", Options::Index | Options::NormalizeDirs),
         )
 }

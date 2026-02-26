@@ -16,7 +16,7 @@ impl AppState {
         Ok(Self {
             pending: Default::default(),
             mq_connection: con.clone(),
-            session_queue: con.sender("session_start", None).await?,
+            session_queue: con.sender("", Some("session_start".to_owned())).await?,
         })
     }
 }

@@ -28,6 +28,7 @@ pub enum GameOutbound {
     ASR(common::dto::asr::ASR),
     Stress(dto::stress::StressResponse),
     Stuck,
+    Unstuck,
     StuckSuggestion(String),
     Question(String),
     Error(String),
@@ -55,6 +56,7 @@ pub enum ServiceInbound {
     ASR(common::dto::asr::ASR),
     Stress(dto::stress::StressResponse),
     Stuck,
+    Unstuck,
     StuckSuggestion(String),
 }
 

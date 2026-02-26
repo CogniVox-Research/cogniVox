@@ -6,7 +6,7 @@ use crate::{
 };
 pub mod proto;
 use common::{
-    dto::{GameFeatures, SessionCreate},
+    dto::{GameFeatures, SessionCreate, asr::ResultType},
     mq::{self, MQError, Message},
 };
 use proto::{GameConnection, GameInbound, GameOutbound, WebConnection, WebInbound};
@@ -43,71 +43,56 @@ impl Game {
 
     async fn speech_loop(&mut self) -> Result<()> {
         loop {
-            let result = select! {
+            select! {
                 Ok(msg) = self.game.recv() => {
-                    let result= self.speech_loop_game_inbound(msg).await;
-                    match result {
-                        Ok(false)=> continue,
-                        Ok(true)=> Ok(()),
-                        Err(e)=> Err(e)
+                    match msg {
+                        GameInbound::Audio(audio_chunk) => {
+                            self.audio_tx.send(audio_chunk).await?;
+                        }
+                        GameInbound::Stress(stress_request) => {
+                            self.stress_tx.send(stress_request).await?;
+                        }
+                        GameInbound::SpeechEnd => {
+                            self.audio_tx.send("END".as_bytes().to_vec()).await?;
+                        }
+                        _ => {
+                            // ignore other messages
+                            log::warn!("Got unexpected message {msg:?}");
+                        }
                     }
                 },
                 Some(data) = self.result_rx.recv()=>{
-                    match self.on_transctipt_recieve(data).await{
-                        Ok(())=>continue,
-                        Err(e)=> Err(e)
+                    let message = data?.get().await?;
+
+                    log::debug!("Got message {:?}", message);
+
+                    match message {
+                        ServiceInbound::ASR(asr) => {
+                            let is_end = asr.type_of == ResultType::Complete;
+                            self.web.send(WebOutbound::ASR(asr.clone())).await?;
+                            self.game.send(GameOutbound::ASR(asr)).await?;
+
+                            if is_end{
+                                break Ok(());
+                            }
+                        }
+                        ServiceInbound::Stress(st) => {
+                            self.web.send(WebOutbound::Stress(st.clone())).await?;
+                            self.game.send(GameOutbound::Stress(st)).await?;
+                        }
+                        ServiceInbound::Stuck => {
+                            self.game.send(GameOutbound::Stuck).await?;
+                        }
+                        ServiceInbound::Unstuck => {
+                            self.game.send(GameOutbound::Unstuck).await?;
+                        }
+                        ServiceInbound::StuckSuggestion(sg) => {
+                            self.game.send(GameOutbound::StuckSuggestion(sg)).await?;
+                        }
                     }
                 },
-                else => Err(Error::SocketClose)
+                else => break Err(Error::SocketClose)
             };
-
-            break result;
-        }
-    }
-
-    async fn on_transctipt_recieve(
-        &mut self,
-        tr: Result<Message<ServiceInbound>, MQError>,
-    ) -> Result<()> {
-        let message = tr?.get().await?;
-
-        log::info!("Got message {:?}", message);
-
-        match message {
-            ServiceInbound::ASR(asr) => {
-                self.web.send(WebOutbound::ASR(asr.clone())).await?;
-                self.game.send(GameOutbound::ASR(asr)).await
-            }
-            ServiceInbound::Stress(st) => {
-                self.web.send(WebOutbound::Stress(st.clone())).await?;
-                self.game.send(GameOutbound::Stress(st)).await
-            }
-            ServiceInbound::Stuck => self.game.send(GameOutbound::Stuck).await,
-            ServiceInbound::StuckSuggestion(sg) => {
-                self.game.send(GameOutbound::StuckSuggestion(sg)).await
-            }
-        }
-    }
-
-    async fn speech_loop_game_inbound(&mut self, message: GameInbound) -> Result<bool> {
-        match message {
-            GameInbound::Audio(audio_chunk) => {
-                self.audio_tx.send(audio_chunk).await?;
-                Ok(false)
-            }
-            GameInbound::Stress(stress_request) => {
-                self.stress_tx.send(stress_request).await?;
-                Ok(false)
-            }
-            GameInbound::SpeechEnd => {
-                self.audio_tx.send("END".as_bytes().to_vec()).await?;
-                Ok(true)
-            }
-            _ => {
-                // ignore other messages
-                log::warn!("Got unexpected message {message:?}");
-                Ok(false)
-            }
         }
     }
 }

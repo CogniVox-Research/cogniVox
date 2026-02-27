@@ -17,9 +17,10 @@ pub async fn upload_to_store(
         .upload_from_reader(upload_path, original.open().await?, Some(original.len()))
         .await?;
 
-    let content_json = serde_json::to_vec(content)?;
-    let upload_path = format!("{dir}/content.json");
-    store.upload(upload_path, content_json).await?;
+    let upload_path = format!("{dir}/content");
+    store
+        .upload(upload_path, content.text.clone().into_bytes())
+        .await?;
 
     Ok(())
 }

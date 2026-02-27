@@ -12,7 +12,7 @@ const ACTIONS = [
     data: {
       scene: "stage",
       size: 10,
-      document_id: "invalid-use-test",
+      document_id: "placeholder-micromachines",
       distractions: true,
       qa: true,
       difficulty: "easy",

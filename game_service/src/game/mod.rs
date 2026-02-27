@@ -164,19 +164,11 @@ pub async fn start_game(
         .await?;
 
     let settings = proto::recv_message!(web, WebInbound::Start).unwrap();
+
     // TODO: validate document and settings.
     log::info!("Got game settings {settings:?}");
 
-    let expected_speech = match store
-        .read_str(format!("{session_id}/documents/content"))
-        .await
-    {
-        Ok(content) => Ok(content),
-        Err(StoreError::NotFound(_)) if settings.document_id == "invalid-use-test" => {
-            Ok(include_str!("../../assets/expected-transcript").to_owned())
-        }
-        Err(e) => Err(error::Error::Store(e)),
-    }?;
+    let expected_speech = fetch_document(store, session_id, &settings.document_id).await?;
 
     tokio::spawn(async move {
         let mut game = Game {
@@ -198,4 +190,26 @@ pub async fn start_game(
     });
 
     Ok(())
+}
+
+async fn fetch_document(
+    store: &Store,
+    session_id: uuid::Uuid,
+    document_id: &str,
+) -> Result<String> {
+    let expected_id = format!("{session_id}/documents/content");
+
+    if document_id != expected_id {
+        // currently used by the test-ui
+        if document_id == "placeholder-micromachines" {
+            return Ok(include_str!("../../assets/placeholder-micromachines").to_owned());
+        }
+
+        return Err(Error::InvalidDocument(document_id.to_owned()));
+    }
+
+    store
+        .read_str(expected_id)
+        .await
+        .map_err(error::Error::Store)
 }

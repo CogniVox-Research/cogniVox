@@ -26,6 +26,9 @@ pub enum Error {
     #[error("Store error: {0:?}")]
     Store(file_store::StoreError),
 
+    #[error("Invalid transcript document: {0}")]
+    InvalidDocument(String),
+
     /// Not an error. Returned by From<rocket_rs::Message> for pong message.
     /// This should not be returned by out of the ws crate.
     #[error("Pong")]

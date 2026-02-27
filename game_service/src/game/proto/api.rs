@@ -7,7 +7,7 @@ use crate::{dto, error};
 #[derive(Debug)]
 pub struct Endpoints {
     pub transcript: APIRequest<dto::transcript::Request, dto::transcript::Response>,
-    pub speech_score: APIRequest<dto::transcript::Request, dto::transcript::Response>,
+    pub speech_score: APIRequest<dto::sds::Request, dto::sds::Response>,
 }
 
 #[derive(Debug, Clone)]
@@ -30,7 +30,6 @@ impl<In: Serialize, Out: DeserializeOwned> APIRequest<In, Out> {
 
     pub async fn send(&self, data: In) -> error::Result<Out> {
         let body = self.client.post(&self.url).json(&data).send().await?;
-
         Ok(body.json().await?)
     }
 }

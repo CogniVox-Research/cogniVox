@@ -1,9 +1,9 @@
+mod api;
 pub mod messages;
-mod web;
 mod ws;
 
+pub use api::*;
 pub(crate) use messages::*;
-pub use web::*;
 pub use ws::*;
 
 pub type WebConnection = WebSocket<WebInbound, WebOutbound>;

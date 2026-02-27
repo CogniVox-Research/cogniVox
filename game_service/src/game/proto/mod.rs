@@ -1,5 +1,8 @@
 mod connection;
-mod proto;
+pub mod messages;
 
 pub use connection::*;
-pub use proto::*;
+pub(crate) use messages::*;
+
+pub type WebConnection = WebSocket<WebInbound, WebOutbound>;
+pub type GameConnection = WebSocket<GameInbound, GameOutbound>;

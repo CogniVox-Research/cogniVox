@@ -6,26 +6,30 @@ use rocket::{
     futures::{SinkExt, StreamExt},
     tokio,
 };
-use rocket_ws::{Channel, Message, WebSocket, stream::DuplexStream};
+use rocket_ws::{Channel, Message, stream::DuplexStream};
 
 use crate::error::{Error, Result};
-use crate::game::proto;
 
-pub type WebConnection = Connection<proto::WebInbound, proto::WebOutbound>;
-pub type GameConnection = Connection<proto::GameInbound, proto::GameOutbound>;
+pub trait Inbound: Sized + Send + 'static {
+    fn from_message(m: Message) -> Result<Self>;
+}
 
-pub struct Connection<In: proto::Inbound, Out: proto::Outbound> {
+pub trait Outbound: Sized + Send + 'static {
+    fn into_message(self) -> Result<Message>;
+}
+
+pub struct WebSocket<In: Inbound, Out: Outbound> {
     inbound: mpsc::Receiver<In>,
     outbound: mpsc::Sender<Out>,
 
     handler: Option<(mpsc::Sender<In>, mpsc::Receiver<Out>)>,
 }
 
-impl<In: proto::Inbound, Out: proto::Outbound> Connection<In, Out> {
+impl<In: Inbound, Out: Outbound> WebSocket<In, Out> {
     pub fn new() -> Self {
         let (inbound_tx, inbound_rx) = mpsc::channel::<In>(100);
         let (outbound_tx, outbound_rx) = mpsc::channel::<Out>(100);
-        Connection {
+        WebSocket {
             inbound: inbound_rx,
             outbound: outbound_tx,
             handler: Some((inbound_tx, outbound_rx)),
@@ -43,7 +47,7 @@ impl<In: proto::Inbound, Out: proto::Outbound> Connection<In, Out> {
         self.inbound.recv().await.ok_or(Error::SocketClose)
     }
 
-    pub fn handle_websocket<'r>(&mut self, ws: WebSocket) -> Channel<'r> {
+    pub fn handle_websocket<'r>(&mut self, ws: rocket_ws::WebSocket) -> Channel<'r> {
         let Some((inbound_tx, mut outbound_rx)) = self.handler.take() else {
             panic!("multiple calls to handle_websocket");
         };

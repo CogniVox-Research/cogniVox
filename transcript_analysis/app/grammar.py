@@ -1,31 +1,39 @@
+import warnings
+
+import spacy
 import torch
 from transformers import T5ForConditionalGeneration, T5Tokenizer
-import spacy
-import warnings
 
 __all__ = ["checker"]
 
 warnings.filterwarnings("ignore")
 
+
 class SpeechGrammarChecker:
     def __init__(self):
         print("Loading models...")
 
-        self.device = "cuda" if torch.cuda.is_available() else "cpu"
+        self.device = "cpu"
         print(f"Using device: {self.device}")
 
         model_name = "vennify/t5-base-grammar-correction"
 
         self.tokenizer = T5Tokenizer.from_pretrained(model_name)
-        self.model = T5ForConditionalGeneration.from_pretrained(model_name).to(self.device)
+        self.model = T5ForConditionalGeneration.from_pretrained(model_name).to(
+            self.device
+        )
 
         self.nlp = spacy.load("en_core_web_md")
 
     def correct_sentence(self, sentence):
         input_text = "grammar: " + sentence
-        input_ids = self.tokenizer.encode(input_text, return_tensors="pt").to(self.device)
+        input_ids = self.tokenizer.encode(input_text, return_tensors="pt").to(
+            self.device
+        )
 
-        outputs = self.model.generate(input_ids, max_length=128, num_beams=4, early_stopping=True)
+        outputs = self.model.generate(
+            input_ids, max_length=128, num_beams=4, early_stopping=True
+        )
         corrected = self.tokenizer.decode(outputs[0], skip_special_tokens=True)
 
         return corrected
@@ -50,7 +58,6 @@ class SpeechGrammarChecker:
 checker = SpeechGrammarChecker()
 
 
-
 def test():
     # ============================================================
     #                EXAMPLE APPLICATION USAGE
@@ -66,7 +73,7 @@ def test():
     errors = checker.check_errors(speech_paragraph)
 
     # Print the Report
-    print(f"{'='*20} GRAMMAR ERROR REPORT {'='*20}\n")
+    print(f"{'=' * 20} GRAMMAR ERROR REPORT {'=' * 20}\n")
 
     if not errors:
         print("No errors found! Good job.")
@@ -76,6 +83,7 @@ def test():
             print(f"   Original:  {err['original']}")
             print(f"   Corrected: {err['corrected']}")
             print("-" * 50)
+
 
 if __name__ == "__main__":
     test()

@@ -14,12 +14,12 @@ pub async fn upload_to_store(
 
     let upload_path = format!("{dir}/{filename}");
     store
-        .upload_from_reader(upload_path, original.open().await?, Some(original.len()))
+        .upload_from_reader(&upload_path, original.open().await?, Some(original.len()))
         .await?;
 
     let upload_path = format!("{dir}/content");
     store
-        .upload(upload_path, content.text.clone().into_bytes())
+        .upload(&upload_path, content.text.clone().into_bytes())
         .await?;
 
     Ok(())

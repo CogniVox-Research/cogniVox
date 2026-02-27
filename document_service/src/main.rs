@@ -50,6 +50,7 @@ async fn upload_file(
     let content = dto::FileContent {
         filename: format!("original.{extension}"),
         file_type: mime_type.to_string(),
+        document_id: String::new(),
         text,
     };
 

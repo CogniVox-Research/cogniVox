@@ -103,7 +103,7 @@ impl Store {
         Ok(String::from_utf8(bytes.to_vec())?)
     }
 
-    pub async fn upload_file(&self, path: String, file_path: PathBuf) -> Result<(), StoreError> {
+    pub async fn upload_file(&self, path: &str, file_path: PathBuf) -> Result<(), StoreError> {
         let file = fs::File::open(file_path).await?;
         let metadata = file.metadata().await?;
 
@@ -113,7 +113,7 @@ impl Store {
 
     pub async fn upload_from_reader<T: AsyncRead>(
         &self,
-        path: String,
+        path: &str,
         mut reader: T,
         size: Option<u64>,
     ) -> Result<(), StoreError>
@@ -128,7 +128,7 @@ impl Store {
         self.upload(path, data).await
     }
 
-    pub async fn upload(&self, path: String, data: Vec<u8>) -> Result<(), StoreError> {
+    pub async fn upload(&self, path: &str, data: Vec<u8>) -> Result<(), StoreError> {
         let upload_path = object_store::path::Path::from(path);
 
         let result = self

@@ -1,16 +1,13 @@
-use std::io::Cursor;
-
 use common::{
     dto::{MQMessage, SessionCreate},
     file_store::{Store, StoreError},
     mq,
 };
 use rocket::{
-    Response, State,
+    State,
     http::{ContentType, Status},
     response::{
-        self,
-        content::{self, RawHtml},
+        content::RawHtml,
         status::{self, Custom},
     },
     tokio,

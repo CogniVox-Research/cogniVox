@@ -1,13 +1,11 @@
 #[macro_use]
 extern crate rocket;
 
-use std::path::PathBuf;
-
 use common::file_store::Store;
 use rocket::{
     State,
     fs::{FileServer, Options},
-    response::content::{RawHtml, RawJavaScript},
+    response::Redirect,
 };
 use rocket_ws::{Channel, WebSocket};
 
@@ -23,13 +21,8 @@ mod error;
 mod game;
 
 #[rocket::get("/")]
-async fn index() -> RawHtml<&'static str> {
-    RawHtml(include_str!("../assets/index.html"))
-}
-
-#[rocket::get("/index.js")]
-async fn index_js() -> RawJavaScript<&'static str> {
-    RawJavaScript(include_str!("../assets/index.js"))
+async fn index() -> Redirect {
+    Redirect::moved(uri!("/ui"))
 }
 
 #[rocket::get("/ws/game/<session_id>")]
@@ -96,7 +89,7 @@ async fn rocket() -> _ {
         .manage(config)
         .manage(store)
         .manage(app_state)
-        .mount("/", routes![index, index_js, web_session, game_session])
+        .mount("/", routes![index, web_session, game_session])
         .mount(
             "/ui",
             FileServer::new("assets", Options::Index | Options::NormalizeDirs),

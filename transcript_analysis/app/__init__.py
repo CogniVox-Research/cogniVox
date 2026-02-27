@@ -2,7 +2,7 @@ from pydantic import BaseModel
 
 from . import grammar, util
 from .config import config
-from .transcript import SpeechComparer
+from .transcript import comparer
 
 __all__ = ["app", "config"]
 
@@ -18,8 +18,6 @@ class SimilarityCheckReq(BaseModel):
 
 @app.post("/")
 def check_similarity(req: SimilarityCheckReq):
-    comparer = SpeechComparer()
-
     similarity_results = comparer.compare(req.expected_text, req.speech_text)
     grammar_results = grammar.checker.check_errors(req.speech_text)
 

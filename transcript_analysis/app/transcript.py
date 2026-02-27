@@ -186,7 +186,6 @@ class SpeechComparer:
     # MAIN APPLICATION FUNCTION
     # ============================================================
     def compare(self, transcript: str, speech: str):
-
         # Embed
         s1, e1 = self._tokenize_and_embed(transcript)
         s2, e2 = self._tokenize_and_embed(speech)
@@ -206,6 +205,8 @@ class SpeechComparer:
             "sentence_count_speech": len(s2),
         }
 
+
+comparer = SpeechComparer()
 
 # ============================================================
 #                EXAMPLE APPLICATION USAGE

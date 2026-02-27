@@ -1,15 +1,12 @@
 [default]
 address = "0.0.0.0"
-port=8002
+port=8004
 sds_service_url="http://localhost:8005/"
 transcript_analysis_url="http://localhost:8005/"
 
 [default.file_store]
 type="local"
-path="../store"
-
-[default.jwt]
-key=""
+path="../storage"
 
 [default.rabbitmq]
 connection_name="game"

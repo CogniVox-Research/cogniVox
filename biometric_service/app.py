@@ -17,11 +17,12 @@ from typing_extensions import Literal
 
 # Load models
 current_dir = os.path.dirname(os.path.abspath(__file__))
-print(f"DEBUG: Current Dir: {current_dir}")
+model_dir = os.path.join(current_dir, "models")
+print(f"DEBUG: Model Dir: {model_dir}")
 print(f"DEBUG: CWD: {os.getcwd()}")
 
 try:
-    rf_path = os.path.join(current_dir, "cognivox_wesad_rf.joblib")
+    rf_path = os.path.join(model_dir, "cognivox_wesad_rf.joblib")
     print(f"DEBUG: Loading RF from: {rf_path}")
     rf_obj = joblib.load(rf_path)
     rf_model = rf_obj["model"]
@@ -32,7 +33,7 @@ except Exception as e:
     rf_feature_cols = []
 
 try:
-    lite_path = os.path.join(current_dir, "cognivox_wesad_lite_enhanced.joblib")
+    lite_path = os.path.join(model_dir, "cognivox_wesad_lite_enhanced.joblib")
     lite_obj = joblib.load(lite_path)
     lite_model = lite_obj["model"]
     lite_feature_cols = lite_obj["feature_cols"]
@@ -74,6 +75,7 @@ class StressData(pydantic.BaseModel):
 
 class Config(shared.config.SharedBaseSettings):
     rabbitmq_url: str = pydantic.Field()
+    port: int = pydantic.Field()
 
 
 config = Config.load()
@@ -204,5 +206,5 @@ if __name__ == "__main__":
     import uvicorn
 
     print("Starting BioSync Server...")
-    print("Listening on 0.0.0.0:8000 (Accessible via local IP)")
-    uvicorn.run(app, host="0.0.0.0", port=8000)
+    print(f"Listening on 0.0.0.0:{config.port}")
+    uvicorn.run(app, host="0.0.0.0", port=config.port)

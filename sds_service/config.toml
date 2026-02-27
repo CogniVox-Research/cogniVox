@@ -1,2 +1,2 @@
 rabbitmq_url = "amqp://appuser:apppass@127.0.0.1/"
-audio_recording_url = "http://localhost:5000/recording/{session_id}"
+audio_recording_url = "http://localhost:8001/recording/{session_id}"

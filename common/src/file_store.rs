@@ -87,7 +87,11 @@ impl Store {
         Ok(store)
     }
 
-    pub async fn read_str(&self, path: String) -> Result<String, StoreError> {
+    pub async fn read_str(&self, path: &str) -> Result<String, StoreError> {
+        Ok(String::from_utf8(self.read(path).await?)?)
+    }
+
+    pub async fn read(&self, path: &str) -> Result<Vec<u8>, StoreError> {
         let path = Path::from(path);
 
         let file = match self.get(&path).await {
@@ -100,7 +104,7 @@ impl Store {
 
         let bytes = file.bytes().await.map_err(|e| StoreError::Read(path, e))?;
 
-        Ok(String::from_utf8(bytes.to_vec())?)
+        Ok(bytes.to_vec())
     }
 
     pub async fn upload_file(&self, path: &str, file_path: PathBuf) -> Result<(), StoreError> {

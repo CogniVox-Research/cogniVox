@@ -12,7 +12,7 @@ use common::{
         GameFeatures, SessionCreate,
         asr::{ASR, ResultType},
     },
-    file_store::{Store, StoreError},
+    file_store::Store,
     mq,
 };
 use proto::{GameConnection, GameInbound, GameOutbound, WebConnection, WebInbound};
@@ -56,11 +56,19 @@ impl Game {
                 expected_text: self.expected_speech.clone(),
             })
             .await?;
-        println!("{transcript_result:?}");
+
+        let speech_score = self
+            .enpoints
+            .speech_score
+            .send(dto::sds::Request {
+                session_id: self.session_id.to_string(),
+                transcript: final_transcript.full_text.clone(),
+            })
+            .await?;
 
         self.game.send(GameOutbound::End).await?;
         self.web
-            .send(WebOutbound::Results(transcript_result))
+            .send(WebOutbound::Results(transcript_result, speech_score))
             .await?;
 
         Ok(())
@@ -209,7 +217,7 @@ async fn fetch_document(
     }
 
     store
-        .read_str(expected_id)
+        .read_str(&expected_id)
         .await
         .map_err(error::Error::Store)
 }

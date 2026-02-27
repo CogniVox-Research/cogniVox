@@ -90,12 +90,12 @@ impl<P: PipelineStep> PipelineStep for RecordAudio<P> {
 
         let upload_path = format!("{}/original", self.prefix);
         self.store
-            .upload_file(upload_path, self.original_path)
+            .upload_file(&upload_path, self.original_path)
             .await?;
 
         let upload_path = format!("{}/converted.wav", self.prefix);
         self.store
-            .upload_file(upload_path, self.converted_path)
+            .upload_file(&upload_path, self.converted_path)
             .await?;
 
         drop(self.recording_dir);

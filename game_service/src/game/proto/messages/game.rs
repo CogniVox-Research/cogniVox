@@ -31,6 +31,7 @@ pub enum GameOutbound {
     Unstuck,
     StuckSuggestion(String),
     Question(String),
+    End,
 }
 
 impl super::Inbound for GameInbound {

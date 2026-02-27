@@ -26,11 +26,12 @@ async fn index() -> Redirect {
 }
 
 #[rocket::get("/ws/game/<session_id>")]
-async fn game_session(
+async fn game_session<'a, 'r>(
     ws: WebSocket,
     session_id: uuid::Uuid,
-    state: &State<AppState>,
-) -> Channel<'_> {
+    state: &'a State<AppState>,
+    store: &'a State<Store>,
+) -> Channel<'r> {
     let mut cache_guard = state.pending.lock().await;
     let Some(web) = cache_guard.remove(&session_id) else {
         panic!("Invalid")
@@ -39,7 +40,7 @@ async fn game_session(
     let mut con = GameConnection::new();
     let channel = con.handle_websocket(ws);
 
-    let result = game::start_game(state.inner(), session_id, con, web).await;
+    let result = game::start_game(state.inner(), store.inner(), session_id, con, web).await;
     if let Err(e) = result {
         log::error!("WS Error {e}")
     }
@@ -69,24 +70,9 @@ async fn rocket() -> _ {
     let figment = rocket.figment();
     let config: config::AppConfig = figment.extract().expect("Config should load");
     let store = Store::from_config(&config.file_store).expect("Store should should create");
-    let rabbitmq = common::mq::Connection::for_config(config.rabbitmq.clone())
-        .await
-        .expect("Connection should succeed");
-
-    rabbitmq
-        .create_broadcast_exchange("session_start")
-        .await
-        .unwrap();
-
-    rabbitmq.create_exchange("audio").await.unwrap();
-    rabbitmq.create_topic_exchange("asr").await.unwrap();
-    rabbitmq.create_broadcast_exchange("stress").await.unwrap();
-    rabbitmq.create_exchange("results").await.unwrap();
-
-    let app_state = AppState::create(rabbitmq).await.expect("App should init");
+    let app_state = AppState::create(config).await.expect("App should init");
 
     rocket
-        .manage(config)
         .manage(store)
         .manage(app_state)
         .mount("/", routes![index, web_session, game_session])

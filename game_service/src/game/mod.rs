@@ -1,13 +1,19 @@
+use std::sync::Arc;
+
 use crate::{
     app::AppState,
     dto::{self, settings::Settings},
-    error::{Error, Result},
-    game::proto::{ServiceInbound, WebOutbound},
+    error::{self, Error, Result},
+    game::proto::{Endpoints, ServiceInbound, WebOutbound},
 };
 pub mod proto;
 use common::{
-    dto::{GameFeatures, SessionCreate, asr::ResultType},
-    mq::{self, MQError, Message},
+    dto::{
+        GameFeatures, SessionCreate,
+        asr::{ASR, ResultType},
+    },
+    file_store::{Store, StoreError},
+    mq,
 };
 use proto::{GameConnection, GameInbound, GameOutbound, WebConnection, WebInbound};
 use rocket::tokio::{self, select};
@@ -22,7 +28,10 @@ pub struct Game {
     stress_tx: mq::Sender<dto::stress::StressRequest>,
     result_rx: mq::Consumer<proto::ServiceInbound>,
 
+    enpoints: Arc<Endpoints>,
+
     settings: Settings,
+    expected_speech: String,
 }
 
 impl Game {
@@ -36,12 +45,28 @@ impl Game {
         log::info!("Waiting for speech to start");
         proto::wait_for!(self.game, GameInbound::SpeechStart)?;
         log::info!("Speech started");
-        self.speech_loop().await?;
+
+        let final_transcript = self.speech_loop().await?;
+
+        let transcript_result = self
+            .enpoints
+            .transcript
+            .send(dto::transcript::Request {
+                speech_text: final_transcript.full_text.clone(),
+                expected_text: self.expected_speech.clone(),
+            })
+            .await?;
+        println!("{transcript_result:?}");
+
+        self.game.send(GameOutbound::End).await?;
+        self.web
+            .send(WebOutbound::Results(transcript_result))
+            .await?;
 
         Ok(())
     }
 
-    async fn speech_loop(&mut self) -> Result<()> {
+    async fn speech_loop(&mut self) -> Result<ASR> {
         loop {
             select! {
                 Ok(msg) = self.game.recv() => {
@@ -72,10 +97,10 @@ impl Game {
                         ServiceInbound::ASR(asr) => {
                             let is_end = asr.type_of == ResultType::Complete;
                             self.web.send(WebOutbound::ASR(asr.clone())).await?;
-                            self.game.send(GameOutbound::ASR(asr)).await?;
+                            self.game.send(GameOutbound::ASR(asr.clone())).await?;
 
                             if is_end{
-                                break Ok(());
+                                break Ok(asr);
                             }
                         }
                         ServiceInbound::Stress(st) => {
@@ -101,6 +126,7 @@ impl Game {
 
 pub async fn start_game(
     state: &AppState,
+    store: &Store,
     session_id: uuid::Uuid,
     game: GameConnection,
     mut web: WebConnection,
@@ -117,6 +143,7 @@ pub async fn start_game(
         .await?;
 
     let session_id_str = session_id.to_string();
+    let enpoints = state.endpoints.clone();
 
     let audio_tx = state
         .mq_connection
@@ -136,12 +163,22 @@ pub async fn start_game(
         .bind_exchange("results".to_owned(), session_id_str)
         .await?;
 
+    let settings = proto::recv_message!(web, WebInbound::Start).unwrap();
+    // TODO: validate document and settings.
+    log::info!("Got game settings {settings:?}");
+
+    let expected_speech = match store
+        .read_str(format!("{session_id}/documents/content"))
+        .await
+    {
+        Ok(content) => Ok(content),
+        Err(StoreError::NotFound(_)) if settings.document_id == "invalid-use-test" => {
+            Ok(include_str!("../../assets/expected-transcript").to_owned())
+        }
+        Err(e) => Err(error::Error::Store(e)),
+    }?;
+
     tokio::spawn(async move {
-        let settings = proto::recv_message!(web, WebInbound::Start).unwrap();
-
-        // TODO: validate document and settings.
-        log::info!("Got game settings {settings:?}");
-
         let mut game = Game {
             session_id,
             game,
@@ -150,11 +187,13 @@ pub async fn start_game(
             audio_tx,
             stress_tx,
             result_rx,
+            enpoints,
+            expected_speech,
         };
 
         let result = game.run().await;
         if let Err(e) = result {
-            log::error!("Game WS Error {e}")
+            log::error!("Game Error {e}")
         }
     });
 

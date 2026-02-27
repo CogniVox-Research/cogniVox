@@ -1,7 +1,7 @@
 use std::{ops::Deref, os::unix::fs::MetadataExt, path::PathBuf, sync::Arc};
 
 use bytes::Bytes;
-use object_store::{ObjectStoreExt, PutPayload};
+use object_store::{ObjectStoreExt, PutPayload, path::Path};
 use serde::Deserialize;
 use tokio::{
     fs,
@@ -18,6 +18,15 @@ pub enum StoreError {
 
     #[error("Failed to upload file {0} to store: {1}")]
     Upload(object_store::path::Path, object_store::Error),
+
+    #[error("Failed to read file {0}: {1}")]
+    Read(object_store::path::Path, object_store::Error),
+
+    #[error("File Not found: {0}")]
+    NotFound(object_store::path::Path),
+
+    #[error(transparent)]
+    NotUtf8(#[from] std::string::FromUtf8Error),
 }
 
 #[derive(Debug, Deserialize)]
@@ -76,6 +85,22 @@ impl Store {
         };
 
         Ok(store)
+    }
+
+    pub async fn read_str(&self, path: String) -> Result<String, StoreError> {
+        let path = Path::from(path);
+
+        let file = match self.get(&path).await {
+            Ok(v) => v,
+            Err(object_store::Error::NotFound { path: _, source: _ }) => {
+                return Err(StoreError::NotFound(path));
+            }
+            Err(e) => return Err(StoreError::Read(path, e)),
+        };
+
+        let bytes = file.bytes().await.map_err(|e| StoreError::Read(path, e))?;
+
+        Ok(String::from_utf8(bytes.to_vec())?)
     }
 
     pub async fn upload_file(&self, path: String, file_path: PathBuf) -> Result<(), StoreError> {

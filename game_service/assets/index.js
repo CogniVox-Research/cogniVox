@@ -12,7 +12,7 @@ const ACTIONS = [
     data: {
       scene: "stage",
       size: 10,
-      document_id: "invalid",
+      document_id: "invalid-use-test",
       distractions: true,
       qa: true,
       difficulty: "easy",
@@ -49,6 +49,19 @@ const ACTIONS = [
       name: "micro-machines",
       chunk_size: 1000,
       chunks: 30,
+    },
+
+    state: 4,
+  },
+  {
+    name: "Audio(Short)",
+    mode: "game",
+
+    type: "audio",
+    data: {
+      name: "micro-machines",
+      chunk_size: 1000,
+      chunks: 3,
     },
 
     state: 4,

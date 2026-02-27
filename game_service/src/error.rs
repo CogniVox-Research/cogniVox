@@ -1,4 +1,4 @@
-use common::mq;
+use common::{file_store, mq};
 use rocket_ws::Message;
 
 pub type Result<T, E = Error> = std::result::Result<T, E>;
@@ -17,8 +17,14 @@ pub enum Error {
     #[error("Failed to deserialize message: {0}")]
     Deserialize(serde_json::Error),
 
-    #[error(transparent)]
+    #[error("MQ error: {0}")]
     MQ(#[from] mq::MQError),
+
+    #[error("Failed to send request: {0:?}")]
+    HTTP(#[from] reqwest::Error),
+
+    #[error("Store error: {0:?}")]
+    Store(file_store::StoreError),
 
     /// Not an error. Returned by From<rocket_rs::Message> for pong message.
     /// This should not be returned by out of the ws crate.

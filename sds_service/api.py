@@ -1,10 +1,10 @@
 import os
 import secrets
 
-import httpx
 import pydantic
 import whisper
 from fastapi import FastAPI, HTTPException
+from shared.store import connect_store
 
 from config import config
 from features.extract_metrics import extract_metrics
@@ -27,6 +27,7 @@ os.makedirs(UPLOAD_DIR, exist_ok=True)
 # Load Whisper ONCE
 whisper_model = whisper.load_model("tiny")
 
+store = connect_store(config.store)
 
 # ---------------------------------------------------
 # HEALTH CHECK
@@ -44,20 +45,19 @@ def root():
 
 
 class SDSRequest(pydantic.BaseModel):
-    session_id: str
+    audio_key: str
     transcript: str
 
 
 @app.post("/analyze-speech")
 async def analyze_speech(req: SDSRequest):
-    response = httpx.get(config.audio_recording_url.format(session_id=req.session_id))
-    response.raise_for_status()
+    data = store.get(req.audio_key)
 
     # Save uploaded file
     file_name = secrets.token_urlsafe() + ".wav"
     file_path = os.path.join(UPLOAD_DIR, file_name)
     with open(file_path, "wb") as file:
-        file.write(response.content)
+        file.write(data)
 
     try:
         # 1️⃣ Transcribe

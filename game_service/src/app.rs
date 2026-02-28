@@ -1,7 +1,7 @@
 use crate::{
     config::AppConfig,
     error::Result,
-    game::proto::{self, APIRequest, WebConnection},
+    game::proto::{self, APIRequest, DeviceConnection, WebConnection},
 };
 use common::{dto::SessionCreate, mq};
 use rocket::futures::lock::Mutex;
@@ -10,6 +10,8 @@ use std::{collections::HashMap, sync::Arc};
 #[derive(Debug)]
 pub struct AppState {
     pub pending: Mutex<HashMap<uuid::Uuid, WebConnection>>,
+
+    pub vr: Mutex<HashMap<uuid::Uuid, DeviceConnection>>,
 
     pub mq_connection: mq::Connection,
     pub session_queue: mq::Sender<SessionCreate>,
@@ -32,6 +34,7 @@ impl AppState {
 
         Ok(Self {
             pending: Default::default(),
+            vr: Default::default(),
             mq_connection: rabbitmq.clone(),
             session_queue: rabbitmq
                 .sender("", Some("session_start".to_owned()))

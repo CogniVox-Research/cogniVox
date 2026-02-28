@@ -11,7 +11,7 @@ use rocket_ws::{Channel, WebSocket};
 
 use crate::{
     app::AppState,
-    game::proto::{GameConnection, WebConnection, WebOutbound},
+    game::proto::{DeviceConnection, DeviceOutbound, GameConnection, WebConnection, WebOutbound},
 };
 
 mod app;
@@ -48,6 +48,25 @@ async fn game_session<'a, 'r>(
     channel
 }
 
+#[rocket::get("/ws/device")]
+async fn vr_device(ws: WebSocket, state: &State<AppState>) -> Channel<'_> {
+    let device_id = uuid::Uuid::now_v7();
+
+    let mut con = DeviceConnection::new();
+    con.send(DeviceOutbound::Ok {
+        device_id,
+        user_name: "Test User".to_owned(),
+    })
+    .await
+    .unwrap();
+
+    let channel = con.handle_websocket(ws);
+
+    let mut vr = state.vr.lock().await;
+    vr.insert(device_id, con);
+    channel
+}
+
 #[rocket::get("/ws/web")]
 async fn web_session(ws: WebSocket, state: &State<AppState>) -> Channel<'_> {
     let session_id = uuid::Uuid::now_v7();
@@ -56,6 +75,12 @@ async fn web_session(ws: WebSocket, state: &State<AppState>) -> Channel<'_> {
     con.send(WebOutbound::Pair(session_id.to_string()))
         .await
         .unwrap();
+
+    // TODO: device filter
+    let devices = state.vr.lock().await;
+    for device in devices.values() {
+        let _ = device.send(DeviceOutbound::Join { session_id }).await;
+    }
 
     let channel = con.handle_websocket(ws);
 
@@ -75,7 +100,7 @@ async fn rocket() -> _ {
     rocket
         .manage(store)
         .manage(app_state)
-        .mount("/", routes![index, web_session, game_session])
+        .mount("/", routes![index, web_session, game_session, vr_device])
         .mount(
             "/ui",
             FileServer::new("assets", Options::Index | Options::NormalizeDirs),

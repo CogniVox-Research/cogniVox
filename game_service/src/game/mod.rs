@@ -8,10 +8,7 @@ use crate::{
 };
 pub mod proto;
 use common::{
-    dto::{
-        GameFeatures, SessionCreate,
-        asr::{ASR, ResultType},
-    },
+    dto::asr::{ASR, ResultType},
     file_store::Store,
 };
 use proto::{GameConnection, GameInbound, GameOutbound, WebConnection, WebInbound};

@@ -10,3 +10,4 @@ pub use ws::*;
 
 pub type WebConnection = WebSocket<WebInbound, WebOutbound>;
 pub type GameConnection = WebSocket<GameInbound, GameOutbound>;
+pub type DeviceConnection = WebSocket<DeviceInbound, DeviceOutbound>;

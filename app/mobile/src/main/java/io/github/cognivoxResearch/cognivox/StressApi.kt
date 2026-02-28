@@ -1,4 +1,4 @@
-package com.biosync.mobile
+package io.github.cognivoxResearch.cognivox
 
 import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory

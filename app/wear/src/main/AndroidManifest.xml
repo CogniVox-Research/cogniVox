@@ -20,14 +20,18 @@
         <meta-data
             android:name="com.samsung.android.health.permission.read"
             android:value="com.samsung.health.heart_rate" />
+        <meta-data
+            android:name="com.google.android.wearable.standalone"
+            android:value="false" />
+
 
         <service
-            android:name=".HRVService"
+            android:name="io.github.cognivoxResearch.cognivox.wear.HRVService"
             android:exported="true"
             android:foregroundServiceType="health" />
 
         <activity
-            android:name=".MainActivity"
+            android:name="io.github.cognivoxResearch.cognivox.wear.MainActivity"
             android:exported="true"
             android:theme="@android:style/Theme.DeviceDefault">
             <intent-filter>

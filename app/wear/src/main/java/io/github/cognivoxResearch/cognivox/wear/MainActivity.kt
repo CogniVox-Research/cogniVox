@@ -1,10 +1,11 @@
-package com.biosync.wear
+package io.github.cognivoxResearch.cognivox.wear
 
 import android.Manifest
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.Build
 import android.os.Bundle
+import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
@@ -24,6 +25,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat
@@ -105,19 +107,19 @@ fun WearApp() {
                 Spacer(modifier = Modifier.height(16.dp))
                 
                 Button(onClick = {
-                    android.widget.Toast.makeText(context, "Stopping Service...", android.widget.Toast.LENGTH_SHORT).show()
+                    Toast.makeText(context, "Stopping Service...", Toast.LENGTH_SHORT).show()
                     context.stopService(Intent(context, HRVService::class.java))
                 }) {
                     Text("Stop")
                 }
             } else {
-                Text(text = "Start Speech", fontSize = 20.sp, fontWeight = androidx.compose.ui.text.font.FontWeight.Bold)
+                Text(text = "Start Speech", fontSize = 20.sp, fontWeight = FontWeight.Bold)
                 Spacer(modifier = Modifier.height(8.dp))
                 Text(text = "🎤", fontSize = 32.sp) // Using emoji as a lightweight icon alternative
                 Spacer(modifier = Modifier.height(8.dp))
                 
                 Button(onClick = {
-                    android.widget.Toast.makeText(context, "Starting Service...", android.widget.Toast.LENGTH_SHORT).show()
+                    Toast.makeText(context, "Starting Service...", Toast.LENGTH_SHORT).show()
                     context.startForegroundService(Intent(context, HRVService::class.java))
                 }) {
                     Text("Start")

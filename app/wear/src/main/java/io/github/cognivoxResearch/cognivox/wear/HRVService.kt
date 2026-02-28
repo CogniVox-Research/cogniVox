@@ -1,4 +1,4 @@
-package com.biosync.wear
+package io.github.cognivoxResearch.cognivox.wear
 
 import android.app.Notification
 import android.app.NotificationChannel

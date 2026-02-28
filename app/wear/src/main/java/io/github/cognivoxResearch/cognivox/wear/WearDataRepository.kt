@@ -1,4 +1,4 @@
-package com.biosync.wear
+package io.github.cognivoxResearch.cognivox.wear
 
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow

@@ -1,4 +1,4 @@
-package com.biosync.mobile
+package io.github.cognivoxResearch.cognivox
 
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow

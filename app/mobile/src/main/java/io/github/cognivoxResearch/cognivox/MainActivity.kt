@@ -1,12 +1,16 @@
-package com.biosync.mobile
+package io.github.cognivoxResearch.cognivox
 
+import android.content.Intent
 import android.os.Bundle
+import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.rememberScrollState
@@ -15,6 +19,10 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -23,9 +31,11 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 
@@ -56,7 +66,7 @@ fun HRVDisplay() {
     // Brand Colors
     val BioSyncBlue = Color(0xFF2979FF)
     val BioSyncPurple = Color(0xFFD500F9)
-    val BrandGradient = androidx.compose.ui.graphics.Brush.linearGradient(
+    val BrandGradient = Brush.linearGradient(
         colors = listOf(BioSyncBlue, BioSyncPurple)
     )
 
@@ -92,17 +102,17 @@ fun HRVDisplay() {
         Spacer(modifier = Modifier.height(48.dp))
         
         // Status Card
-        androidx.compose.material3.Card(
+        Card(
             modifier = Modifier.size(280.dp),
             shape = CircleShape,
-            colors = androidx.compose.material3.CardDefaults.cardColors(
+            colors = CardDefaults.cardColors(
                 containerColor = Color(0xFFF5F5F5) // Light gray background
             ),
             // Use border logic: Red/Green if active, Gradient if waiting
             border = if (stressLabel == null) {
-                androidx.compose.foundation.BorderStroke(6.dp, BrandGradient)
+                BorderStroke(6.dp, BrandGradient)
             } else {
-                androidx.compose.foundation.BorderStroke(6.dp, indicatorColor)
+                BorderStroke(6.dp, indicatorColor)
             }
         ) {
             Box(
@@ -115,7 +125,7 @@ fun HRVDisplay() {
                         fontSize = if (statusText.length > 10) 24.sp else 36.sp, // Dynamic size
                         fontWeight = FontWeight.ExtraBold,
                         color = if (stressLabel == null) BioSyncBlue else indicatorColor,
-                        textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                        textAlign = TextAlign.Center,
                         lineHeight = 32.sp,
                         modifier = Modifier.padding(horizontal = 16.dp)
                     )
@@ -140,34 +150,34 @@ fun HRVDisplay() {
             fontSize = 18.sp,
             fontWeight = FontWeight.Medium,
             color = Color.DarkGray,
-            textAlign = androidx.compose.ui.text.style.TextAlign.Center
+            textAlign = TextAlign.Center
         )
 
         Spacer(modifier = Modifier.height(32.dp))
 
         // Start / Stop Buttons
-        androidx.compose.foundation.layout.Row(
+        Row(
            horizontalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            androidx.compose.material3.Button(
+            Button(
                 onClick = {
-                    android.widget.Toast.makeText(context, "Monitoring Started", android.widget.Toast.LENGTH_SHORT).show()
-                    context.startService(android.content.Intent(context, HRVReceiverService::class.java))
+                    Toast.makeText(context, "Monitoring Started", Toast.LENGTH_SHORT).show()
+                    context.startService(Intent(context, HRVReceiverService::class.java))
                 },
                 modifier = Modifier.weight(1f),
-                colors = androidx.compose.material3.ButtonDefaults.buttonColors(
+                colors = ButtonDefaults.buttonColors(
                     containerColor = BioSyncBlue
                 )
             ) {
                 Text("Start")
             }
-            
-            androidx.compose.material3.Button(
+
+            Button(
                 onClick = {
-                    android.widget.Toast.makeText(context, "Monitoring Stopped", android.widget.Toast.LENGTH_SHORT).show()
-                    context.stopService(android.content.Intent(context, HRVReceiverService::class.java))
+                    Toast.makeText(context, "Monitoring Stopped", Toast.LENGTH_SHORT).show()
+                    context.stopService(Intent(context, HRVReceiverService::class.java))
                 },
-                colors = androidx.compose.material3.ButtonDefaults.buttonColors(
+                colors = ButtonDefaults.buttonColors(
                     containerColor = Color(0xFFD32F2F)
                 ),
                 modifier = Modifier.weight(1f)

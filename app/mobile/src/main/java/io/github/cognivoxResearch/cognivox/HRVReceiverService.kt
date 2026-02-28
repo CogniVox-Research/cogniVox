@@ -1,18 +1,22 @@
+package io.github.cognivoxResearch.cognivox
 
-package com.biosync.mobile
-
+import android.os.Handler
+import android.os.Looper
 import com.google.android.gms.wearable.MessageEvent
 import com.google.android.gms.wearable.WearableListenerService
 import java.nio.ByteBuffer
 import kotlinx.coroutines.launch
 import android.util.Log // Added for direct Log usage as per user's edit
+import android.widget.Toast
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
 
 class HRVReceiverService : WearableListenerService() {
 
-    private val scope = kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.IO)
+    private val scope = CoroutineScope(Dispatchers.IO)
 
     override fun onMessageReceived(messageEvent: MessageEvent) {
-        android.util.Log.d("HRVReceiverService", "Message received path: ${messageEvent.path}")
+        Log.d("HRVReceiverService", "Message received path: ${messageEvent.path}")
         
         if (messageEvent.path == "/hrv_stream") {
             // Legacy support if needed, or remove if fully switching
@@ -41,8 +45,8 @@ class HRVReceiverService : WearableListenerService() {
                 )
                 
                 // Show Toast for Debugging
-                android.os.Handler(android.os.Looper.getMainLooper()).post {
-                    android.widget.Toast.makeText(applicationContext, "Rx: RMSSD=${String.format("%.1f", rmssd)}", android.widget.Toast.LENGTH_SHORT).show()
+                Handler(Looper.getMainLooper()).post {
+                    Toast.makeText(applicationContext, "Rx: RMSSD=${String.format("%.1f", rmssd)}", Toast.LENGTH_SHORT).show()
                 }
 
                 scope.launch {
@@ -52,8 +56,8 @@ class HRVReceiverService : WearableListenerService() {
                         DataRepository.updateStress(response.label, response.stress_score, response.suggestion)
                     } catch (e: Exception) {
                         Log.e("HRVReceiver", "API Call Failed: ${e.message}")
-                        android.os.Handler(android.os.Looper.getMainLooper()).post {
-                            android.widget.Toast.makeText(applicationContext, "API Error: ${e.message}", android.widget.Toast.LENGTH_LONG).show()
+                        Handler(Looper.getMainLooper()).post {
+                            Toast.makeText(applicationContext, "API Error: ${e.message}", Toast.LENGTH_LONG).show()
                         }
                     }
                 }

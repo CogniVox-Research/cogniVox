@@ -4,7 +4,7 @@ use crate::{
     app::AppState,
     dto::{self, settings::Settings},
     error::{self, Error, Result},
-    game::proto::{Endpoints, ServiceInbound, WebOutbound},
+    game::proto::{Endpoints, MQSession, ServiceInbound, WebOutbound},
 };
 pub mod proto;
 use common::{
@@ -13,7 +13,6 @@ use common::{
         asr::{ASR, ResultType},
     },
     file_store::Store,
-    mq,
 };
 use proto::{GameConnection, GameInbound, GameOutbound, WebConnection, WebInbound};
 use rocket::tokio::{self, select};
@@ -23,10 +22,7 @@ pub struct Game {
 
     game: GameConnection,
     web: WebConnection,
-
-    audio_tx: mq::Sender<Vec<u8>>,
-    stress_tx: mq::Sender<dto::stress::StressRequest>,
-    result_rx: mq::Consumer<proto::ServiceInbound>,
+    mq: MQSession,
 
     enpoints: Arc<Endpoints>,
 
@@ -61,7 +57,7 @@ impl Game {
             .enpoints
             .speech_score
             .send(dto::sds::Request {
-                session_id: self.session_id.to_string(),
+                audio_key: format!("{}/recordings/converted.wav", self.session_id.to_string()),
                 transcript: final_transcript.full_text.clone(),
             })
             .await?;
@@ -80,15 +76,15 @@ impl Game {
                 Ok(msg) = self.game.recv() => {
                     match msg {
                         GameInbound::Audio(audio_chunk) => {
-                            self.audio_tx.send(audio_chunk).await?;
+                            self.mq.send_audio(audio_chunk).await?;
                         }
                         GameInbound::Stress(stress_request) => {
                             let mut request = stress_request;
                             request.session_id = Some(self.session_id);
-                            self.stress_tx.send(request).await?;
+                            self.mq.send_stress_metrics(request).await?;
                         }
                         GameInbound::SpeechEnd => {
-                            self.audio_tx.send("END".as_bytes().to_vec()).await?;
+                            self.mq.send_audio("END".as_bytes().to_vec()).await?;
                         }
                         _ => {
                             // ignore other messages
@@ -96,7 +92,7 @@ impl Game {
                         }
                     }
                 },
-                Some(data) = self.result_rx.recv()=>{
+                Some(data) = self.mq.recv()=>{
                     let message = data?.get().await?;
 
                     log::debug!("Got message {:?}", message);
@@ -142,34 +138,11 @@ pub async fn start_game(
     web.send(WebOutbound::GameConnected).await?;
     log::info!("Game connected successfully");
 
-    state
-        .session_queue
-        .send(SessionCreate {
-            session_id,
-            features: GameFeatures { stress: false },
-        })
-        .await?;
+    let session_mq = MQSession::new(&state.mq_connection, session_id).await?;
+    session_mq.send_session_start(&state.session_queue).await?;
+    log::info!("MQ initialized for session");
 
-    let session_id_str = session_id.to_string();
     let enpoints = state.endpoints.clone();
-
-    let audio_tx = state
-        .mq_connection
-        .sender(&session_id_str, Some("audio".to_owned()))
-        .await?;
-    let stress_tx = state
-        .mq_connection
-        .sender(&session_id_str, Some("stress".to_owned()))
-        .await?;
-
-    let result_rx = state
-        .mq_connection
-        .recieve(None)
-        .await?
-        .bind_exchange("asr".to_owned(), session_id_str.clone())
-        .await?
-        .bind_exchange("results".to_owned(), session_id_str)
-        .await?;
 
     let settings = proto::recv_message!(web, WebInbound::Start).unwrap();
 
@@ -184,10 +157,8 @@ pub async fn start_game(
             game,
             web,
             settings,
-            audio_tx,
-            stress_tx,
-            result_rx,
             enpoints,
+            mq: session_mq,
             expected_speech,
         };
 

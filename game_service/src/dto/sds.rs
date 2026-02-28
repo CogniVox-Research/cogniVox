@@ -2,7 +2,7 @@ use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Serialize)]
 pub struct Request {
-    pub session_id: String,
+    pub audio_key: String,
     pub transcript: String,
 }
 

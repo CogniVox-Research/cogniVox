@@ -1,5 +1,6 @@
 import os
 import secrets
+import traceback
 
 import pydantic
 import whisper
@@ -78,6 +79,8 @@ async def analyze_speech(req: SDSRequest):
         print(result)
         return result
     except Exception as e:
+        print(f"SDS error: {e}")
+        traceback.print_exc()
         raise HTTPException(status_code=500, detail=str(e))
 
     finally:

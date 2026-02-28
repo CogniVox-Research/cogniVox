@@ -4,11 +4,11 @@ plugins {
 }
 
 android {
-    namespace = "com.biosync.wear"
+    namespace = "io.github.cognivoxResearch.cognivox.wear"
     compileSdk = 34
 
     defaultConfig {
-        applicationId = "com.biosync.mobile"
+        applicationId = "io.github.cognivoxResearch.cognivox"
         minSdk = 30
         targetSdk = 34
         versionCode = 1

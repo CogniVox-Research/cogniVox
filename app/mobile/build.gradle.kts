@@ -1,14 +1,16 @@
+import com.android.build.api.dsl.AaptOptions
+
 plugins {
     alias(libs.plugins.androidApplication)
     alias(libs.plugins.kotlinCompose)
 }
 
 android {
-    namespace = "com.biosync.mobile"
+    namespace = "io.github.cognivoxResearch.cognivox"
     compileSdk = 34
 
     defaultConfig {
-        applicationId = "com.biosync.mobile"
+        applicationId = "io.github.cognivoxResearch.cognivox"
         minSdk = 26
         targetSdk = 34
         versionCode = 1
@@ -18,7 +20,11 @@ android {
         vectorDrawables {
             useSupportLibrary = true
         }
+        androidResources{
+            ignoreAssetsPattern ="!.svn:!.git:!.gitignore:!.ds_store:!*.scc:<dir>_*:!CVS:!thumbs.db:!picasa.ini:!*~"
+        }
     }
+
 
     buildTypes {
         release {
@@ -32,12 +38,14 @@ android {
     }
     buildFeatures {
         compose = true
+        viewBinding = true
     }
     packaging {
         resources {
             excludes += "/META-INF/{AL2.0,LGPL2.1}"
         }
     }
+
 }
 
 dependencies {
@@ -50,6 +58,8 @@ dependencies {
     implementation(libs.androidx.ui.tooling.preview)
     implementation(libs.androidx.material3)
     implementation(libs.play.services.wearable)
+    implementation(libs.appcompat)
+    implementation(libs.androidx.fragment)
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
@@ -59,7 +69,10 @@ dependencies {
     debugImplementation(libs.androidx.ui.test.manifest)
 
     // Networking
-    implementation("com.squareup.retrofit2:retrofit:2.9.0")
-    implementation("com.squareup.retrofit2:converter-gson:2.9.0")
-    implementation("com.squareup.okhttp3:logging-interceptor:4.12.0")
+    implementation(libs.retrofit)
+    implementation(libs.converter.gson)
+    implementation(libs.logging.interceptor)
+
+    // Godot
+    implementation(libs.godot)
 }

@@ -3,9 +3,9 @@ import typing
 from contextlib import asynccontextmanager
 from warnings import deprecated
 
+import pydantic
 from aio_pika import connect_robust
 from aio_pika.abc import AbstractChannel, AbstractIncomingMessage
-import pydantic
 
 
 @asynccontextmanager
@@ -26,24 +26,35 @@ def rabbitmq_connect(url: str):
 @typing.overload
 def read_queue[T: pydantic.BaseModel](
     channel: AbstractChannel,
-    queue_name: str,
+    queue_name: str | None,
     msg_type: typing.Type[T],
+    exchange: str | None = None,
+    routing_key: str | None = None,
 ) -> typing.AsyncIterable[T]: ...
 
 
 @typing.overload
 def read_queue(
     channel: AbstractChannel,
-    queue_name: str,
+    queue_name: str | None,
     msg_type: None,
+    exchange: str | None = None,
+    routing_key: str | None = None,
 ) -> typing.AsyncIterable[AbstractIncomingMessage]: ...
 
 
 async def read_queue[T: pydantic.BaseModel](
     channel: AbstractChannel,
-    queue_name: str,
+    queue_name: str | None,
     msg_type: typing.Type[T] | None = None,
+    exchange: str = "",
+    routing_key: str | None = None,
 ) -> typing.AsyncIterable[T] | typing.AsyncIterable[AbstractIncomingMessage]:
+    if queue_name is None:
+        queue = await channel.declare_queue(None, exclusive=True, auto_delete=True)
+        queue_name = queue.name
+        await queue.bind(exchange, routing_key=routing_key)
+
     queue = await channel.get_queue(queue_name, ensure=True)
     async with queue.iterator() as queue_iter:
         async for message in queue_iter:

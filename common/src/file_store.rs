@@ -1,7 +1,7 @@
 use std::{ops::Deref, os::unix::fs::MetadataExt, path::PathBuf, sync::Arc};
 
 use bytes::Bytes;
-use object_store::{ObjectStoreExt, PutPayload};
+use object_store::{ObjectStoreExt, PutPayload, path::Path};
 use serde::Deserialize;
 use tokio::{
     fs,
@@ -18,6 +18,15 @@ pub enum StoreError {
 
     #[error("Failed to upload file {0} to store: {1}")]
     Upload(object_store::path::Path, object_store::Error),
+
+    #[error("Failed to read file {0}: {1}")]
+    Read(object_store::path::Path, object_store::Error),
+
+    #[error("File Not found: {0}")]
+    NotFound(object_store::path::Path),
+
+    #[error(transparent)]
+    NotUtf8(#[from] std::string::FromUtf8Error),
 }
 
 #[derive(Debug, Deserialize)]
@@ -78,7 +87,27 @@ impl Store {
         Ok(store)
     }
 
-    pub async fn upload_file(&self, path: String, file_path: PathBuf) -> Result<(), StoreError> {
+    pub async fn read_str(&self, path: &str) -> Result<String, StoreError> {
+        Ok(String::from_utf8(self.read(path).await?)?)
+    }
+
+    pub async fn read(&self, path: &str) -> Result<Vec<u8>, StoreError> {
+        let path = Path::from(path);
+
+        let file = match self.get(&path).await {
+            Ok(v) => v,
+            Err(object_store::Error::NotFound { path: _, source: _ }) => {
+                return Err(StoreError::NotFound(path));
+            }
+            Err(e) => return Err(StoreError::Read(path, e)),
+        };
+
+        let bytes = file.bytes().await.map_err(|e| StoreError::Read(path, e))?;
+
+        Ok(bytes.to_vec())
+    }
+
+    pub async fn upload_file(&self, path: &str, file_path: PathBuf) -> Result<(), StoreError> {
         let file = fs::File::open(file_path).await?;
         let metadata = file.metadata().await?;
 
@@ -88,7 +117,7 @@ impl Store {
 
     pub async fn upload_from_reader<T: AsyncRead>(
         &self,
-        path: String,
+        path: &str,
         mut reader: T,
         size: Option<u64>,
     ) -> Result<(), StoreError>
@@ -103,7 +132,7 @@ impl Store {
         self.upload(path, data).await
     }
 
-    pub async fn upload(&self, path: String, data: Vec<u8>) -> Result<(), StoreError> {
+    pub async fn upload(&self, path: &str, data: Vec<u8>) -> Result<(), StoreError> {
         let upload_path = object_store::path::Path::from(path);
 
         let result = self

@@ -1,6 +1,6 @@
 import asyncio
-from contextlib import asynccontextmanager
 import typing
+from contextlib import asynccontextmanager
 
 from .config import config
 
@@ -32,5 +32,3 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI()
-
-print(config)

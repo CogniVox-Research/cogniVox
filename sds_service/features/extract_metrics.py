@@ -1,21 +1,25 @@
-import librosa
-import numpy as np
-from scipy.signal import find_peaks
 import re
 
+import librosa
+import numpy as np
+from audioread import audio_open
+from scipy.signal import find_peaks
 
 # ---------------------------------------------------
 # AUDIO LOADING (hardware-independent)
 # ---------------------------------------------------
 
+
 def load_audio(path):
-    audio, sr = librosa.load(path, sr=16000)
+    data = audio_open(path)
+    audio, sr = librosa.load(data, sr=16000)
     audio = librosa.util.normalize(audio)
     return audio, sr
 
+
 # ---------------------------------------------------
 # VOICED DURATION (Fluency)
-#----------------------------------------------------
+# ----------------------------------------------------
 def compute_voiced_duration(audio, sr):
     """
     Compute voiced duration using both pitch and energy.
@@ -40,9 +44,8 @@ def compute_voiced_duration(audio, sr):
 
     return float(voiced_duration)
 
-def detect_pauses(audio, sr,
-                  rms_threshold=0.1,
-                  min_pause_duration=0.4):
+
+def detect_pauses(audio, sr, rms_threshold=0.1, min_pause_duration=0.4):
     """
     Detect pauses based on low energy.
     Returns a list of pause dicts with start, end, duration (seconds).
@@ -69,23 +72,28 @@ def detect_pauses(audio, sr,
             current_duration += frame_duration
         else:
             if current_duration >= min_pause_duration:
-                pauses.append({
-                    "start": current_start,
-                    "end": current_start + current_duration,
-                    "duration": current_duration
-                })
+                pauses.append(
+                    {
+                        "start": current_start,
+                        "end": current_start + current_duration,
+                        "duration": current_duration,
+                    }
+                )
             current_start = None
             current_duration = 0.0
 
     # Catch trailing pause
     if current_duration >= min_pause_duration:
-        pauses.append({
-            "start": current_start,
-            "end": current_start + current_duration,
-            "duration": current_duration
-        })
+        pauses.append(
+            {
+                "start": current_start,
+                "end": current_start + current_duration,
+                "duration": current_duration,
+            }
+        )
 
     return pauses
+
 
 def merge_close_pauses(pauses, gap_threshold=0.3):
     """
@@ -109,25 +117,24 @@ def merge_close_pauses(pauses, gap_threshold=0.3):
 
     return merged
 
+
 def compute_pause_metrics(pauses):
     if not pauses:
-        return {
-            "avg_pause": 0.0,
-            "max_pause": 0.0,
-            "pause_count": 0
-        }
+        return {"avg_pause": 0.0, "max_pause": 0.0, "pause_count": 0}
 
     durations = [p["duration"] for p in pauses]
 
     return {
         "avg_pause": float(np.mean(durations)),
         "max_pause": float(np.max(durations)),
-        "pause_count": int(len(durations))
+        "pause_count": int(len(durations)),
     }
+
 
 # ---------------------------------------------------
 # PITCH VARIABILITY (Prosody)
 # ---------------------------------------------------
+
 
 def compute_pitch_variability(audio, sr):
     f0 = librosa.yin(audio, fmin=50, fmax=400, sr=sr)
@@ -146,10 +153,7 @@ def compute_pitch_variability(audio, sr):
     # Remove outliers using IQR filtering (robust to pitch estimation errors)
     q1, q3 = np.percentile(f0_st, [25, 75])
     iqr = q3 - q1
-    f0_clean = f0_st[
-        (f0_st >= q1 - 1.5 * iqr) &
-        (f0_st <= q3 + 1.5 * iqr)
-    ]
+    f0_clean = f0_st[(f0_st >= q1 - 1.5 * iqr) & (f0_st <= q3 + 1.5 * iqr)]
 
     if len(f0_clean) < 20:
         return 0.0
@@ -166,19 +170,18 @@ def compute_pitch_variability(audio, sr):
 # SYLLABLE ESTIMATION (Articulation)
 # ---------------------------------------------------
 
+
 def estimate_syllables(audio, sr):
     # Band-pass filter to focus on speech energy (vowel-dominant region)
     audio = librosa.effects.preemphasis(audio)
-    
+
     # Amplitude envelope (smoothed)
     envelope = np.abs(audio)
     envelope = librosa.util.normalize(envelope)
-    
+
     # Smooth envelope (~50 ms window)
     win_size = int(0.05 * sr)
-    envelope_smooth = np.convolve(
-        envelope, np.ones(win_size) / win_size, mode="same"
-    )
+    envelope_smooth = np.convolve(envelope, np.ones(win_size) / win_size, mode="same")
 
     # Adaptive threshold (robust to loudness differences)
     threshold = np.percentile(envelope_smooth, 75)
@@ -186,11 +189,7 @@ def estimate_syllables(audio, sr):
     # Minimum distance between syllables (~120 ms → max ~8 syll/sec)
     min_distance = int(0.12 * sr)
 
-    peaks, _ = find_peaks(
-        envelope_smooth,
-        height=threshold,
-        distance=min_distance
-    )
+    peaks, _ = find_peaks(envelope_smooth, height=threshold, distance=min_distance)
 
     return int(len(peaks))
 
@@ -208,6 +207,7 @@ def compute_articulation_rate(syllables, voiced_duration):
 # ---------------------------------------------------
 # PAUSE DETECTION (Whisper timestamps)
 # ---------------------------------------------------
+
 
 def compute_avg_pause(segments):
     pauses = []
@@ -227,6 +227,7 @@ def compute_avg_pause(segments):
 # FILLED PAUSES (Transcript-based)
 # ---------------------------------------------------
 
+
 def detect_filled_pauses(transcript):
     if not transcript:
         return 0
@@ -241,6 +242,7 @@ def detect_filled_pauses(transcript):
 # ---------------------------------------------------
 # DISFLUENCIES (Repeated words)
 # ---------------------------------------------------
+
 
 def detect_disfluencies(transcript):
     if not transcript:
@@ -259,6 +261,7 @@ def detect_disfluencies(transcript):
 # ---------------------------------------------------
 # MAIN METRIC EXTRACTION (PURE FUNCTION)
 # ---------------------------------------------------
+
 
 def extract_metrics(audio_path, transcript, segments):
     """

@@ -1,21 +1,29 @@
 ###########################################################
+from pathlib import Path
+
 import nltk
-nltk.download('punkt')
-nltk.download('punkt_tab')
+
+from app.util import is_out_of_memory
+
+download_dir = Path(__file__).parent.parent / "models"
+download_dir.mkdir(exist_ok=True, parents=True)
+
+nltk.download("punkt", download_dir, quiet=True)
+nltk.download("punkt_tab", download_dir, quiet=True)
+nltk.data.path.append(str(download_dir))
+
+from typing import List, Tuple
 
 import nltk
 import numpy as np
 from sentence_transformers import SentenceTransformer, util
 from sklearn.cluster import KMeans
 from sklearn.metrics.pairwise import cosine_similarity
-from typing import List, Tuple
-
-
 
 # ------------------------------------------
 # CONFIGURATION
 # ------------------------------------------
-MODEL_NAME = 'all-MiniLM-L6-v2'
+MODEL_NAME = "all-MiniLM-L6-v2"
 
 # Thresholds
 MISSING_THRESHOLD = 0.65
@@ -28,11 +36,24 @@ KEY_POINTS_COUNT = 3
 #                     MAIN COMPARISON CLASS
 # ============================================================
 
+
 class SpeechComparer:
     """Advanced NLP system for comparing delivered speech with transcript."""
 
     def __init__(self, model_name: str = MODEL_NAME):
-        self.model = SentenceTransformer(model_name)
+        try:
+            self.model = SentenceTransformer(model_name, cache_folder=str(download_dir))
+        except Exception as e:
+            if is_out_of_memory(e):
+                print("Not enough cuda memory. Falling back to CPU")
+                self.model = SentenceTransformer(
+                    model_name,
+                    device="cpu",
+                    cache_folder=str(download_dir),
+                )
+            else:
+                raise
+
         print(f"Loaded SBERT model: {model_name}")
 
     # ---------------------------
@@ -99,12 +120,14 @@ class SpeechComparer:
     def structural_analysis(self, sentences):
         word_counts = [len(s.split()) for s in sentences]
         avg_length = np.mean(word_counts)
-        lex_density = sum(len(set(s.split())) for s in sentences) / max(1, sum(word_counts))
+        lex_density = sum(len(set(s.split())) for s in sentences) / max(
+            1, sum(word_counts)
+        )
 
         return {
             "sentence_count": len(sentences),
             "avg_sentence_length": round(avg_length, 2),
-            "lexical_density": round(lex_density, 4)
+            "lexical_density": round(lex_density, 4),
         }
 
     # ============================================================
@@ -132,12 +155,14 @@ class SpeechComparer:
             best_sim = sim_matrix[i][best_idx]
             paraphrase_type = self.paraphrase_level(best_sim)
 
-            alignments.append({
-                "transcript_sentence": sent,
-                "closest_speech_sentence": s2[best_idx],
-                "similarity": float(best_sim),
-                "paraphrase_type": paraphrase_type
-            })
+            alignments.append(
+                {
+                    "transcript_sentence": sent,
+                    "closest_speech_sentence": s2[best_idx],
+                    "similarity": float(best_sim),
+                    "paraphrase_type": paraphrase_type,
+                }
+            )
 
         return alignments
 
@@ -151,7 +176,7 @@ class SpeechComparer:
 
         return {
             "in_order_percentage": round(in_order / total * 100, 2),
-            "out_of_order_percentage": round(100 - (in_order / total * 100), 2)
+            "out_of_order_percentage": round(100 - (in_order / total * 100), 2),
         }
 
     # ============================================================
@@ -165,7 +190,9 @@ class SpeechComparer:
         for i in range(len(sentences)):
             for j in range(i + 1, len(sentences)):
                 if sim_matrix[i][j] > threshold:
-                    redundant_pairs.append((sentences[i], sentences[j], sim_matrix[i][j]))
+                    redundant_pairs.append(
+                        (sentences[i], sentences[j], sim_matrix[i][j])
+                    )
 
         return redundant_pairs
 
@@ -173,7 +200,6 @@ class SpeechComparer:
     # MAIN APPLICATION FUNCTION
     # ============================================================
     def compare(self, transcript: str, speech: str):
-
         # Embed
         s1, e1 = self._tokenize_and_embed(transcript)
         s2, e2 = self._tokenize_and_embed(speech)
@@ -181,25 +207,20 @@ class SpeechComparer:
         # Full analysis dictionary
         return {
             "overall_similarity": self.get_overall_similarity(e1, e2),
-
             "structural_transcript": self.structural_analysis(s1),
             "structural_speech": self.structural_analysis(s2),
-
             "missing_points": self.find_missing_points(s1, e1, e2),
-
             "key_points_transcript": self.extract_key_points(s1, e1),
             "key_points_speech": self.extract_key_points(s2, e2),
-
             "alignment": self.align_sentences(s1, s2, e1, e2),
-
             "order_analysis": self.order_analysis(self.align_sentences(s1, s2, e1, e2)),
-
             "redundant_speech_segments": self.redundancy_check(s2, e2),
-
             "sentence_count_transcript": len(s1),
-            "sentence_count_speech": len(s2)
+            "sentence_count_speech": len(s2),
         }
 
+
+comparer = SpeechComparer()
 
 # ============================================================
 #                EXAMPLE APPLICATION USAGE
@@ -228,5 +249,3 @@ class SpeechComparer:
 # print("\n============= RESULTS =============")
 # for key, value in results.items():
 #     print(f"\n{key.upper()}:\n{value}")
-
-

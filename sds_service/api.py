@@ -1,30 +1,15 @@
-import asyncio
-from contextlib import asynccontextmanager
 import os
-import shutil
-import httpx
+import secrets
+
+import pydantic
 import whisper
-from fastapi import FastAPI, UploadFile, File, HTTPException
-from shared import rabbitmq
+from fastapi import FastAPI, HTTPException
+from shared.store import connect_store
 
-from features.extract_metrics import extract_metrics
-from scoring.score_speech import score_speech
-from feedback.generate_feedback import generate_feedback
 from config import config
-
-
-@asynccontextmanager
-async def lifespan(app: FastAPI):
-    from queue_listener import queue_listener
-
-    async with rabbitmq.connect(config.rabbitmq_url) as channel:
-        async with httpx.AsyncClient() as client:
-            queue_task = asyncio.create_task(queue_listener(channel, client))
-            app.state.channel = channel
-            app.state.client = client
-            yield
-            queue_task.cancel()
-
+from features.extract_metrics import extract_metrics
+from feedback.generate_feedback import generate_feedback
+from scoring.score_speech import score_speech
 
 # ---------------------------------------------------
 # APP SETUP
@@ -34,7 +19,6 @@ app = FastAPI(
     title="Speech Delivery Scoring API",
     description="Analyze speech delivery quality and provide feedback",
     version="1.0.0",
-    lifespan=lifespan,
 )
 
 UPLOAD_DIR = "audio/uploads"
@@ -43,6 +27,7 @@ os.makedirs(UPLOAD_DIR, exist_ok=True)
 # Load Whisper ONCE
 whisper_model = whisper.load_model("tiny")
 
+store = connect_store(config.store)
 
 # ---------------------------------------------------
 # HEALTH CHECK
@@ -59,18 +44,20 @@ def root():
 # ---------------------------------------------------
 
 
+class SDSRequest(pydantic.BaseModel):
+    audio_key: str
+    transcript: str
+
+
 @app.post("/analyze-speech")
-async def analyze_speech(file: UploadFile = File(...)):
-    assert file.filename is not None
-
-    if not file.filename.lower().endswith((".wav", ".mp3", ".m4a")):
-        raise HTTPException(status_code=400, detail="Unsupported audio format")
-
-    file_path = os.path.join(UPLOAD_DIR, file.filename)
+async def analyze_speech(req: SDSRequest):
+    data = store.get(req.audio_key)
 
     # Save uploaded file
-    with open(file_path, "wb") as buffer:
-        shutil.copyfileobj(file.file, buffer)
+    file_name = secrets.token_urlsafe() + ".wav"
+    file_path = os.path.join(UPLOAD_DIR, file_name)
+    with open(file_path, "wb") as file:
+        file.write(data)
 
     try:
         # 1️⃣ Transcribe
@@ -87,8 +74,9 @@ async def analyze_speech(file: UploadFile = File(...)):
         # 4️⃣ Generate feedback
         feedback = generate_feedback(scores)
 
-        return {"metrics": metrics, "scores": scores, "feedback": feedback}
-
+        result = {"metrics": metrics, "scores": scores, "feedback": feedback}
+        print(result)
+        return result
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 

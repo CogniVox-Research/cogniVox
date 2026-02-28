@@ -1,7 +1,0 @@
-cors_allow_origins = ["http://localhost:5173"]
-rabbitmq_url = "amqp://appuser:apppass@127.0.0.1/"
-
-whisper_model = "small"
-warmup_model = false
-
-recording_dir = "../recordings/"

@@ -1,4 +1,0 @@
-rabbitmq_url = "amqp://appuser:apppass@127.0.0.1/"
-cors_allow_origins = ["http://localhost:5173"]
-asr_stream_url = "ws://localhost:5000/audio/{session_id}"
-transcript_upload_url = "http://localhost:5001/upload/{session_id}"

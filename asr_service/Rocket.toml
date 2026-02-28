@@ -1,6 +1,6 @@
 [default]
 address = "0.0.0.0"
-port=8000
+port=8001
 
 [default.asr]
 backend="whisper"
@@ -12,4 +12,8 @@ silence_threshold=3
 
 [default.recording_store]
 type="local"
-path="../store"
+path="../storage"
+
+[default.rabbitmq]
+connection_name="game"
+address="amqp://appuser:apppass@127.0.0.1"

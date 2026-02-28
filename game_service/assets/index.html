@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>Game Protocol Debugger</title>
+        <link rel="stylesheet" href="style.css" />
+    </head>
+    <body x-data="app">
+        <div id="sidebar">
+            <div
+                :class="connected ? 'status connected' : 'status disconnected'"
+                x-text="connected ? 'Connected' : 'Disconnected'"
+            >
+                Disconnected
+            </div>
+            <button @click="reconnect()" class="secondary">Reconnect</button>
+
+            <hr />
+
+            <div class="btn-group">
+                <template x-for="action in actions">
+                    <button
+                        @click="
+                            sendMessage(action)
+                        "
+                        x-text="`Send ${action.name}`"
+                        :disabled="state != action.state"
+                    ></button>
+                </template>
+            </div>
+        </div>
+
+        <div id="log-container">
+            <div
+                style="
+                    display: flex;
+                    justify-content: space-between;
+                    align-items: center;
+                "
+            >
+                <h3>Message Log</h3>
+                <button
+                    @click="clearLogs()"
+                    style="width: auto; padding: 5px 15px"
+                >
+                    Clear
+                </button>
+            </div>
+            <div id="logs">
+                <template x-for="log in logs">
+                    <div
+                        :style="`color: ${log.color}`"
+                        x-text="`[${log.time}][${log.mode.charAt(0).toUpperCase()}] ${log.message}`"
+                    ></div>
+                </template>
+                <div x-show="logs.length === 0">Waiting for connection...</div>
+            </div>
+        </div>
+
+        <script
+            defer
+            src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"
+        ></script>
+        <script src="index.js"></script>
+    </body>
+</html>

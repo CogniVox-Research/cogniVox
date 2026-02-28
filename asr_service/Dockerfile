@@ -7,7 +7,7 @@ RUN --mount=type=cache,target=/var/cache/apt/archives \
 
 
 
-FROM base AS builder
+FROM build-base AS builder
 WORKDIR /app/asr_service
 COPY asr_service/Cargo.toml Cargo.toml
 COPY asr_service/Cargo.lock Cargo.lock
@@ -29,5 +29,5 @@ FROM debian:trixie-slim
 WORKDIR /app
 COPY asr_service/Rocket.toml Rocket.toml
 COPY --from=builder /app/asr_service/target/release/asr_service /app/asr_service
-EXPOSE 8000
+EXPOSE 8001
 CMD ["/app/asr_service"]

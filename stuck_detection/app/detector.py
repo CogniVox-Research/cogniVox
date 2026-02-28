@@ -1,9 +1,10 @@
 import datetime
-from app import dto
+
 import spacy
-from app import config
-from app.dto import ASRData, Silence
 from fastapi.logger import logger
+
+from app import config, dto
+from app.dto import ASRData, Silence
 
 
 class StuckDetector:
@@ -38,19 +39,14 @@ class StuckDetector:
                 # suggestion generation
                 self.detections[data.session_id] = True
                 return dto.StuckDetection(
-                    stuck_id="PLACEHOLDER",
                     reason="repetition" if is_repeating else "silence",
                     suggestions=[suggestion],
-                    at=datetime.datetime.now(),
                 )
 
         else:
             self.detections[data.session_id] = False
             return dto.StuckDetection(
-                stuck_id="PLACEHOLDER",
                 reason="repetition" if is_repeating else "silence",
-                suggestions=None,
-                at=datetime.datetime.now(),
             )
 
     def _detect_semantic_repetition(self, text: str):
@@ -78,11 +74,11 @@ class StuckDetector:
     def _detect_long_silence(self, data: ASRData):
         last_line = data.lines[-1]
         if not isinstance(last_line, Silence):
-            logger.debug("No pause detected")
+            logger.info("No pause detected")
             return False
 
         if not last_line.timestamp.duration > config.max_silence:
-            logger.debug(
+            logger.info(
                 f"Pause is lower than min threshold {last_line.timestamp.duration} < {config.max_silence}"
             )
             return False

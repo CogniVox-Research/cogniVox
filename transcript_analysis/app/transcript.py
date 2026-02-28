@@ -3,6 +3,8 @@ from pathlib import Path
 
 import nltk
 
+from app.util import is_out_of_memory
+
 download_dir = Path(__file__).parent.parent / "models"
 download_dir.mkdir(exist_ok=True, parents=True)
 
@@ -39,7 +41,19 @@ class SpeechComparer:
     """Advanced NLP system for comparing delivered speech with transcript."""
 
     def __init__(self, model_name: str = MODEL_NAME):
-        self.model = SentenceTransformer(model_name)
+        try:
+            self.model = SentenceTransformer(model_name, cache_folder=str(download_dir))
+        except Exception as e:
+            if is_out_of_memory(e):
+                print("Not enough cuda memory. Falling back to CPU")
+                self.model = SentenceTransformer(
+                    model_name,
+                    device="cpu",
+                    cache_folder=str(download_dir),
+                )
+            else:
+                raise
+
         print(f"Loaded SBERT model: {model_name}")
 
     # ---------------------------

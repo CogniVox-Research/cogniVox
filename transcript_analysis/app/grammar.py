@@ -4,6 +4,8 @@ import spacy
 import torch
 from transformers import T5ForConditionalGeneration, T5Tokenizer
 
+from app import util
+
 __all__ = ["checker"]
 
 warnings.filterwarnings("ignore")
@@ -22,8 +24,7 @@ class SpeechGrammarChecker:
         self.model = T5ForConditionalGeneration.from_pretrained(model_name).to(
             self.device
         )
-
-        self.nlp = spacy.load("en_core_web_md")
+        self.nlp = util.spacy_load_or_download("en_core_web_md")
 
     def correct_sentence(self, sentence):
         input_text = "grammar: " + sentence

@@ -1,17 +1,9 @@
 use common::{
     dto::{MQMessage, SessionCreate},
-    file_store::{Store, StoreError},
+    file_store::Store,
     mq,
 };
-use rocket::{
-    State,
-    http::{ContentType, Status},
-    response::{
-        content::RawHtml,
-        status::{self, Custom},
-    },
-    tokio,
-};
+use rocket::{State, response::content::RawHtml, tokio};
 use rocket_ws::{Channel, WebSocket};
 
 use crate::transcript::{Input, run_transcription};
@@ -28,33 +20,6 @@ extern crate rocket;
 #[get("/")]
 async fn index() -> RawHtml<&'static str> {
     RawHtml(include_str!("../assets/index.html"))
-}
-
-#[get("/recording/<session_id>")]
-async fn get_recording<'a, 'b>(
-    session_id: &'a str,
-    store: &'a State<Store>,
-) -> status::Custom<(ContentType, Vec<u8>)> {
-    let path = format!("{session_id}/recordings/converted.wav");
-    let content = store.read(&path).await;
-
-    return match content {
-        Ok(data) => Custom(Status::Ok, (ContentType::new("audio", "wav"), data)),
-        Err(StoreError::NotFound(_)) => Custom(
-            Status::NotFound,
-            (
-                ContentType::new("text", "plain"),
-                "Not Found".as_bytes().to_vec(),
-            ),
-        ),
-        Err(_) => Custom(
-            Status::InternalServerError,
-            (
-                ContentType::new("text", "plain"),
-                "Internal Error".as_bytes().to_vec(),
-            ),
-        ),
-    };
 }
 
 #[get("/audio/<session_id>")]
@@ -144,5 +109,5 @@ async fn rocket() -> _ {
     rocket
         .manage(transcriber)
         .manage(store)
-        .mount("/", routes![index, stream_audio, get_recording])
+        .mount("/", routes![index, stream_audio])
 }

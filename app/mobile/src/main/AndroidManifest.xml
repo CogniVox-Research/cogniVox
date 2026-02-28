@@ -16,7 +16,7 @@
         android:theme="@style/Theme.AppCompat.Light"
         tools:targetApi="31">
         <activity
-            android:name="io.github.cognivoxResearch.cognivox.GameActivity"
+            android:name="io.github.cognivoxResearch.cognivox.game.GameActivity"
             android:theme="@style/Theme.AppCompat.Light"
             android:configChanges="layoutDirection|locale|orientation|keyboardHidden|screenSize|smallestScreenSize|density|keyboard|navigation|screenLayout|uiMode"
             android:exported="true">

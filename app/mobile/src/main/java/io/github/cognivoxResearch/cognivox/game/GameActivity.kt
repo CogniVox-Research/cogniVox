@@ -1,8 +1,9 @@
-package io.github.cognivoxResearch.cognivox
+package io.github.cognivoxResearch.cognivox.game
 
 import android.os.Bundle
 import android.view.View
 import androidx.appcompat.app.AppCompatActivity
+import io.github.cognivoxResearch.cognivox.R
 import org.godotengine.godot.Godot
 import org.godotengine.godot.GodotFragment
 import org.godotengine.godot.GodotHost

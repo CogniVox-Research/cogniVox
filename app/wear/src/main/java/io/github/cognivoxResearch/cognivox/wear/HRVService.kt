@@ -1,11 +1,22 @@
 package io.github.cognivoxResearch.cognivox.wear
 
+import android.R
 import android.app.Notification
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.Service
 import android.content.Intent
+import android.content.pm.PackageManager
+import android.content.pm.ServiceInfo
+import android.hardware.Sensor
+import android.hardware.SensorEvent
+import android.hardware.SensorEventListener
+import android.hardware.SensorManager
+import android.os.Build
+import android.os.Bundle
+import android.os.Handler
 import android.os.IBinder
+import android.os.Looper
 import android.util.Log
 import android.widget.Toast
 import com.google.android.gms.wearable.Wearable
@@ -16,6 +27,7 @@ import com.samsung.android.service.health.tracking.HealthTrackingService
 import com.samsung.android.service.health.tracking.data.DataPoint
 import com.samsung.android.service.health.tracking.data.HealthTrackerType
 import com.samsung.android.service.health.tracking.data.ValueKey
+import kotlinx.serialization.json.Json
 import java.nio.ByteBuffer
 import kotlin.math.pow
 import kotlin.math.sqrt
@@ -25,8 +37,8 @@ class HRVService : Service() {
     private lateinit var healthTrackingService: HealthTrackingService
     private var healthTracker: HealthTracker? = null
     
-    private lateinit var sensorManager: android.hardware.SensorManager
-    private var accSensor: android.hardware.Sensor? = null
+    private lateinit var sensorManager: SensorManager
+    private var accSensor: Sensor? = null
     
     private val ibiWindow = ArrayDeque<Double>()
     private val accWindow = ArrayDeque<Double>()
@@ -76,9 +88,9 @@ class HRVService : Service() {
         }
     }
     
-    private val sensorListener = object : android.hardware.SensorEventListener {
-        override fun onSensorChanged(event: android.hardware.SensorEvent?) {
-            if (event?.sensor?.type == android.hardware.Sensor.TYPE_ACCELEROMETER) {
+    private val sensorListener = object : SensorEventListener {
+        override fun onSensorChanged(event: SensorEvent?) {
+            if (event?.sensor?.type == Sensor.TYPE_ACCELEROMETER) {
                 val x = event.values[0]
                 val y = event.values[1]
                 val z = event.values[2]
@@ -87,7 +99,7 @@ class HRVService : Service() {
             }
         }
 
-        override fun onAccuracyChanged(sensor: android.hardware.Sensor?, accuracy: Int) {}
+        override fun onAccuracyChanged(sensor: Sensor?, accuracy: Int) {}
     }
 
     override fun onCreate() {
@@ -96,16 +108,16 @@ class HRVService : Service() {
         Log.d(TAG, "onCreate: Service starting...")
         
         // Initialize Accelerometer
-        sensorManager = getSystemService(android.hardware.SensorManager::class.java)
-        accSensor = sensorManager.getDefaultSensor(android.hardware.Sensor.TYPE_ACCELEROMETER)
+        sensorManager = getSystemService(SensorManager::class.java)
+        accSensor = sensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER)
         
         if (accSensor != null) {
-            sensorManager.registerListener(sensorListener, accSensor, android.hardware.SensorManager.SENSOR_DELAY_GAME)
+            sensorManager.registerListener(sensorListener, accSensor, SensorManager.SENSOR_DELAY_GAME)
         } else {
             Log.e(TAG, "Accelerometer not found")
         }
         
-        val isWatch = packageManager.hasSystemFeature(android.content.pm.PackageManager.FEATURE_WATCH)
+        val isWatch = packageManager.hasSystemFeature(PackageManager.FEATURE_WATCH)
         if (!isWatch) {
             Log.e(TAG, "CRITICAL ERROR: HRVService is running on a NON-WATCH device!")
             showToast("ERROR: Running on PHONE! Install on WATCH.")
@@ -113,9 +125,9 @@ class HRVService : Service() {
         }
 
         try {
-            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.Q) {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
                 Log.d(TAG, "Calling startForeground with type HEALTH")
-                startForeground(1, createNotification(), android.content.pm.ServiceInfo.FOREGROUND_SERVICE_TYPE_HEALTH)
+                startForeground(1, createNotification(), ServiceInfo.FOREGROUND_SERVICE_TYPE_HEALTH)
             } else {
                 Log.d(TAG, "Calling startForeground (legacy)")
                 startForeground(1, createNotification())
@@ -216,17 +228,19 @@ class HRVService : Service() {
     }
 
     private fun transmitFeatures(rmssd: Double, accMean: Double, accStd: Double, accMax: Double) {
-        // Send 32 bytes (4 doubles)
-        val buffer = ByteBuffer.allocate(32)
-        buffer.putDouble(rmssd)
-        buffer.putDouble(accMean)
-        buffer.putDouble(accStd)
-        buffer.putDouble(accMax)
-        val byteArray = buffer.array()
-        
+        val dto = HSRVDto(
+            bvp_mean = 0.0,
+            bvp_std = rmssd,
+            acc_mean = accMean,
+            acc_std = accStd,
+            acc_max = accMax
+        );
+
+        val data = Json.encodeToString(dto).encodeToByteArray()
+
         Wearable.getNodeClient(this).connectedNodes.addOnSuccessListener { nodes ->
             for (node in nodes) {
-                Wearable.getMessageClient(this).sendMessage(node.id, "/bvp_stream", byteArray)
+                Wearable.getMessageClient(this).sendMessage(node.id, "/biometrics", data)
                     .addOnSuccessListener { Log.d(TAG, "Features sent successfully") }
                     .addOnFailureListener { e -> Log.e(TAG, "Message failed to send: ${e.message}") }
             }
@@ -241,12 +255,12 @@ class HRVService : Service() {
         return Notification.Builder(this, channelId)
             .setContentTitle("BioSync")
             .setContentText("Measuring HRV...")
-            .setSmallIcon(android.R.drawable.ic_menu_mylocation) // Placeholder icon
+            .setSmallIcon(R.drawable.ic_menu_mylocation) // Placeholder icon
             .build()
     }
 
     private fun showToast(message: String) {
-        android.os.Handler(android.os.Looper.getMainLooper()).post {
+        Handler(Looper.getMainLooper()).post {
             Toast.makeText(applicationContext, message, Toast.LENGTH_LONG).show()
         }
     }

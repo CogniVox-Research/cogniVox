@@ -1,4 +1,4 @@
-package io.github.cognivoxResearch.cognivox
+package io.github.cognivoxResearch.cognivox.game
 
 import org.godotengine.godot.Godot
 import org.godotengine.godot.plugin.GodotPlugin

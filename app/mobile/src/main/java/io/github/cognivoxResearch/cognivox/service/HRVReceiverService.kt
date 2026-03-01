@@ -4,7 +4,7 @@ import android.util.Log
 import com.google.android.gms.wearable.MessageEvent
 import com.google.android.gms.wearable.WearableListenerService
 import com.google.gson.Gson
-import io.github.cognivoxResearch.cognivox.FeatureInput
+import io.github.cognivoxResearch.cognivox.dto.FeatureInput
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 

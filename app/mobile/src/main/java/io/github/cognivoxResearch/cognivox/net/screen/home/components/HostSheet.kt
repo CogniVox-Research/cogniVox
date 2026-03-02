@@ -1,14 +1,21 @@
 package io.github.cognivoxResearch.cognivox.net.screen.home.components
 
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
@@ -24,6 +31,7 @@ fun HostSheet(
     onClose: () -> Unit = {}
 ) {
     val bottomSheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+    var input by remember { mutableStateOf(host) }
 
     ModalBottomSheet(
         onDismissRequest = onClose,
@@ -36,15 +44,26 @@ fun HostSheet(
         ) {
             Text("Change Host Name", fontWeight = FontWeight.Bold, fontSize = 20.sp)
             OutlinedTextField(
-                value = host,
+                value = input,
                 singleLine = true,
                 modifier = Modifier
                     .fillMaxWidth(),
                 onValueChange = {
-                    setHost(it)
+                    input = it
                 },
                 label = { Text("Enter Host") },
             )
+            Row(
+                horizontalArrangement = Arrangement.End,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(top = 8.dp)
+            ) {
+                Button({
+                    setHost(input)
+                    onClose()
+                }) { Text("Change") }
+            }
         }
     }
 }

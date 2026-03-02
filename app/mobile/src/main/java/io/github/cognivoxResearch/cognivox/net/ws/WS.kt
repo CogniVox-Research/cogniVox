@@ -16,17 +16,19 @@ import okio.ByteString
 
 
 abstract class WS<In, Out>(
-    private val url: String,
+    private var url: String,
     private val deserializer: FromMessage<In>,
     private val client: OkHttpClient = getWebsocketClient(),
 ) where  Out : ToMessage<Out> {
     private var websocket: WebSocket? = null
     private var isConnected = false
+    private var isClosed = false
 
     val tag: String = this::class.java.simpleName
 
     private val listener = object : WebSocketListener() {
         override fun onMessage(webSocket: WebSocket, text: String) {
+            if (isClosed) return
             val parsed = try {
                 deserializer.fromMessage(Message.Text(text))
             } catch (e: Exception) {
@@ -39,6 +41,7 @@ abstract class WS<In, Out>(
         }
 
         override fun onMessage(webSocket: WebSocket, bytes: ByteString) {
+            if (isClosed) return
             val parsed = try {
                 deserializer.fromMessage(Message.Bytes(bytes))
             } catch (e: Exception) {
@@ -50,6 +53,7 @@ abstract class WS<In, Out>(
         }
 
         override fun onFailure(webSocket: WebSocket, t: Throwable, response: Response?) {
+            if (isClosed) return
             super.onFailure(webSocket, t, response)
             Log.e(tag, "Failure: $t")
 
@@ -63,6 +67,7 @@ abstract class WS<In, Out>(
         }
 
         override fun onOpen(webSocket: WebSocket, response: Response) {
+            if (isClosed) return
             super.onOpen(webSocket, response)
             Log.d(tag, "Connection opened")
             isConnected = true
@@ -79,9 +84,10 @@ abstract class WS<In, Out>(
 
     suspend fun connect() {
         if (websocket != null) return
+        if (isClosed) return
 
         withContext(Dispatchers.IO) {
-            Log.d(tag, "Connecting...")
+            Log.d(tag, "Connecting to $url")
             val request = Request.Builder().url(url).build()
             websocket = client.newWebSocket(request, listener)
         }
@@ -101,6 +107,12 @@ abstract class WS<In, Out>(
         websocket?.close(1000, "Force Disconnect")
         websocket = null
         isConnected = false
+        isClosed = true
+    }
+
+    suspend fun reconnect() {
+        isClosed = false
+        connect()
     }
 
     private suspend fun reconnectWithBackoff() {

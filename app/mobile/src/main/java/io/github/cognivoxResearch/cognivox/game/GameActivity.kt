@@ -10,7 +10,7 @@ import org.godotengine.godot.GodotHost
 import org.godotengine.godot.plugin.GodotPlugin
 
 
-class GameActivity: AppCompatActivity(), GodotHost {
+class GameActivity : AppCompatActivity(), GodotHost {
 
     private var godotFragment: GodotFragment? = null
 
@@ -22,7 +22,8 @@ class GameActivity: AppCompatActivity(), GodotHost {
 
         setContentView(R.layout.game_layout)
 
-        val currentGodotFragment = supportFragmentManager.findFragmentById(R.id.godot_fragment_container)
+        val currentGodotFragment =
+            supportFragmentManager.findFragmentById(R.id.godot_fragment_container)
         if (currentGodotFragment is GodotFragment) {
             godotFragment = currentGodotFragment
         } else {
@@ -38,6 +39,8 @@ class GameActivity: AppCompatActivity(), GodotHost {
     override fun onResume() {
         super.onResume()
         supportActionBar?.hide()
+
+        @Suppress("DEPRECATION")
         window.decorView.systemUiVisibility = (
                 View.SYSTEM_UI_FLAG_IMMERSIVE // Immersive mode
                         or View.SYSTEM_UI_FLAG_FULLSCREEN // Hide notification bar

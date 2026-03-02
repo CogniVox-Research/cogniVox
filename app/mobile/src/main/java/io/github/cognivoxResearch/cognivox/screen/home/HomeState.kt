@@ -1,4 +1,4 @@
-package io.github.cognivoxResearch.cognivox.net.screen.home
+package io.github.cognivoxResearch.cognivox.screen.home
 
 import java.util.UUID
 

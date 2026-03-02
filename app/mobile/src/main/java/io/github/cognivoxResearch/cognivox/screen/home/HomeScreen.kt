@@ -1,4 +1,4 @@
-package io.github.cognivoxResearch.cognivox.net.screen.home
+package io.github.cognivoxResearch.cognivox.screen.home
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Spacer
@@ -19,8 +19,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import io.github.cognivoxResearch.cognivox.net.screen.home.components.HostSheet
-import io.github.cognivoxResearch.cognivox.net.screen.home.components.JoinSheet
+import io.github.cognivoxResearch.cognivox.screen.home.components.HostSheet
+import io.github.cognivoxResearch.cognivox.screen.home.components.JoinSheet
 import java.util.UUID
 
 @OptIn(ExperimentalMaterial3Api::class)

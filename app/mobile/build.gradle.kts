@@ -59,6 +59,8 @@ dependencies {
     implementation(libs.play.services.wearable)
     implementation(libs.appcompat)
     implementation(libs.androidx.fragment)
+    implementation(libs.androidx.constraintlayout)
+    implementation(libs.androidx.fragment.compose)
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)

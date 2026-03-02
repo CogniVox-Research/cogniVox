@@ -33,7 +33,7 @@ fun JoinSheet(
     onClose: () -> Unit = {}
 ) {
     val bottomSheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
-    var input by remember { mutableStateOf("") }
+    var input by remember { mutableStateOf(UUID.randomUUID().toString()) }
     var error by remember { mutableStateOf("") }
 
     ModalBottomSheet(

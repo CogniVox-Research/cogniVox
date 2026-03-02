@@ -111,7 +111,7 @@ class MainActivity : ComponentActivity(), DeviceWs.Listener {
 
     fun joinSession(sessionId: UUID) {
         val startIntent = Intent(this, GameActivity::class.java)
-        startIntent.putExtra("session", sessionId)
+        startIntent.putExtra("session", sessionId.toString())
         startActivity(startIntent)
     }
 }

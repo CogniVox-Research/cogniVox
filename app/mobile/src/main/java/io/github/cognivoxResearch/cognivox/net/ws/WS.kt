@@ -59,7 +59,7 @@ abstract class WS<In, Out>(
 
             websocket = null
             isConnected = false
-            onDisconnect()
+            onDisconnect(t, response)
 
             runBlocking {
                 reconnectWithBackoff()
@@ -77,7 +77,7 @@ abstract class WS<In, Out>(
 
     protected abstract fun onMessage(message: In)
 
-    protected abstract fun onDisconnect()
+    protected abstract fun onDisconnect(t: Throwable, response: Response?)
 
     protected abstract fun onConnect()
 

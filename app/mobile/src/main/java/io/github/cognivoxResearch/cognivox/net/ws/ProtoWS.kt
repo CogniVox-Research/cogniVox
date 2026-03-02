@@ -5,6 +5,7 @@ import io.github.cognivoxResearch.cognivox.net.proto.DeviceInbound
 import io.github.cognivoxResearch.cognivox.net.proto.DeviceOutbound
 import io.github.cognivoxResearch.cognivox.net.proto.ServerInbound
 import io.github.cognivoxResearch.cognivox.net.proto.ServerOutbound
+import okhttp3.Response
 
 open class ProtoWS<In, Out>(
     url: String, deserializer: FromMessage<In>,
@@ -13,7 +14,7 @@ open class ProtoWS<In, Out>(
         Log.i(this.tag, "Got message $message")
     }
 
-    override fun onDisconnect() {
+    override fun onDisconnect(t: Throwable, response: Response?) {
         Log.i(this.tag, "Disconnected")
     }
 
@@ -37,7 +38,7 @@ class DeviceWs(
         }
     }
 
-    override fun onDisconnect() {
+    override fun onDisconnect(t: Throwable, response: Response?) {
         listener.onDisconnect()
     }
 
@@ -53,5 +54,30 @@ class DeviceWs(
     }
 }
 
-class GameWs(url: String) :
-    ProtoWS<ServerInbound, ServerOutbound>(url, ServerInbound.Companion)
+class GameWs(
+    url: String,
+    private var listener: Listener? = null
+) :
+    ProtoWS<ServerInbound, ServerOutbound>(url, ServerInbound.Companion) {
+    override fun onMessage(message: ServerInbound) {
+        listener?.onMessage(message)
+    }
+
+    override fun onDisconnect(t: Throwable, response: Response?) {
+        listener?.onDisconnect(t, response)
+    }
+
+    override fun onConnect() {
+        listener?.onConnect()
+    }
+
+    fun setListener(l: Listener) {
+        this.listener = l
+    }
+
+    interface Listener {
+        fun onMessage(message: ServerInbound)
+        fun onConnect()
+        fun onDisconnect(t: Throwable, response: Response?)
+    }
+}

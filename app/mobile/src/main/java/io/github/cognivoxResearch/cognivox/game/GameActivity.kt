@@ -1,39 +1,63 @@
 package io.github.cognivoxResearch.cognivox.game
 
 import android.os.Bundle
+import android.util.Log
+import android.view.LayoutInflater
 import android.view.View
+import android.view.ViewGroup
 import androidx.appcompat.app.AppCompatActivity
+import androidx.compose.runtime.MutableState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.platform.ComposeView
+import androidx.fragment.app.Fragment
+import io.github.cognivoxResearch.cognivox.API_HOST
+import io.github.cognivoxResearch.cognivox.PREF_TAG
 import io.github.cognivoxResearch.cognivox.R
+import io.github.cognivoxResearch.cognivox.SESSION_URL
+import io.github.cognivoxResearch.cognivox.net.ws.GameWs
+import io.github.cognivoxResearch.cognivox.screen.game.GameScreen
+import io.github.cognivoxResearch.cognivox.screen.game.GameState
+import kotlinx.coroutines.runBlocking
 import org.godotengine.godot.Godot
 import org.godotengine.godot.GodotFragment
 import org.godotengine.godot.GodotHost
 import org.godotengine.godot.plugin.GodotPlugin
+import java.util.UUID
 
 
 class GameActivity : AppCompatActivity(), GodotHost {
-
     private var godotFragment: GodotFragment? = null
+    internal var gameController: GameController? = null
+    lateinit var uiState: MutableState<GameState>
 
-    internal var appPlugin: AppPlugin? = null
+    lateinit var websocket: GameWs
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
+        val sessionId = UUID.fromString(intent.getStringExtra("session")!!)
+        val prefs = getSharedPreferences(PREF_TAG, MODE_PRIVATE)
+        val hostname = prefs.getString("host", API_HOST)!!
+        websocket = GameWs("ws://$hostname/$SESSION_URL/$sessionId")
 
         setContentView(R.layout.game_layout)
 
-        val currentGodotFragment =
-            supportFragmentManager.findFragmentById(R.id.godot_fragment_container)
-        if (currentGodotFragment is GodotFragment) {
-            godotFragment = currentGodotFragment
-        } else {
-            godotFragment = GodotFragment()
-            supportFragmentManager.beginTransaction()
-                .replace(R.id.godot_fragment_container, godotFragment!!)
-                .commitNowAllowingStateLoss()
-        }
+        uiState = mutableStateOf(GameState.Loading(false))
 
-        initAppPluginIfNeeded(godot!!)
+        godotFragment = GodotFragment()
+        supportFragmentManager.beginTransaction()
+            .replace(R.id.godot_fragment_container, godotFragment!!)
+            .commitNowAllowingStateLoss()
+        supportFragmentManager.beginTransaction().replace(R.id.godot_loader, GameOverlay())
+            .commitNowAllowingStateLoss()
+
+        initController(godot!!)
+
+        runBlocking {
+            websocket.connect()
+        }
     }
 
     override fun onResume() {
@@ -48,19 +72,48 @@ class GameActivity : AppCompatActivity(), GodotHost {
                 )
     }
 
-    private fun initAppPluginIfNeeded(godot: Godot) {
-        if (appPlugin == null) {
-            appPlugin = AppPlugin(godot)
+
+    override fun getActivity() = this
+    override fun getGodot() = godotFragment?.godot
+
+    override fun onGodotMainLoopStarted() {
+        super.onGodotMainLoopStarted()
+        Log.i("GameActivity", "Game Main Loop Started")
+
+        if (uiState.value is GameState.Loading)
+            uiState.value = (uiState.value as GameState.Loading).copy(godotLoaded = true)
+
+    }
+
+    override fun getHostPlugins(godot: Godot): Set<GodotPlugin> {
+        initController(godot)
+        return setOf(gameController!!)
+    }
+
+    private fun initController(godot: Godot) {
+        if (gameController == null) {
+            gameController = GameController(godot, uiState, websocket)
+            websocket.setListener(gameController!!)
         }
     }
 
-    override fun getActivity() = this
 
-    override fun getGodot() = godotFragment?.godot
+    class GameOverlay : Fragment() {
+        override fun onCreateView(
+            inflater: LayoutInflater, container: ViewGroup?,
+            savedInstanceState: Bundle?
+        ): View {
+            val activity = requireActivity() as GameActivity;
 
-    override fun getHostPlugins(godot: Godot): Set<GodotPlugin> {
-        initAppPluginIfNeeded(godot)
+            Log.e("GameActivity", activity.godot.toString())
 
-        return setOf(appPlugin!!)
+            var state by activity.uiState;
+
+            return ComposeView(requireContext()).apply {
+                setContent {
+                    GameScreen(state)
+                }
+            }
+        }
     }
 }

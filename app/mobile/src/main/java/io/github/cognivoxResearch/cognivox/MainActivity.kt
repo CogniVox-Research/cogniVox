@@ -22,7 +22,8 @@ import kotlinx.coroutines.runBlocking
 
 class MainActivity : ComponentActivity(), DeviceWs.Listener {
     lateinit var websocket: DeviceWs
-    var uiState: MutableState<HomeState> = mutableStateOf(HomeState.Connecting(DEVICE_URL, ""))
+    var host = DEVICE_URL;
+    var uiState: MutableState<HomeState> = mutableStateOf(HomeState.Connecting(host, ""))
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -61,10 +62,12 @@ class MainActivity : ComponentActivity(), DeviceWs.Listener {
     }
 
     override fun onError(err: DeviceInbound.Err) {
+        uiState.value = HomeState.Connecting(host, "Error: $err")
         Log.i("Main", "Error $err")
     }
 
     override fun onDisconnect() {
+        uiState.value = HomeState.Connecting(host, "")
         Log.i("Main", "Disconnected")
     }
 }

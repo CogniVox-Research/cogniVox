@@ -6,7 +6,7 @@ use crate::error::{Error, Result};
 #[derive(Debug, Deserialize, Serialize)]
 #[serde(tag = "type", content = "data", rename_all = "snake_case")]
 pub enum DeviceInbound {
-    Connect { device_name: String },
+    Connect { device_name: String, auth: String },
 }
 
 #[derive(Debug, Serialize)]

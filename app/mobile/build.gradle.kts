@@ -1,11 +1,12 @@
 plugins {
     alias(libs.plugins.androidApplication)
     alias(libs.plugins.kotlinCompose)
+    kotlin("plugin.serialization") version "2.3.10"
 }
 
 android {
     namespace = "io.github.cognivoxResearch.cognivox"
-    compileSdk = 34
+    compileSdk = 36
 
     defaultConfig {
         applicationId = "io.github.cognivoxResearch.cognivox"
@@ -65,6 +66,7 @@ dependencies {
     androidTestImplementation(libs.androidx.ui.test.junit4)
     debugImplementation(libs.androidx.ui.tooling)
     debugImplementation(libs.androidx.ui.test.manifest)
+    implementation(libs.kotlinx.serialization.json)
 
     // Networking
     implementation(libs.retrofit)

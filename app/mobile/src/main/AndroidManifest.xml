@@ -19,6 +19,12 @@
             android:name="io.github.cognivoxResearch.cognivox.game.GameActivity"
             android:theme="@style/Theme.AppCompat.Light"
             android:configChanges="layoutDirection|locale|orientation|keyboardHidden|screenSize|smallestScreenSize|density|keyboard|navigation|screenLayout|uiMode"
+            >
+        </activity>
+
+        <activity
+            android:name="io.github.cognivoxResearch.cognivox.MainActivity"
+            android:theme="@style/Theme.AppCompat.Light"
             android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
@@ -27,11 +33,11 @@
         </activity>
 
         <service
-            android:name="io.github.cognivoxResearch.cognivox.HRVReceiverService"
+            android:name="io.github.cognivoxResearch.cognivox.service.HRVReceiverService"
             android:exported="true">
             <intent-filter>
                 <action android:name="com.google.android.gms.wearable.MESSAGE_RECEIVED" />
-                <data android:scheme="wear" android:host="*" android:pathPrefix="/bvp_stream" />
+                <data android:scheme="wear" android:host="*" android:pathPrefix="/biometrics" />
             </intent-filter>
         </service>
     </application>

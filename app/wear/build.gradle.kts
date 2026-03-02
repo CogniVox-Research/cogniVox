@@ -6,7 +6,7 @@ plugins {
 
 android {
     namespace = "io.github.cognivoxResearch.cognivox.wear"
-    compileSdk = 34
+    compileSdk = 36
 
     defaultConfig {
         applicationId = "io.github.cognivoxResearch.cognivox"

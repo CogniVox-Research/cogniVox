@@ -1,7 +1,8 @@
-package io.github.cognivoxResearch.cognivox.dto
+package io.github.cognivoxResearch.cognivox.net.dto
 
 import kotlinx.serialization.Serializable
 
+@Suppress("PropertyName")
 @Serializable
 data class FeatureInput(
     // Common or RF specific

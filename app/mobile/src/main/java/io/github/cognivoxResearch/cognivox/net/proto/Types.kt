@@ -1,7 +1,7 @@
 package io.github.cognivoxResearch.cognivox.net.proto
 
-import kotlinx.serialization.Serializable
 import kotlinx.serialization.SerialName
+import kotlinx.serialization.Serializable
 
 @Serializable
 @SerialName("stress_response")
@@ -29,9 +29,12 @@ data class GameFeatures(
 
 @Serializable
 enum class AudienceDifficulty {
-    @SerialName("easy")   EASY,
-    @SerialName("medium") MEDIUM,
-    @SerialName("hard") HARD
+    @SerialName("easy")
+    EASY,
+    @SerialName("medium")
+    MEDIUM,
+    @SerialName("hard")
+    HARD
 }
 
 @Serializable
@@ -49,3 +52,5 @@ sealed class SceneType {
     @SerialName("stage")
     data class Stage(val size: Long) : SceneType()
 }
+
+

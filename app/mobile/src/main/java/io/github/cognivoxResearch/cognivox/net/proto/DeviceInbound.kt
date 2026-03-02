@@ -1,8 +1,13 @@
 package io.github.cognivoxResearch.cognivox.net.proto
 
+import io.github.cognivoxResearch.cognivox.net.ws.FromMessage
+import io.github.cognivoxResearch.cognivox.net.ws.Message
+import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
+import kotlinx.serialization.json.Json
 import java.util.UUID
+
 
 @Serializable
 sealed class DeviceInbound {
@@ -16,24 +21,41 @@ sealed class DeviceInbound {
         @SerialName("device_id") val deviceId: UUID
     ) : DeviceInbound()
 
-    /**
-     * Server side error – the data field contains an arbitrary message.
-     */
+
     @Serializable
     @SerialName("err")
     data class Err(
         @SerialName("data") val message: String
     ) : DeviceInbound()
 
-    /**
-     * Request to join a game session – the client provides the UUID of
-     * the session it wants to enter.
-     */
+
     @Serializable
     @SerialName("join")
     data class Join(
-        /** UUID of the session to join. */
         @Serializable(with = UUIDSerializer::class)
         @SerialName("session_id") val sessionId: UUID
     ) : DeviceInbound()
+
+    companion object : FromMessage<DeviceInbound> {
+        @OptIn(ExperimentalSerializationApi::class)
+        @JvmStatic
+        override fun fromMessage(message: Message): DeviceInbound {
+            val json = Json {
+                classDiscriminator = "type"
+            }
+
+            return when (message) {
+                is Message.Text -> json.decodeFromString(
+                    flatten(serializer()),
+                    message.text
+                )
+
+                else -> throw RuntimeException("Unexpected byte message")
+            }
+        }
+    }
 }
+
+
+
+

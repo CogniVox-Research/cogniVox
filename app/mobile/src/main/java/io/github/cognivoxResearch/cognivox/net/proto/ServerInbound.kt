@@ -1,6 +1,7 @@
 package io.github.cognivoxResearch.cognivox.net.proto
 
-import io.github.cognivoxResearch.cognivox.net.Message
+import io.github.cognivoxResearch.cognivox.net.ws.FromMessage
+import io.github.cognivoxResearch.cognivox.net.ws.Message
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
@@ -35,13 +36,14 @@ sealed class ServerInbound {
     @Serializable
     @SerialName("end")
     object End : ServerInbound()
-}
+    companion object : FromMessage<ServerInbound> {
+        override fun fromMessage(message: Message): ServerInbound {
+            val json = Json { classDiscriminator = "type" }
 
-fun ServerInbound.fromMessage(message: Message): ServerInbound {
-    val json = Json { classDiscriminator = "type" };
-
-    return when (message) {
-        is Message.Text -> json.decodeFromString(ServerInbound.serializer(), message.text)
-        else -> throw RuntimeException("Unexpected byte message")
+            return when (message) {
+                is Message.Text -> json.decodeFromString(flatten(serializer()), message.text)
+                else -> throw RuntimeException("Unexpected byte message")
+            }
+        }
     }
 }

@@ -1,15 +1,25 @@
-package io.github.cognivoxResearch.cognivox.net
+package io.github.cognivoxResearch.cognivox.net.ws
 
 import android.util.Log
+import io.github.cognivoxResearch.cognivox.RETRY_DELAY
+import io.github.cognivoxResearch.cognivox.net.getWebsocketClient
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withContext
-import okhttp3.*
+import okhttp3.OkHttpClient
+import okhttp3.Request
+import okhttp3.Response
+import okhttp3.WebSocket
+import okhttp3.WebSocketListener
 import okio.ByteString
 
-const val  RETRY_DELAY = 5000L
-abstract class WS(private val client: OkHttpClient, private val url: String) {
+
+abstract class WS<In, Out>(
+    private val url: String,
+    private val deserializer: FromMessage<In>,
+    private val client: OkHttpClient = getWebsocketClient(),
+) where  Out : ToMessage<Out> {
     private var websocket: WebSocket? = null
     private var isConnected = false
 
@@ -17,23 +27,36 @@ abstract class WS(private val client: OkHttpClient, private val url: String) {
 
     private val listener = object : WebSocketListener() {
         override fun onMessage(webSocket: WebSocket, text: String) {
-            super.onMessage(webSocket, text)
-            Log.d(tag, "Received: $text")
-            onMessage(Message.Text(text))
+            val parsed = try {
+                deserializer.fromMessage(Message.Text(text))
+            } catch (e: Exception) {
+                Log.e(tag, "Failed to parse: $text", e)
+                return
+            }
+
+            Log.i(tag, "Got message $parsed")
+            onMessage(parsed)
         }
 
         override fun onMessage(webSocket: WebSocket, bytes: ByteString) {
-            super.onMessage(webSocket, bytes)
+            val parsed = try {
+                deserializer.fromMessage(Message.Bytes(bytes))
+            } catch (e: Exception) {
+                Log.e(tag, "Failed to bytes", e)
+                return
+            }
             Log.d(tag, "Received: bytes")
-            onMessage(Message.Bytes(bytes))
+            onMessage(parsed)
         }
 
         override fun onFailure(webSocket: WebSocket, t: Throwable, response: Response?) {
             super.onFailure(webSocket, t, response)
-            Log.e(tag, "Failure: ${t.message}")
+            Log.e(tag, "Failure: $t")
 
             websocket = null
-            isConnected = false;
+            isConnected = false
+            onDisconnect()
+
             runBlocking {
                 reconnectWithBackoff()
             }
@@ -42,13 +65,19 @@ abstract class WS(private val client: OkHttpClient, private val url: String) {
         override fun onOpen(webSocket: WebSocket, response: Response) {
             super.onOpen(webSocket, response)
             Log.d(tag, "Connection opened")
-            isConnected = true;
+            isConnected = true
+            onConnect()
         }
     }
 
-    abstract  fun onMessage(message: Message)
+    protected abstract fun onMessage(message: In)
 
-    suspend  fun connect() {
+    protected abstract fun onDisconnect()
+
+    protected abstract fun onConnect()
+
+
+    suspend fun connect() {
         if (websocket != null) return
 
         withContext(Dispatchers.IO) {
@@ -58,8 +87,8 @@ abstract class WS(private val client: OkHttpClient, private val url: String) {
         }
     }
 
-    protected fun send(message: Message) {
-        val sent = when (message) {
+    fun send(out: Out) {
+        val sent = when (val message = out.toMessage()) {
             is Message.Text -> websocket?.send(message.text)
             is Message.Bytes -> websocket?.send(message.bytes)
         } ?: throw RuntimeException("Socket is closed")
@@ -74,7 +103,7 @@ abstract class WS(private val client: OkHttpClient, private val url: String) {
         isConnected = false
     }
 
-    private suspend  fun reconnectWithBackoff() {
+    private suspend fun reconnectWithBackoff() {
         Log.d(tag, "Reconnecting in $RETRY_DELAY ms...")
         withContext(Dispatchers.IO) {
             delay(RETRY_DELAY)
@@ -83,20 +112,4 @@ abstract class WS(private val client: OkHttpClient, private val url: String) {
     }
 }
 
-sealed class Message{
-    class Bytes(val bytes: ByteString): Message()
-    class Text(val text: String): Message()
 
-    override fun toString(): String = when(this) {
-        is Bytes -> "[${this.bytes.size} Bytes]"
-        is Text -> this.text
-    }
-}
-
-
-class TestSocket(client: OkHttpClient, url: String): WS(client , url){
-    override fun onMessage(message: Message) {
-        Log.i(this.tag, "Got message $message")
-    }
-
-}

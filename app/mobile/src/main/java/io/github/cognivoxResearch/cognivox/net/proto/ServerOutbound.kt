@@ -1,7 +1,8 @@
 package io.github.cognivoxResearch.cognivox.net.proto
 
-import io.github.cognivoxResearch.cognivox.dto.FeatureInput
-import io.github.cognivoxResearch.cognivox.net.Message
+import io.github.cognivoxResearch.cognivox.net.dto.FeatureInput
+import io.github.cognivoxResearch.cognivox.net.ws.Message
+import io.github.cognivoxResearch.cognivox.net.ws.ToMessage
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
@@ -9,7 +10,7 @@ import okio.ByteString.Companion.toByteString
 
 
 @Serializable
-sealed class ServerOutbound {
+sealed class ServerOutbound : ToMessage<ServerOutbound> {
 
     @Serializable
     @SerialName("audio")
@@ -53,12 +54,13 @@ sealed class ServerOutbound {
     object QuestionEnd : ServerOutbound()
 
 
-}
-
-fun ServerOutbound.toMessage(): Message {
-    val json = Json { classDiscriminator = "type" };
-    return when (this) {
-        is ServerOutbound.Audio -> Message.Bytes(this.data.toByteString())
-        else -> Message.Text(json.encodeToString(ServerOutbound.serializer(), this))
+    override fun toMessage(): Message {
+        val json = Json { classDiscriminator = "type" }
+        return when (this) {
+            is Audio -> Message.Bytes(this.data.toByteString())
+            else -> Message.Text(json.encodeToString(flatten(serializer()), this))
+        }
     }
 }
+
+

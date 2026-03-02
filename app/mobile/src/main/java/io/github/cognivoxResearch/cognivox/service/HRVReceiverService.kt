@@ -4,7 +4,7 @@ import android.util.Log
 import com.google.android.gms.wearable.MessageEvent
 import com.google.android.gms.wearable.WearableListenerService
 import com.google.gson.Gson
-import io.github.cognivoxResearch.cognivox.dto.FeatureInput
+import io.github.cognivoxResearch.cognivox.net.dto.FeatureInput
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 
@@ -17,14 +17,14 @@ class HRVReceiverService : WearableListenerService() {
 
         if (messageEvent.path == "/biometrics") {
             val json = messageEvent.data.decodeToString()
-            val input: FeatureInput = Gson().fromJson(json, FeatureInput::class.java);
+            val input: FeatureInput = Gson().fromJson(json, FeatureInput::class.java)
             Log.d("HRVReceiver", "Rx Data: $input")
 
 
             // TODO: send to backend
 
 
-        }else{
+        } else {
             Log.e("HRVReceiverService", "Unexpected message ${messageEvent.path}")
         }
     }

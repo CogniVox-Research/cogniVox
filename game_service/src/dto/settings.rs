@@ -2,8 +2,7 @@ use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Settings {
-    #[serde(rename = "type")]
-    pub scene_type: Type,
+    pub session_type: Type,
     #[serde(flatten)]
     pub scene: SceneType,
     pub document_id: String,
@@ -48,7 +47,7 @@ pub enum AudienceDifficulty {
 impl Into<GameSettings> for &Settings {
     fn into(self) -> GameSettings {
         GameSettings {
-            session_type: self.scene_type,
+            session_type: self.session_type,
             scene: self.scene,
             distractions: self.distractions,
             difficulty: self.difficulty,

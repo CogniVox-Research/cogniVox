@@ -18,13 +18,14 @@ pub async fn start_test_session(
     mut game: GameConnection,
 ) -> Result<()> {
     tokio::spawn(async move {
-        sleep(Duration::from_secs(4)).await;
+        sleep(Duration::from_secs(1)).await;
 
         game.send(super::proto::GameOutbound::Init(GameSettings {
             difficulty: AudienceDifficulty::Hard,
             session_type: crate::dto::settings::Type::Speech,
             scene: SceneType::Stage { size: 10 },
             distractions: true,
+            qa: true,
         }))
         .await?;
 
@@ -37,7 +38,21 @@ pub async fn start_test_session(
         proto::wait_for!(game, GameInbound::SpeechEnd)?;
         log::info!("Speech Ended");
 
-        sleep(Duration::from_secs(3)).await;
+        sleep(Duration::from_secs(2)).await;
+
+        let questions = vec!["Test question?"];
+
+        for question in questions.iter() {
+            game.send(super::proto::GameOutbound::Question(question.to_string()))
+                .await?;
+
+            proto::wait_for!(game, GameInbound::QuestionStart)?;
+            log::info!("Question started");
+
+            proto::wait_for!(game, GameInbound::QuestionEnd)?;
+            log::info!("Question Ended");
+        }
+
         game.send(super::proto::GameOutbound::End).await
     });
     Ok(())

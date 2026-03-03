@@ -18,6 +18,7 @@ pub struct GameSettings {
     #[serde(flatten)]
     pub scene: SceneType,
     pub distractions: bool,
+    pub qa: bool,
     pub difficulty: AudienceDifficulty,
 }
 
@@ -51,6 +52,7 @@ impl Into<GameSettings> for &Settings {
             scene: self.scene,
             distractions: self.distractions,
             difficulty: self.difficulty,
+            qa: self.qa,
         }
     }
 }

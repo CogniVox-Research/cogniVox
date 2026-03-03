@@ -1,12 +1,26 @@
 import { Slider } from "@/components/ui/slider";
+import { useEffect } from "react";
 
-const SizeSelector = (props: {
+const SizeSelector = ({
+  value,
+  min,
+  max,
+  disabled,
+  onChange,
+}: {
   value: number;
   min: number;
   max: number;
   disabled?: boolean;
   onChange: (_: number) => void;
 }) => {
+  useEffect(() => {
+    const c = Math.max(Math.min(max, value), min);
+    if (c != value) {
+      onChange(c);
+    }
+  }, [value, max, min, onChange]);
+
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
@@ -21,16 +35,16 @@ const SizeSelector = (props: {
             Select audience size
           </p>
         </div>
-        <span className={`text-sm font-bold`}>{props.value}</span>
+        <span className={`text-sm font-bold`}>{value}</span>
       </div>
 
       <Slider
-        value={[props.value]}
-        min={props.min}
-        max={props.max}
+        value={[value]}
+        min={min}
+        max={max}
         step={1}
-        disabled={props.disabled}
-        onValueChange={(e) => props.onChange(e[0])}
+        disabled={disabled}
+        onValueChange={(e) => onChange(e[0])}
       ></Slider>
     </div>
   );

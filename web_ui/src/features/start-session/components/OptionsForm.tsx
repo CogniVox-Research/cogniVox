@@ -1,3 +1,4 @@
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import type { Environment, Difficulty, OptionsConfig } from "../types";
 import DifficultySelector from "./difficulty-selector";
 import SceneSelect from "./scene-select";
@@ -5,12 +6,23 @@ import SizeSelector from "./size-selector";
 
 import ToggleOption from "./toggle-option";
 
-type EnvironmentSelectorProps = {
+type OptionFormProps = {
   config: OptionsConfig;
   onChange: (config: OptionsConfig) => void;
 };
 
-export function OptionsForm({ config, onChange }: EnvironmentSelectorProps) {
+function maxSizeFor(env: Environment) {
+  switch (env) {
+    case "boardroom":
+      return 8;
+    case "stage":
+      return 24;
+    case "interview":
+      return 1;
+  }
+}
+
+export function OptionsForm({ config, onChange }: OptionFormProps) {
   const setEnv = (env: Environment) =>
     onChange({ ...config, environment: env });
   const setDifficulty = (v: Difficulty) =>
@@ -21,7 +33,7 @@ export function OptionsForm({ config, onChange }: EnvironmentSelectorProps) {
   const setSize = (v: number) => onChange({ ...config, audienceSize: v });
 
   return (
-    <div className="space-y-10">
+    <div className="space-y-10 w-full">
       {/* Environment selector */}
       <SceneSelect scene={config.environment} setScene={setEnv} />
 
@@ -30,7 +42,7 @@ export function OptionsForm({ config, onChange }: EnvironmentSelectorProps) {
         onChange={setSize}
         value={config.audienceSize}
         min={1}
-        max={10}
+        max={maxSizeFor(config.environment)}
       />
 
       {/* Difficulty slider */}

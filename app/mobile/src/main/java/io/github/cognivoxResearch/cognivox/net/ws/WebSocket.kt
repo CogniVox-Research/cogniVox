@@ -17,11 +17,11 @@ import okio.ByteString
 
 abstract class WebSocket<In, Out>(
     private var url: String,
-    private val deserializer: FromMessage<In>,
+    private val deserializer: Message.From<In>,
     private val client: OkHttpClient = getWebsocketClient(),
     private val retry: Boolean = true,
     private val ignoreDeserializeErrors: Boolean = true,
-) where  Out : ToMessage<Out> {
+) where  Out : Message.To<Out> {
     private var websocket: WebSocket? = null
     private var isConnected = false
     private var isClosed = false

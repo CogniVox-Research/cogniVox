@@ -1,6 +1,5 @@
 package io.github.cognivoxResearch.cognivox.net.proto
 
-import io.github.cognivoxResearch.cognivox.net.ws.FromMessage
 import io.github.cognivoxResearch.cognivox.net.ws.Message
 import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.SerialName
@@ -36,7 +35,7 @@ sealed class DeviceInbound {
         @SerialName("session_id") val sessionId: UUID
     ) : DeviceInbound()
 
-    companion object : FromMessage<DeviceInbound> {
+    companion object : Message.From<DeviceInbound> {
         @OptIn(ExperimentalSerializationApi::class)
         @JvmStatic
         override fun fromMessage(message: Message): DeviceInbound {

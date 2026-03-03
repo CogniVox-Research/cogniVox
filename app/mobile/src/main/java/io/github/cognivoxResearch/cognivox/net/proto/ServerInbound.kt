@@ -1,6 +1,5 @@
 package io.github.cognivoxResearch.cognivox.net.proto
 
-import io.github.cognivoxResearch.cognivox.net.ws.FromMessage
 import io.github.cognivoxResearch.cognivox.net.ws.Message
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
@@ -40,7 +39,7 @@ sealed class ServerInbound {
     @Serializable
     @SerialName("end")
     object End : ServerInbound()
-    companion object : FromMessage<ServerInbound> {
+    companion object : Message.From<ServerInbound> {
         override fun fromMessage(message: Message): ServerInbound {
             val json = Json { classDiscriminator = "type" }
 

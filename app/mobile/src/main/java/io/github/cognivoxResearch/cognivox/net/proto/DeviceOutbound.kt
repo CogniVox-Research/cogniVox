@@ -2,14 +2,13 @@ package io.github.cognivoxResearch.cognivox.net.proto
 
 
 import io.github.cognivoxResearch.cognivox.net.ws.Message
-import io.github.cognivoxResearch.cognivox.net.ws.ToMessage
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 
 
 @Serializable
-sealed class DeviceOutbound : ToMessage<DeviceOutbound> {
+sealed class DeviceOutbound : Message.To<DeviceOutbound> {
 
     @Serializable
     @SerialName("connect")

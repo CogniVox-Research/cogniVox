@@ -10,12 +10,13 @@ sealed class Message {
         is Bytes -> "[${this.bytes.size} Bytes]"
         is Text -> this.text
     }
+
+    interface From<T> {
+        fun fromMessage(message: Message): T
+    }
+
+    interface To<T> {
+        fun toMessage(): Message
+    }
 }
 
-interface FromMessage<T> {
-    fun fromMessage(message: Message): T
-}
-
-interface ToMessage<T> {
-    fun toMessage(): Message
-}

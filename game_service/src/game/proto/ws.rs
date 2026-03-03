@@ -162,7 +162,7 @@ macro_rules! recv_message {
                         continue;
                     }
                 },
-                Err(Error::UnexpectedMessage(err)) => {
+                Err(crate::error::Error::UnexpectedMessage(err)) => {
                     log::debug!("Recieved unexpected message: {err}");
                     continue;
                 }
@@ -188,7 +188,7 @@ macro_rules! wait_for {
                         continue;
                     }
                 },
-                Err(Error::UnexpectedMessage(err)) => {
+                Err(crate::error::Error::UnexpectedMessage(err)) => {
                     log::debug!("Recieved unexpected message: {err}");
                     continue;
                 }

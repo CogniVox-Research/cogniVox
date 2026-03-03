@@ -52,7 +52,7 @@ impl<In: Inbound, Out: Outbound> WebSocket<In, Out> {
             panic!("multiple calls to handle_websocket");
         };
 
-        let mut timer = tokio::time::interval(Duration::from_secs(5));
+        let mut timer = tokio::time::interval(Duration::from_secs(15));
         let mut last_ping = None;
 
         ws.channel(move |stream| {

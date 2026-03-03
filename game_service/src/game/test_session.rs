@@ -1,22 +1,14 @@
 use std::time::Duration;
 
-use common::file_store::Store;
 use rocket::tokio::{self, time::sleep};
 
 use crate::{
-    app::AppState,
     dto::settings::{AudienceDifficulty, GameSettings, SceneType},
     error::Result,
     game::proto::{self, GameConnection, GameInbound},
-    recv_message,
 };
 
-pub async fn start_test_session(
-    state: &AppState,
-    store: &Store,
-    session_id: uuid::Uuid,
-    mut game: GameConnection,
-) -> Result<()> {
+pub async fn start_test_session(mut game: GameConnection) -> Result<()> {
     tokio::spawn(async move {
         sleep(Duration::from_secs(1)).await;
 

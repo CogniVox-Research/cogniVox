@@ -8,11 +8,12 @@ use rocket::{
     response::Redirect,
 };
 use rocket_ws::{Channel, WebSocket};
-use uuid::Uuid;
 
 use crate::{
     app::AppState,
-    game::proto::{DeviceConnection, DeviceOutbound, GameConnection, WebConnection, WebOutbound},
+    game::proto::{
+        DeviceConnection, DeviceOutbound, GameConnection, GameOutbound, WebConnection, WebOutbound,
+    },
 };
 
 mod app;
@@ -27,17 +28,11 @@ async fn index() -> Redirect {
 }
 
 #[rocket::get("/ws/game/test")]
-async fn test_game_session<'a, 'r>(
-    ws: WebSocket,
-    state: &'a State<AppState>,
-    store: &'a State<Store>,
-) -> Channel<'r> {
+async fn test_game_session<'r>(ws: WebSocket) -> Channel<'r> {
     let mut con = GameConnection::new();
     let channel = con.handle_websocket(ws);
 
-    game::test_session::start_test_session(state.inner(), store.inner(), Uuid::now_v7(), con)
-        .await
-        .unwrap();
+    game::test_session::start_test_session(con).await.unwrap();
 
     channel
 }
@@ -49,13 +44,21 @@ async fn game_session<'a, 'r>(
     state: &'a State<AppState>,
     store: &'a State<Store>,
 ) -> Channel<'r> {
-    let mut cache_guard = state.pending.lock().await;
-    let Some(web) = cache_guard.remove(&session_id) else {
-        panic!("Invalid")
-    };
-
     let mut con = GameConnection::new();
     let channel = con.handle_websocket(ws);
+
+    let mut pending_guard = state.pending.lock().await;
+    let Some(web) = pending_guard.remove(&session_id) else {
+        let result = con
+            .send(GameOutbound::Error("Session Not Found".to_string()))
+            .await;
+        if let Err(e) = result {
+            log::error!("WS Error {e}")
+        }
+
+        con.disconnect();
+        return channel;
+    };
 
     let result = game::start_game(state.inner(), store.inner(), session_id, con, web).await;
     if let Err(e) = result {

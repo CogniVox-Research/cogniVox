@@ -1,7 +1,8 @@
-use std::sync::atomic::AtomicBool;
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{self, Arc};
 use std::time::Duration;
 
+use rocket::tokio::sync::Notify;
 use rocket::{futures::stream::SplitSink, tokio::sync::mpsc};
 
 use rocket::{
@@ -25,7 +26,13 @@ pub struct WebSocket<In: Inbound, Out: Outbound> {
     outbound: mpsc::Sender<Out>,
 
     handler: Option<(mpsc::Sender<In>, mpsc::Receiver<Out>)>,
-    disconnect: Arc<AtomicBool>,
+    inner: Arc<WebSocketInner>,
+}
+
+/// inner content that is shared with the worker task
+struct WebSocketInner {
+    disconnect: AtomicBool,
+    shutdown: Notify,
 }
 
 impl<In: Inbound, Out: Outbound> WebSocket<In, Out> {
@@ -36,14 +43,27 @@ impl<In: Inbound, Out: Outbound> WebSocket<In, Out> {
             inbound: inbound_rx,
             outbound: outbound_tx,
             handler: Some((inbound_tx, outbound_rx)),
-            disconnect: Default::default(),
+            inner: Arc::new(WebSocketInner {
+                disconnect: AtomicBool::new(false),
+                shutdown: Notify::new(),
+            }),
         }
     }
 
     pub fn is_connected(&self) -> bool {
-        !self.disconnect.load(sync::atomic::Ordering::Relaxed)
+        !self.inner.disconnect.load(Ordering::Relaxed)
     }
 
+    /// disconnects the websocket connection.
+    /// This does nothing if called before calling `self.handler`.
+    pub fn disconnect(&self) {
+        if self.handler.is_none() {
+            // self.handler is only none after self.handler is called.
+            self.inner.shutdown.notify_waiters();
+        }
+    }
+
+    /// Sends the given message on the websocket.
     pub async fn send(&self, message: Out) -> Result<()> {
         self.outbound
             .send(message)
@@ -51,15 +71,17 @@ impl<In: Inbound, Out: Outbound> WebSocket<In, Out> {
             .map_err(|_e| Error::SocketClose)
     }
 
+    /// Reads a message from the websocket.
     pub async fn recv(&mut self) -> Result<In> {
         self.inbound.recv().await.ok_or(Error::SocketClose)
     }
 
+    /// Starts a task that handles websocket communication.
     pub fn handle_websocket<'r>(&mut self, ws: rocket_ws::WebSocket) -> Channel<'r> {
         let Some((inbound_tx, mut outbound_rx)) = self.handler.take() else {
             panic!("multiple calls to handle_websocket");
         };
-        let disconnect = self.disconnect.clone();
+        let inner = self.inner.clone();
 
         let mut timer = tokio::time::interval(Duration::from_secs(15));
         let mut last_ping = None;
@@ -74,11 +96,14 @@ impl<In: Inbound, Out: Outbound> WebSocket<In, Out> {
                                 Self::send_message(&mut ws_sink, msg).await.err()
                             }
                             Some(Ok(msg)) = ws_stream.next() => {
-                                Self::read_message(&inbound_tx, &mut last_ping, msg).await.err()
+                                Self::parse_message(&inbound_tx, &mut last_ping, msg).await.err()
                             }
                             _ = timer.tick() =>{
                                 Self::ping_client(&mut ws_sink, &mut last_ping).await.err()
                             },
+                            _= inner.shutdown.notified()=>{
+                                Some(Error::SocketClose)
+                            }
                             else => Some(Error::SocketClose),
                         };
 
@@ -89,13 +114,17 @@ impl<In: Inbound, Out: Outbound> WebSocket<In, Out> {
                             break;
                         }
                     }
-                    disconnect.store(true, sync::atomic::Ordering::Relaxed);
+
+                    inner.disconnect.store(true, Ordering::Relaxed);
                 });
                 Ok(())
             })
         })
     }
 
+    /// Sends a ping message to the client.
+    /// The client must respond with a pong message before this function is called again.
+    /// If the client has not responded, the connection is closed.
     async fn ping_client(
         ws_sink: &mut SplitSink<DuplexStream, Message>,
         last_ping: &mut Option<Vec<u8>>,
@@ -130,7 +159,8 @@ impl<In: Inbound, Out: Outbound> WebSocket<In, Out> {
         }
     }
 
-    async fn read_message(
+    /// Parses the given message and puts it into the inbound_tx queue.
+    async fn parse_message(
         inbound_tx: &mpsc::Sender<In>,
         last_ping: &mut Option<Vec<u8>>,
         message: Message,
@@ -144,6 +174,7 @@ impl<In: Inbound, Out: Outbound> WebSocket<In, Out> {
                     Ok(())
                 }
             }
+
             Err(Error::SocketPong(data)) => {
                 if let Some(expected_pong) = last_ping {
                     if *expected_pong == data {

@@ -6,7 +6,7 @@ use rocket::form::Form;
 use rocket::response::content::RawHtml;
 use rocket::response::status::Custom;
 use rocket::serde::json::Json;
-use rocket::{State, fs::TempFile, http::Status};
+use rocket::{State, fs::TempFile};
 
 mod config;
 mod dto;
@@ -17,43 +17,37 @@ mod upload;
 async fn index() -> RawHtml<&'static str> {
     RawHtml(include_str!("../assets/index.html"))
 }
-
-#[rocket::post("/upload/<session_id>", data = "<file>")]
-async fn upload_file(
-    session_id: &str,
+#[rocket::post("/parse", data = "<file>")]
+async fn parse_file(
     file: Form<TempFile<'_>>,
-    store: &State<Store>,
-) -> Result<Json<dto::FileContent>, Custom<Json<String>>> {
-    let mime_type = match file.content_type() {
-        Some(mime) => mime.to_owned(),
-        None => return Err(Custom(Status::BadRequest, Json("Missing MIME type".into()))),
-    };
+) -> Result<Json<dto::ParseResponse>, Custom<Json<String>>> {
+    let (mime_type, text) = extractor::extract_text(&file).await?;
 
-    let extension = mime_type.extension().map(|v| v.as_str()).unwrap_or("bin");
-
-    let text = match extractor::extract_text(&file, &mime_type).await {
-        Ok(Some(text)) => text,
-        Ok(None) => {
-            return Err(Custom(
-                Status::BadRequest,
-                Json(format!("Unsupported file type (got {})", mime_type)),
-            ));
-        }
-        Err(err) => {
-            return Err(Custom(
-                Status::InternalServerError,
-                Json(format!("Failed to parse document: {}", err)),
-            ));
-        }
-    };
-
-    let content = dto::FileContent {
-        filename: format!("original.{extension}"),
+    Ok(Json(dto::ParseResponse {
         file_type: mime_type.to_string(),
         text,
+    }))
+}
+
+#[rocket::post("/upload", data = "<file>")]
+async fn upload_file(
+    file: Form<TempFile<'_>>,
+    store: &State<Store>,
+) -> Result<Json<dto::FileToken>, Custom<Json<String>>> {
+    let (mime_type, text) = extractor::extract_text(&file).await?;
+
+    let document_id = uuid::Uuid::new_v4();
+    let dir = format!("documents/{document_id}");
+    let extension = mime_type.extension().map(|v| v.as_str()).unwrap_or("bin");
+
+    let content = dto::FileToken {
+        document_id,
+        //TODO: user id
+        content_path: format!("{dir}/content"),
+        original_path: format!("{dir}/original.{extension}"),
     };
 
-    upload::upload_to_store(store, session_id, &file, &content)
+    upload::upload_to_store(store, &file, &content, text)
         .await
         .unwrap();
 
@@ -70,5 +64,5 @@ fn rocket() -> _ {
     rocket
         .manage(config)
         .manage(store)
-        .mount("/", routes![index, upload_file])
+        .mount("/", routes![index, upload_file, parse_file])
 }

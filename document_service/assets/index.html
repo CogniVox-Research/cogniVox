@@ -44,7 +44,7 @@
                 const fd = new FormData();
                 fd.append(fileInput.name, file);
 
-                const resp = await fetch("/upload/test", {
+                const resp = await fetch("/parse", {
                     method: "POST",
                     body: fd,
                 });

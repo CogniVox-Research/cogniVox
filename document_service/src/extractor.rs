@@ -1,6 +1,40 @@
-use rocket::{fs::TempFile, http::ContentType, tokio::io::AsyncReadExt};
+use rocket::{
+    form::Form,
+    fs::TempFile,
+    http::{ContentType, Status},
+    response::status::Custom,
+    serde::json::Json,
+    tokio::io::AsyncReadExt,
+};
 
 pub async fn extract_text(
+    file: &Form<TempFile<'_>>,
+) -> Result<(ContentType, String), Custom<Json<String>>> {
+    let mime_type = match file.content_type() {
+        Some(mime) => mime.to_owned(),
+        None => return Err(Custom(Status::BadRequest, Json("Missing MIME type".into()))),
+    };
+
+    let text = match extract_content(&file, &mime_type).await {
+        Ok(Some(text)) => text,
+        Ok(None) => {
+            return Err(Custom(
+                Status::BadRequest,
+                Json(format!("Unsupported file type (got {})", mime_type)),
+            ));
+        }
+        Err(err) => {
+            return Err(Custom(
+                Status::InternalServerError,
+                Json(format!("Failed to parse document: {}", err)),
+            ));
+        }
+    };
+
+    Ok((mime_type, text))
+}
+
+async fn extract_content(
     file: &TempFile<'_>,
     content_type: &ContentType,
 ) -> Result<Option<String>, Box<dyn std::error::Error>> {

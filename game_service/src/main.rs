@@ -35,10 +35,9 @@ async fn test_game_session<'a, 'r>(
     let mut con = GameConnection::new();
     let channel = con.handle_websocket(ws);
 
-    let result =
-        game::test_session::start_test_session(state.inner(), store.inner(), Uuid::now_v7(), con)
-            .await
-            .unwrap();
+    game::test_session::start_test_session(state.inner(), store.inner(), Uuid::now_v7(), con)
+        .await
+        .unwrap();
 
     channel
 }

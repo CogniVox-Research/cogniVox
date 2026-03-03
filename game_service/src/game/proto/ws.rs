@@ -1,3 +1,5 @@
+use std::sync::atomic::AtomicBool;
+use std::sync::{self, Arc};
 use std::time::Duration;
 
 use rocket::{futures::stream::SplitSink, tokio::sync::mpsc};
@@ -23,6 +25,7 @@ pub struct WebSocket<In: Inbound, Out: Outbound> {
     outbound: mpsc::Sender<Out>,
 
     handler: Option<(mpsc::Sender<In>, mpsc::Receiver<Out>)>,
+    disconnect: Arc<AtomicBool>,
 }
 
 impl<In: Inbound, Out: Outbound> WebSocket<In, Out> {
@@ -33,7 +36,12 @@ impl<In: Inbound, Out: Outbound> WebSocket<In, Out> {
             inbound: inbound_rx,
             outbound: outbound_tx,
             handler: Some((inbound_tx, outbound_rx)),
+            disconnect: Default::default(),
         }
+    }
+
+    pub fn is_connected(&self) -> bool {
+        !self.disconnect.load(sync::atomic::Ordering::Relaxed)
     }
 
     pub async fn send(&self, message: Out) -> Result<()> {
@@ -51,6 +59,7 @@ impl<In: Inbound, Out: Outbound> WebSocket<In, Out> {
         let Some((inbound_tx, mut outbound_rx)) = self.handler.take() else {
             panic!("multiple calls to handle_websocket");
         };
+        let disconnect = self.disconnect.clone();
 
         let mut timer = tokio::time::interval(Duration::from_secs(15));
         let mut last_ping = None;
@@ -80,6 +89,7 @@ impl<In: Inbound, Out: Outbound> WebSocket<In, Out> {
                             break;
                         }
                     }
+                    disconnect.store(true, sync::atomic::Ordering::Relaxed);
                 });
                 Ok(())
             })

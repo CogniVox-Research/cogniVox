@@ -6,19 +6,21 @@ import kotlinx.serialization.Serializable
 @Serializable
 @SerialName("stress_response")
 data class StressResponse(
+    @SerialName("model_used")
     val modelUsed: String,
     val label: Long,
+    @SerialName("stress_score")
     val stressScore: Double,
     val suggestion: String
 )
 
 @Serializable
 data class GameSettings(
-    @SerialName("scene")
     val scene: SceneType,
-
+    val size: Long = 1,
     val distractions: Boolean,
-
+    @SerialName("session_type")
+    val sessionType: String,
     val difficulty: AudienceDifficulty
 )
 
@@ -31,26 +33,24 @@ data class GameFeatures(
 enum class AudienceDifficulty {
     @SerialName("easy")
     EASY,
+
     @SerialName("medium")
     MEDIUM,
+
     @SerialName("hard")
     HARD
 }
 
 @Serializable
-sealed class SceneType {
-
-    @Serializable
+enum class SceneType {
     @SerialName("interview")
-    object Interview : SceneType()
+    Interview,
 
-    @Serializable
     @SerialName("board_room")
-    data class BoardRoom(val size: Long) : SceneType()
+    BoardRoom,
 
-    @Serializable
     @SerialName("stage")
-    data class Stage(val size: Long) : SceneType()
+    Stage
 }
 
 

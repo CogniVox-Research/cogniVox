@@ -1,5 +1,7 @@
 package io.github.cognivoxResearch.cognivox.game
 
+import android.content.Intent
+import android.content.pm.ActivityInfo
 import android.os.Bundle
 import android.util.Log
 import android.view.LayoutInflater
@@ -13,6 +15,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.platform.ComposeView
 import androidx.fragment.app.Fragment
 import io.github.cognivoxResearch.cognivox.API_HOST
+import io.github.cognivoxResearch.cognivox.MainActivity
 import io.github.cognivoxResearch.cognivox.PREF_TAG
 import io.github.cognivoxResearch.cognivox.R
 import io.github.cognivoxResearch.cognivox.SESSION_URL
@@ -34,13 +37,16 @@ class GameActivity : AppCompatActivity(), GodotHost {
 
     lateinit var websocket: GameWs
 
+    var hasStopped: Boolean = false
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE;
 
         val sessionId = UUID.fromString(intent.getStringExtra("session")!!)
         val prefs = getSharedPreferences(PREF_TAG, MODE_PRIVATE)
         val hostname = prefs.getString("host", API_HOST)!!
-        websocket = GameWs("ws://$hostname/$SESSION_URL/$sessionId")
+        websocket = GameWs("ws://$hostname/$SESSION_URL/test")
 
         setContentView(R.layout.game_layout)
 
@@ -64,14 +70,14 @@ class GameActivity : AppCompatActivity(), GodotHost {
         super.onResume()
         supportActionBar?.hide()
 
-        @Suppress("DEPRECATION")
-        window.decorView.systemUiVisibility = (
-                View.SYSTEM_UI_FLAG_IMMERSIVE // Immersive mode
-                        or View.SYSTEM_UI_FLAG_FULLSCREEN // Hide notification bar
-                        or View.SYSTEM_UI_FLAG_HIDE_NAVIGATION // Hide navigation bar
-                )
+        godot?.enableImmersiveMode(true)
+        godot?.enableEdgeToEdge(true)
     }
 
+    override fun onDestroy() {
+        super.onDestroy()
+        stop()
+    }
 
     override fun getActivity() = this
     override fun getGodot() = godotFragment?.godot
@@ -92,28 +98,41 @@ class GameActivity : AppCompatActivity(), GodotHost {
 
     private fun initController(godot: Godot) {
         if (gameController == null) {
-            gameController = GameController(godot, uiState, websocket)
-            websocket.setListener(gameController!!)
+            gameController = GameController(godot, uiState, websocket, { stop() })
+            websocket.setListener(gameController!!.listener)
         }
     }
 
+    private fun stop() {
+        if (hasStopped) return;
+        hasStopped = true;
 
-    class GameOverlay : Fragment() {
-        override fun onCreateView(
-            inflater: LayoutInflater, container: ViewGroup?,
-            savedInstanceState: Bundle?
-        ): View {
-            val activity = requireActivity() as GameActivity;
+        // Fully restart the entire app because godot cannot be restarted.
+        // https://github.com/godotengine/godot-proposals/issues/8151
+        val intent = Intent(applicationContext, MainActivity::class.java)
+        val mainIntent = Intent.makeRestartActivityTask(intent.component)
+        mainIntent.putExtra("session_id", "i")
+        applicationContext.startActivity(mainIntent)
+        Runtime.getRuntime().exit(0)
+    }
+}
 
-            Log.e("GameActivity", activity.godot.toString())
+class GameOverlay : Fragment() {
+    override fun onCreateView(
+        inflater: LayoutInflater, container: ViewGroup?,
+        savedInstanceState: Bundle?
+    ): View {
+        val activity = requireActivity() as GameActivity;
 
-            var state by activity.uiState;
+        Log.e("GameActivity", activity.godot.toString())
 
-            return ComposeView(requireContext()).apply {
-                setContent {
-                    GameScreen(state)
-                }
+        var state by activity.uiState;
+
+        return ComposeView(requireContext()).apply {
+            setContent {
+                GameScreen(state)
             }
         }
     }
 }
+

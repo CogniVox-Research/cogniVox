@@ -1,15 +1,26 @@
 package io.github.cognivoxResearch.cognivox.screen.game
 
 sealed class GameState {
-    data class Loading(val godotLoaded: Boolean) : GameState() {
-        fun is_ready() = godotLoaded
-        fun loading_message(): String {
+    data class Loading(
+        val godotLoaded: Boolean = false,
+        val serverReady: Boolean = false,
+        val connected: Boolean = false
+    ) :
+        GameState() {
+        fun loadingMessage(): String {
             return if (!godotLoaded) {
                 "Starting Game Engine"
+            } else if (!connected) {
+                "Connecting to server"
+            } else if (!serverReady) {
+                "Waiting For Server"
             } else {
                 "Loading"
             }
         }
     }
 
+    data class WaitingSpeech(val onStart: () -> Unit) : GameState()
+    data class Speech(val onEnd: () -> Unit) : GameState()
+    object SpeechEnd : GameState()
 }

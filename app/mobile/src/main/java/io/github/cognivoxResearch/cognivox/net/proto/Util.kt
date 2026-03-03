@@ -22,11 +22,15 @@ inline fun <reified T : Any> flatten(s: KSerializer<T>): KSerializer<T> =
     object : JsonTransformingSerializer<T>(s) {
         override fun transformDeserialize(element: JsonElement): JsonElement {
             val obj = element.jsonObject
-            val typeName = obj["type"]?.jsonPrimitive
-                ?: throw SerializationException("Missing 'type'")
+
             val data = obj["data"]?.jsonObject
-                ?: throw SerializationException("Missing 'data'")
-            return JsonObject(data + Pair("type", typeName))
+            if (data != null) {
+                val typeName = obj["type"]?.jsonPrimitive
+                    ?: throw SerializationException("Missing 'type'")
+                return JsonObject(data + Pair("type", typeName))
+            }
+
+            return obj
         }
 
         override fun transformSerialize(element: JsonElement): JsonElement {

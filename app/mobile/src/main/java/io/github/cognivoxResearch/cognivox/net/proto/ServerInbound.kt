@@ -34,6 +34,10 @@ sealed class ServerInbound {
     data class Question(val data: String) : ServerInbound()
 
     @Serializable
+    @SerialName("error")
+    data class Error(val data: String) : ServerInbound()
+
+    @Serializable
     @SerialName("end")
     object End : ServerInbound()
     companion object : FromMessage<ServerInbound> {
@@ -41,7 +45,7 @@ sealed class ServerInbound {
             val json = Json { classDiscriminator = "type" }
 
             return when (message) {
-                is Message.Text -> json.decodeFromString(flatten(serializer()), message.text)
+                is Message.Text -> json.decodeFromString(serializer(), message.text)
                 else -> throw RuntimeException("Unexpected byte message")
             }
         }

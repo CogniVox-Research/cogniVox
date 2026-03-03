@@ -95,8 +95,15 @@ abstract class WS<In, Out>(
 
     fun send(out: Out) {
         val sent = when (val message = out.toMessage()) {
-            is Message.Text -> websocket?.send(message.text)
-            is Message.Bytes -> websocket?.send(message.bytes)
+            is Message.Text -> {
+                Log.i(tag, "Sent message ${message.text}")
+                websocket?.send(message.text)
+            }
+
+            is Message.Bytes -> {
+                Log.i(tag, "Sent  ${message.bytes.size} bytes")
+                websocket?.send(message.bytes)
+            }
         } ?: throw RuntimeException("Socket is closed")
 
         if (!sent) throw RuntimeException("Failed to send")

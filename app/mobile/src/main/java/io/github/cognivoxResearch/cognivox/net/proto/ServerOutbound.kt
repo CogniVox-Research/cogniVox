@@ -58,7 +58,7 @@ sealed class ServerOutbound : ToMessage<ServerOutbound> {
         val json = Json { classDiscriminator = "type" }
         return when (this) {
             is Audio -> Message.Bytes(this.data.toByteString())
-            else -> Message.Text(json.encodeToString(flatten(serializer()), this))
+            else -> Message.Text(json.encodeToString(serializer(), this))
         }
     }
 }

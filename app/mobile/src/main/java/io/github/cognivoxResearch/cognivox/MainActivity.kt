@@ -4,8 +4,10 @@ import android.content.Intent
 import android.os.Bundle
 import android.provider.Settings
 import android.util.Log
+import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -42,6 +44,15 @@ class MainActivity : ComponentActivity(), DeviceWs.Listener {
         hostname = prefs.getString("host", API_HOST)!!
         deviceName = Settings.Global.getString(contentResolver, Settings.Global.DEVICE_NAME)!!
         uiState = mutableStateOf(HomeState.Connecting(hostname, ""))
+
+        registerForActivityResult(ActivityResultContracts.RequestPermission()) { isGranted ->
+            if (!isGranted) {
+                runOnUiThread {
+                    Toast.makeText(baseContext, "Permissions not granted", Toast.LENGTH_LONG).show()
+                }
+                finish()
+            }
+        }
 
         runBlocking {
             connect()

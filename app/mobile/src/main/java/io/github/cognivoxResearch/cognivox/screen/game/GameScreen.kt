@@ -2,6 +2,7 @@ package io.github.cognivoxResearch.cognivox.screen.game
 
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.graphics.Color
 import io.github.cognivoxResearch.cognivox.screen.game.pages.ContinueTap
 import io.github.cognivoxResearch.cognivox.screen.game.pages.Loading
 import io.github.cognivoxResearch.cognivox.screen.game.pages.Speech
@@ -13,5 +14,7 @@ fun GameScreen(state: GameState) {
         is GameState.WaitingSpeech -> ContinueTap(state.onStart)
         is GameState.Speech -> Speech(state.onEnd)
         GameState.SpeechEnd -> Surface() {}
+        is GameState.Question -> Speech(state.onEnd)
+        GameState.QuestionWait -> Surface(color = Color(0f, 0f, 0f, 0.4f)) {}
     }
 }

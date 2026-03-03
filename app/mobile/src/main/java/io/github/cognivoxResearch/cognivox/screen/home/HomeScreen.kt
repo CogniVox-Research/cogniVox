@@ -29,7 +29,8 @@ import java.util.UUID
 fun HomeScreen(
     state: HomeState = HomeState.Waiting("Test User", UUID.randomUUID()),
     onChangeHost: (String) -> Unit = {},
-    onJoinManual: (UUID) -> Unit = {}
+    onJoinManual: (UUID) -> Unit = {},
+    onJoinTest: () -> Unit = {}
 ) {
     var hostEditOpen by remember { mutableStateOf(false) }
     var joinManual by remember { mutableStateOf(false) }
@@ -80,7 +81,7 @@ fun HomeScreen(
     if (state is HomeState.Connecting && hostEditOpen) {
         HostSheet(state.host, onChangeHost, hideHostEdit)
     } else if (state is HomeState.Waiting && joinManual) {
-        JoinSheet(onJoinManual, hideJoin)
+        JoinSheet(onJoinManual, onJoinTest, hideJoin)
     }
 }
 

@@ -30,10 +30,11 @@ import java.util.UUID
 @Preview
 fun JoinSheet(
     setSession: (UUID) -> Unit = {},
+    joinTest: () -> Unit = {},
     onClose: () -> Unit = {}
 ) {
     val bottomSheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
-    var input by remember { mutableStateOf(UUID.randomUUID().toString()) }
+    var input by remember { mutableStateOf("") }
     var error by remember { mutableStateOf("") }
 
     ModalBottomSheet(
@@ -65,11 +66,16 @@ fun JoinSheet(
             )
 
             Row(
-                horizontalArrangement = Arrangement.End,
+                horizontalArrangement = Arrangement.SpaceBetween,
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(top = 8.dp)
             ) {
+                Button({
+                        joinTest()
+                        onClose()
+                }) { Text("Join Test Session") }
+
                 Button({
                     try {
                         val uuid = UUID.fromString(input)
@@ -78,7 +84,7 @@ fun JoinSheet(
                     } catch (e: IllegalArgumentException) {
                         error = "Invalid Session Id"
                     }
-                }) { Text("Change") }
+                }) { Text("Join") }
             }
         }
     }

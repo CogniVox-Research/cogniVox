@@ -17,11 +17,12 @@ data class StressResponse(
 @Serializable
 data class GameSettings(
     val scene: SceneType,
-    val size: Long = 1,
+    val size: Int = 1,
     val distractions: Boolean,
     @SerialName("session_type")
     val sessionType: String,
-    val difficulty: AudienceDifficulty
+    val difficulty: AudienceDifficulty,
+    val qa: Boolean
 )
 
 @Serializable
@@ -50,7 +51,15 @@ enum class SceneType {
     BoardRoom,
 
     @SerialName("stage")
-    Stage
+    Stage;
+
+    fun getIdent(): String {
+        return when (this) {
+            Interview -> "interview"
+            BoardRoom -> "board_room"
+            Stage -> "stage"
+        }
+    }
 }
 
 

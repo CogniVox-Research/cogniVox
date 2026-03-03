@@ -22,5 +22,10 @@ sealed class GameState {
 
     data class WaitingSpeech(val onStart: () -> Unit) : GameState()
     data class Speech(val onEnd: () -> Unit) : GameState()
+
+    object QuestionWait : GameState()
+
+    data class Question(val onEnd: () -> Unit) : GameState()
+
     object SpeechEnd : GameState()
 }

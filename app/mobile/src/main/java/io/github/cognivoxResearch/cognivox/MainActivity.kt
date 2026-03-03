@@ -64,7 +64,11 @@ class MainActivity : ComponentActivity(), DeviceWs.Listener {
                     modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colorScheme.background
                 ) {
-                    WaitScreen(uiState, { this.changeHost(it) }, { this.joinSession(it) })
+                    WaitScreen(
+                        uiState,
+                        { this.changeHost(it) },
+                        { this.joinSession(it) },
+                        { this.joinSession(null) })
                 }
             }
         }
@@ -120,9 +124,13 @@ class MainActivity : ComponentActivity(), DeviceWs.Listener {
         runBlocking { connect() }
     }
 
-    fun joinSession(sessionId: UUID) {
+    fun joinSession(sessionId: UUID?) {
         val startIntent = Intent(this, GameActivity::class.java)
-        startIntent.putExtra("session", sessionId.toString())
+        if (sessionId == null) {
+            startIntent.putExtra("session", "test")
+        } else {
+            startIntent.putExtra("session", sessionId.toString())
+        }
         startActivity(startIntent)
     }
 }
@@ -131,8 +139,9 @@ class MainActivity : ComponentActivity(), DeviceWs.Listener {
 fun WaitScreen(
     uiState: MutableState<HomeState>,
     changeHost: (String) -> Unit,
-    joinSession: (UUID) -> Unit
+    joinSession: (UUID) -> Unit,
+    joinTest: () -> Unit,
 ) {
     var state by uiState;
-    HomeScreen(state, changeHost, joinSession)
+    HomeScreen(state, changeHost, joinSession, joinTest)
 }

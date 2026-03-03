@@ -19,6 +19,8 @@ abstract class WS<In, Out>(
     private var url: String,
     private val deserializer: FromMessage<In>,
     private val client: OkHttpClient = getWebsocketClient(),
+    private val retry: Boolean = true,
+    private val ignoreDeserializeErrors: Boolean = true,
 ) where  Out : ToMessage<Out> {
     private var websocket: WebSocket? = null
     private var isConnected = false
@@ -32,6 +34,11 @@ abstract class WS<In, Out>(
             val parsed = try {
                 deserializer.fromMessage(Message.Text(text))
             } catch (e: Exception) {
+                if (!ignoreDeserializeErrors) {
+                    onFailure(webSocket, e, null)
+                    return
+                }
+                
                 Log.e(tag, "Failed to parse: $text", e)
                 return
             }
@@ -45,6 +52,11 @@ abstract class WS<In, Out>(
             val parsed = try {
                 deserializer.fromMessage(Message.Bytes(bytes))
             } catch (e: Exception) {
+                if (!ignoreDeserializeErrors) {
+                    onFailure(webSocket, e, null)
+                    return
+                }
+
                 Log.e(tag, "Failed to bytes", e)
                 return
             }
@@ -123,6 +135,10 @@ abstract class WS<In, Out>(
     }
 
     private suspend fun reconnectWithBackoff() {
+        if (!retry) {
+            return this.disconnect()
+        }
+
         Log.d(tag, "Reconnecting in $RETRY_DELAY ms...")
         withContext(Dispatchers.IO) {
             delay(RETRY_DELAY)

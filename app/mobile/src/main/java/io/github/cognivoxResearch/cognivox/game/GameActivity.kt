@@ -27,7 +27,6 @@ import org.godotengine.godot.Godot
 import org.godotengine.godot.GodotFragment
 import org.godotengine.godot.GodotHost
 import org.godotengine.godot.plugin.GodotPlugin
-import java.util.UUID
 
 
 class GameActivity : AppCompatActivity(), GodotHost {
@@ -36,6 +35,7 @@ class GameActivity : AppCompatActivity(), GodotHost {
     lateinit var uiState: MutableState<GameState>
 
     lateinit var websocket: GameWs
+    lateinit var sessionId: String
 
     var hasStopped: Boolean = false
 
@@ -43,16 +43,18 @@ class GameActivity : AppCompatActivity(), GodotHost {
         super.onCreate(savedInstanceState)
         requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE;
 
-        val sessionId = UUID.fromString(intent.getStringExtra("session")!!)
+        sessionId = intent.getStringExtra("session")!!
         val prefs = getSharedPreferences(PREF_TAG, MODE_PRIVATE)
         val hostname = prefs.getString("host", API_HOST)!!
-        websocket = GameWs("ws://$hostname/$SESSION_URL/test")
+        websocket = GameWs("ws://$hostname/$SESSION_URL/$sessionId")
 
         setContentView(R.layout.game_layout)
 
         uiState = mutableStateOf(GameState.Loading(false))
 
         godotFragment = GodotFragment()
+
+
         supportFragmentManager.beginTransaction()
             .replace(R.id.godot_fragment_container, godotFragment!!)
             .commitNowAllowingStateLoss()
@@ -60,6 +62,8 @@ class GameActivity : AppCompatActivity(), GodotHost {
             .commitNowAllowingStateLoss()
 
         initController(godot!!)
+
+
 
         runBlocking {
             websocket.connect()
@@ -98,7 +102,7 @@ class GameActivity : AppCompatActivity(), GodotHost {
 
     private fun initController(godot: Godot) {
         if (gameController == null) {
-            gameController = GameController(godot, uiState, websocket, { stop() })
+            gameController = GameController(godot, sessionId, uiState, websocket, { stop() })
             websocket.setListener(gameController!!.listener)
         }
     }
@@ -107,11 +111,13 @@ class GameActivity : AppCompatActivity(), GodotHost {
         if (hasStopped) return;
         hasStopped = true;
 
+        // TODO: send to results page instead
+        val intent = Intent(applicationContext, MainActivity::class.java)
+
         // Fully restart the entire app because godot cannot be restarted.
         // https://github.com/godotengine/godot-proposals/issues/8151
-        val intent = Intent(applicationContext, MainActivity::class.java)
         val mainIntent = Intent.makeRestartActivityTask(intent.component)
-        mainIntent.putExtra("session_id", "i")
+        mainIntent.putExtra("session_id", sessionId)
         applicationContext.startActivity(mainIntent)
         Runtime.getRuntime().exit(0)
     }

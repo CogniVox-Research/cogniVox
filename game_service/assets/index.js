@@ -12,6 +12,7 @@ const ACTIONS = [
     data: {
       scene: "stage",
       size: 10,
+      session_type: "speech",
       document_id: "placeholder-micromachines",
       distractions: true,
       qa: true,

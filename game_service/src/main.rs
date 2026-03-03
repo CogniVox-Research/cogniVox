@@ -8,6 +8,7 @@ use rocket::{
     response::Redirect,
 };
 use rocket_ws::{Channel, WebSocket};
+use uuid::Uuid;
 
 use crate::{
     app::AppState,
@@ -23,6 +24,23 @@ mod game;
 #[rocket::get("/")]
 async fn index() -> Redirect {
     Redirect::moved(uri!("/ui"))
+}
+
+#[rocket::get("/ws/game/test")]
+async fn test_game_session<'a, 'r>(
+    ws: WebSocket,
+    state: &'a State<AppState>,
+    store: &'a State<Store>,
+) -> Channel<'r> {
+    let mut con = GameConnection::new();
+    let channel = con.handle_websocket(ws);
+
+    let result =
+        game::test_session::start_test_session(state.inner(), store.inner(), Uuid::now_v7(), con)
+            .await
+            .unwrap();
+
+    channel
 }
 
 #[rocket::get("/ws/game/<session_id>")]
@@ -100,7 +118,16 @@ async fn rocket() -> _ {
     rocket
         .manage(store)
         .manage(app_state)
-        .mount("/", routes![index, web_session, game_session, vr_device])
+        .mount(
+            "/",
+            routes![
+                index,
+                web_session,
+                test_game_session,
+                game_session,
+                vr_device
+            ],
+        )
         .mount(
             "/ui",
             FileServer::new("assets", Options::Index | Options::NormalizeDirs),

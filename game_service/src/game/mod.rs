@@ -1,4 +1,5 @@
 use std::sync::Arc;
+pub mod test_session;
 
 use crate::{
     app::AppState,

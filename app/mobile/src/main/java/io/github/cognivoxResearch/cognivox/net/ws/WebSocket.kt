@@ -2,7 +2,6 @@ package io.github.cognivoxResearch.cognivox.net.ws
 
 import android.util.Log
 import io.github.cognivoxResearch.cognivox.RETRY_DELAY
-import io.github.cognivoxResearch.cognivox.net.getWebsocketClient
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.runBlocking
@@ -19,18 +18,21 @@ abstract class WebSocket<In, Out>(
     private var url: String,
     private val deserializer: Message.From<In>,
     private val client: OkHttpClient = getWebsocketClient(),
-    private val retry: Boolean = true,
+    private val canRetry: Boolean = true,
     private val ignoreDeserializeErrors: Boolean = true,
 ) where  Out : Message.To<Out> {
     private var websocket: WebSocket? = null
-    private var isConnected = false
     private var isClosed = false
 
     val tag: String = this::class.java.simpleName
 
     private val listener = object : WebSocketListener() {
+        /**
+         * Get text message from websocket and parse it.
+         */
         override fun onMessage(webSocket: WebSocket, text: String) {
             if (isClosed) return
+
             val parsed = try {
                 deserializer.fromMessage(Message.Text(text))
             } catch (e: Exception) {
@@ -39,16 +41,20 @@ abstract class WebSocket<In, Out>(
                     return
                 }
 
-                Log.e(tag, "Failed to parse: $text", e)
+                Log.e(tag, "Websocket: Error: Failed to parse: $text", e)
                 return
             }
 
-            Log.i(tag, "Got message $parsed")
+            Log.i(tag, "Websocket: Received: $parsed")
             onMessage(parsed)
         }
 
+        /**
+         * Get binary message from websocket and parse it.
+         */
         override fun onMessage(webSocket: WebSocket, bytes: ByteString) {
             if (isClosed) return
+
             val parsed = try {
                 deserializer.fromMessage(Message.Bytes(bytes))
             } catch (e: Exception) {
@@ -57,32 +63,42 @@ abstract class WebSocket<In, Out>(
                     return
                 }
 
-                Log.e(tag, "Failed to bytes", e)
+                Log.e(tag, "Websocket: Error: Failed to parse bytes", e)
                 return
             }
-            Log.d(tag, "Received: bytes")
+            Log.d(tag, "Websocket: Received: ${bytes.size} bytes")
             onMessage(parsed)
         }
 
+        /**
+         * Handles the ws closing or receiving an unparsable message.
+         * The websocket connection is closed.
+         */
         override fun onFailure(webSocket: WebSocket, t: Throwable, response: Response?) {
             if (isClosed) return
-            super.onFailure(webSocket, t, response)
-            Log.e(tag, "Failure: $t")
 
-            websocket = null
-            isConnected = false
+            super.onFailure(webSocket, t, response)
+            Log.e(tag, "Websocket: Error: $t")
+
+            disconnect()
+
             onDisconnect(t, response)
+            isClosed = false
 
             runBlocking {
-                reconnectWithBackoff()
+                reconnectWithDelay()
             }
         }
 
+        /**
+         * Handles the connection starting.
+         */
         override fun onOpen(webSocket: WebSocket, response: Response) {
             if (isClosed) return
+
             super.onOpen(webSocket, response)
-            Log.d(tag, "Connection opened")
-            isConnected = true
+            Log.d(tag, "Websocket: Connection opened")
+
             onConnect()
         }
     }
@@ -94,6 +110,10 @@ abstract class WebSocket<In, Out>(
     protected abstract fun onConnect()
 
 
+    /**
+     * Connects to the server.
+     * This does nothing if called after disconnect(), use reconnect() instead.
+     */
     suspend fun connect() {
         if (websocket != null) return
         if (isClosed) return
@@ -105,6 +125,9 @@ abstract class WebSocket<In, Out>(
         }
     }
 
+    /**
+     * Sends the given message over the websocket
+     */
     fun send(out: Out) {
         val sent = when (val message = out.toMessage()) {
             is Message.Text -> {
@@ -122,20 +145,33 @@ abstract class WebSocket<In, Out>(
     }
 
 
+    /**
+     * Disconnects the websocket connection.
+     * */
     fun disconnect() {
         websocket?.close(1000, "Force Disconnect")
         websocket = null
-        isConnected = false
         isClosed = true
     }
 
+    /**
+     * Reconnects to the socket.
+     * If a connection already exists, it is closed.
+     */
     suspend fun reconnect() {
+        disconnect()
+
         isClosed = false
+
         connect()
     }
 
-    private suspend fun reconnectWithBackoff() {
-        if (!retry) {
+    /**
+     * Attempts to reconnect with the server.
+     * This continuously retries until the connection succeeds or disconnect() is called.
+     */
+    private suspend fun reconnectWithDelay() {
+        if (!canRetry) {
             return this.disconnect()
         }
 
@@ -144,6 +180,12 @@ abstract class WebSocket<In, Out>(
             delay(RETRY_DELAY)
             connect()
         }
+    }
+
+    companion object {
+        val wsClient = OkHttpClient.Builder().build()
+
+        fun getWebsocketClient() = wsClient
     }
 }
 

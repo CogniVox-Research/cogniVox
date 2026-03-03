@@ -18,7 +18,6 @@ import io.github.cognivoxResearch.cognivox.API_HOST
 import io.github.cognivoxResearch.cognivox.MainActivity
 import io.github.cognivoxResearch.cognivox.PREF_TAG
 import io.github.cognivoxResearch.cognivox.R
-import io.github.cognivoxResearch.cognivox.SESSION_URL
 import io.github.cognivoxResearch.cognivox.net.ws.GameWebSocket
 import io.github.cognivoxResearch.cognivox.screen.game.GameScreen
 import io.github.cognivoxResearch.cognivox.screen.game.GameState
@@ -46,7 +45,7 @@ class GameActivity : AppCompatActivity(), GodotHost {
         sessionId = intent.getStringExtra("session")!!
         val prefs = getSharedPreferences(PREF_TAG, MODE_PRIVATE)
         val hostname = prefs.getString("host", API_HOST)!!
-        websocket = GameWebSocket("ws://$hostname/$SESSION_URL/$sessionId")
+        websocket = GameWebSocket(hostname, sessionId)
 
         setContentView(R.layout.game_layout)
 

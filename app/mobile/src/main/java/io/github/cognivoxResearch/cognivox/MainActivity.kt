@@ -34,6 +34,8 @@ class MainActivity : ComponentActivity(), DeviceWebSocket.Listener {
     lateinit var deviceName: String
     lateinit var auth: String
 
+    val tag: String = this.javaClass.simpleName
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
@@ -45,6 +47,7 @@ class MainActivity : ComponentActivity(), DeviceWebSocket.Listener {
         deviceName = Settings.Global.getString(contentResolver, Settings.Global.DEVICE_NAME)!!
         uiState = mutableStateOf(HomeState.Connecting(hostname, ""))
 
+        // request perms for microphone, wearables
         registerForActivityResult(ActivityResultContracts.RequestPermission()) { isGranted ->
             if (!isGranted) {
                 runOnUiThread {
@@ -52,10 +55,6 @@ class MainActivity : ComponentActivity(), DeviceWebSocket.Listener {
                 }
                 finish()
             }
-        }
-
-        runBlocking {
-            connect()
         }
 
         setContent {
@@ -88,43 +87,51 @@ class MainActivity : ComponentActivity(), DeviceWebSocket.Listener {
 
 
     override fun onJoinRequest(join: DeviceInbound.Join) {
-        Log.i("Main", "Join request $join")
+        Log.i(tag, "Join request $join")
+        joinSession(join.sessionId)
     }
 
     override fun onConnect(con: DeviceInbound.Ok) {
-        Log.i("Main", "Connected to server $con")
+        Log.i(tag, "Connected to server $con")
         uiState.value = HomeState.Waiting(con.userName, con.deviceId);
     }
 
     override fun onError(err: DeviceInbound.Err) {
         uiState.value = HomeState.Connecting(hostname, "Error: $err")
-        Log.i("Main", "Error $err")
+        Log.i(tag, "Error $err")
     }
 
     override fun onDisconnect() {
         uiState.value = HomeState.Connecting(hostname, "")
-        Log.i("Main", "Disconnected")
+        Log.i(tag, "Disconnected")
     }
 
-    suspend fun connect() {
-        websocket = DeviceWebSocket("ws://$hostname/$DEVICE_URL", deviceName, "INVALID", this)
+    /**
+     * Connects to the device websocket (for receiving session start notifications)
+     */
+    private suspend fun connect() {
+        websocket = DeviceWebSocket(getDeviceURL(hostname), deviceName, "INVALID", this)
         websocket!!.connect()
     }
 
-    fun changeHost(host: String) {
-        hostname = host
-        websocket?.disconnect()
-
+    /**
+     * Sets the ip address for the server
+     */
+    private fun changeHost(host: String) {
         val prefs = getSharedPreferences(PREF_TAG, MODE_PRIVATE)
-
         prefs.edit { putString("host", host) }
 
+        hostname = host
+        websocket?.disconnect()
         uiState.value = HomeState.Connecting(hostname, "")
 
         runBlocking { connect() }
     }
 
-    fun joinSession(sessionId: UUID?) {
+    /**
+     * Starts a new GameActivity for the session id.
+     */
+    private fun joinSession(sessionId: UUID?) {
         val startIntent = Intent(this, GameActivity::class.java)
         if (sessionId == null) {
             startIntent.putExtra("session", "test")

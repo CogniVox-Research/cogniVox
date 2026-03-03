@@ -2,6 +2,9 @@ package io.github.cognivoxResearch.cognivox.net.ws
 
 import okio.ByteString
 
+/**
+ * A message sent or received by the websocket.
+ */
 sealed class Message {
     class Bytes(val bytes: ByteString) : Message()
     class Text(val text: String) : Message()

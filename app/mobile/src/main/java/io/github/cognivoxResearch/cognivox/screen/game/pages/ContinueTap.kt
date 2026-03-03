@@ -38,7 +38,7 @@ fun ContinueTap(onTap: () -> Unit = {}) {
             Text(
                 text = "Tap to Start",
                 modifier = Modifier.padding(),
-                fontSize = 30.sp,
+                fontSize = 24.sp,
             )
         }
     }

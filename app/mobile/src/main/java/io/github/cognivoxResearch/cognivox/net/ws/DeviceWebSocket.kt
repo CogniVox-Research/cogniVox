@@ -13,7 +13,7 @@ class DeviceWebSocket(
     WebSocket<DeviceInbound, DeviceOutbound>(
         url,
         DeviceInbound.Companion,
-        retry = true,
+        canRetry = true,
         ignoreDeserializeErrors = true
     ) {
     override fun onMessage(message: DeviceInbound) {

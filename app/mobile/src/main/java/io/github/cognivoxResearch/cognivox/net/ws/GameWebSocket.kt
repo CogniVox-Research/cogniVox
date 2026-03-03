@@ -1,16 +1,19 @@
 package io.github.cognivoxResearch.cognivox.net.ws
 
+import io.github.cognivoxResearch.cognivox.getSessionURL
 import io.github.cognivoxResearch.cognivox.net.proto.ServerInbound
 import io.github.cognivoxResearch.cognivox.net.proto.ServerOutbound
 import okhttp3.Response
 
 class GameWebSocket(
-    url: String,
+    hostname: String,
+    sessionId: String,
     private var listener: Listener? = null
 ) :
     WebSocket<ServerInbound, ServerOutbound>(
-        url, ServerInbound.Companion,
-        retry = false,
+        url = getSessionURL(hostname, sessionId),
+        deserializer = ServerInbound.Companion,
+        canRetry = false,
         ignoreDeserializeErrors = false
     ) {
     override fun onMessage(message: ServerInbound) {

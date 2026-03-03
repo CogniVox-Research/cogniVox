@@ -10,7 +10,7 @@ import io.github.cognivoxResearch.cognivox.net.proto.GameFeatures
 import io.github.cognivoxResearch.cognivox.net.proto.GameSettings
 import io.github.cognivoxResearch.cognivox.net.proto.ServerInbound
 import io.github.cognivoxResearch.cognivox.net.proto.ServerOutbound
-import io.github.cognivoxResearch.cognivox.net.ws.GameWs
+import io.github.cognivoxResearch.cognivox.net.ws.GameWebSocket
 import io.github.cognivoxResearch.cognivox.screen.game.GameState
 import okhttp3.Response
 import org.godotengine.godot.Godot
@@ -22,7 +22,7 @@ class GameController(
     godot: Godot,
     private val sessionId: String,
     private val overlayState: MutableState<GameState>,
-    private val websocket: GameWs,
+    private val websocket: GameWebSocket,
     private val onStop: () -> Unit,
 ) :
     GodotPlugin(godot) {
@@ -40,7 +40,6 @@ class GameController(
             String::class.java,
         )
         val SCENE_START = SignalInfo("start_scene")
-        val SCENE_PAUSE = SignalInfo("pause_scene")
         val STRESS_SUGGESTION = SignalInfo("stress_suggestion", String::class.java)
         val SPEECH_STUCK = SignalInfo("speech_stuck")
         val SPEECH_UNSTUCK = SignalInfo("speech_unstuck")
@@ -60,7 +59,7 @@ class GameController(
 
     override fun getPluginSignals() = ALL_SIGNALS
 
-    override fun onMainCreate(activity: Activity?): View? {
+    override fun onMainCreate(activity: Activity?): View {
         return ComposeView(context)
     }
 
@@ -140,7 +139,7 @@ class GameController(
         emitSignal(SPEECH_UNSTUCK)
     }
 
-    internal val listener = object : GameWs.Listener {
+    internal val listener = object : GameWebSocket.Listener {
         override fun onMessage(message: ServerInbound) {
             when (message) {
                 ServerInbound.End -> onStop()

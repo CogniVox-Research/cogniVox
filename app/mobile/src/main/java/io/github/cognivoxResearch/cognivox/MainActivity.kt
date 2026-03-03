@@ -20,17 +20,17 @@ import androidx.compose.ui.Modifier
 import androidx.core.content.edit
 import io.github.cognivoxResearch.cognivox.game.GameActivity
 import io.github.cognivoxResearch.cognivox.net.proto.DeviceInbound
-import io.github.cognivoxResearch.cognivox.net.ws.DeviceWs
+import io.github.cognivoxResearch.cognivox.net.ws.DeviceWebSocket
 import io.github.cognivoxResearch.cognivox.screen.home.HomeScreen
 import io.github.cognivoxResearch.cognivox.screen.home.HomeState
 import kotlinx.coroutines.runBlocking
 import java.util.UUID
 
 
-class MainActivity : ComponentActivity(), DeviceWs.Listener {
+class MainActivity : ComponentActivity(), DeviceWebSocket.Listener {
     lateinit var hostname: String
     lateinit var uiState: MutableState<HomeState>
-    var websocket: DeviceWs? = null
+    var websocket: DeviceWebSocket? = null
     lateinit var deviceName: String
     lateinit var auth: String
 
@@ -107,7 +107,7 @@ class MainActivity : ComponentActivity(), DeviceWs.Listener {
     }
 
     suspend fun connect() {
-        websocket = DeviceWs("ws://$hostname/$DEVICE_URL", deviceName, "INVALID", this)
+        websocket = DeviceWebSocket("ws://$hostname/$DEVICE_URL", deviceName, "INVALID", this)
         websocket!!.connect()
     }
 

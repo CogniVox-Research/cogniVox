@@ -19,7 +19,7 @@ import io.github.cognivoxResearch.cognivox.MainActivity
 import io.github.cognivoxResearch.cognivox.PREF_TAG
 import io.github.cognivoxResearch.cognivox.R
 import io.github.cognivoxResearch.cognivox.SESSION_URL
-import io.github.cognivoxResearch.cognivox.net.ws.GameWs
+import io.github.cognivoxResearch.cognivox.net.ws.GameWebSocket
 import io.github.cognivoxResearch.cognivox.screen.game.GameScreen
 import io.github.cognivoxResearch.cognivox.screen.game.GameState
 import kotlinx.coroutines.runBlocking
@@ -34,7 +34,7 @@ class GameActivity : AppCompatActivity(), GodotHost {
     internal var gameController: GameController? = null
     lateinit var uiState: MutableState<GameState>
 
-    lateinit var websocket: GameWs
+    lateinit var websocket: GameWebSocket
     lateinit var sessionId: String
 
     var hasStopped: Boolean = false
@@ -46,7 +46,7 @@ class GameActivity : AppCompatActivity(), GodotHost {
         sessionId = intent.getStringExtra("session")!!
         val prefs = getSharedPreferences(PREF_TAG, MODE_PRIVATE)
         val hostname = prefs.getString("host", API_HOST)!!
-        websocket = GameWs("ws://$hostname/$SESSION_URL/$sessionId")
+        websocket = GameWebSocket("ws://$hostname/$SESSION_URL/$sessionId")
 
         setContentView(R.layout.game_layout)
 

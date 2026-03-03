@@ -4,13 +4,13 @@ import io.github.cognivoxResearch.cognivox.net.proto.DeviceInbound
 import io.github.cognivoxResearch.cognivox.net.proto.DeviceOutbound
 import okhttp3.Response
 
-class DeviceWs(
+class DeviceWebSocket(
     url: String,
     private val deviceName: String,
     private val auth: String,
     private val listener: Listener
 ) :
-    WS<DeviceInbound, DeviceOutbound>(
+    WebSocket<DeviceInbound, DeviceOutbound>(
         url,
         DeviceInbound.Companion,
         retry = true,

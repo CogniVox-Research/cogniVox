@@ -4,11 +4,11 @@ import io.github.cognivoxResearch.cognivox.net.proto.ServerInbound
 import io.github.cognivoxResearch.cognivox.net.proto.ServerOutbound
 import okhttp3.Response
 
-class GameWs(
+class GameWebSocket(
     url: String,
     private var listener: Listener? = null
 ) :
-    WS<ServerInbound, ServerOutbound>(
+    WebSocket<ServerInbound, ServerOutbound>(
         url, ServerInbound.Companion,
         retry = false,
         ignoreDeserializeErrors = false

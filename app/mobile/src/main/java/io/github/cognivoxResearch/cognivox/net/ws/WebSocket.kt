@@ -15,7 +15,7 @@ import okhttp3.WebSocketListener
 import okio.ByteString
 
 
-abstract class WS<In, Out>(
+abstract class WebSocket<In, Out>(
     private var url: String,
     private val deserializer: FromMessage<In>,
     private val client: OkHttpClient = getWebsocketClient(),
@@ -38,7 +38,7 @@ abstract class WS<In, Out>(
                     onFailure(webSocket, e, null)
                     return
                 }
-                
+
                 Log.e(tag, "Failed to parse: $text", e)
                 return
             }

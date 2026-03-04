@@ -48,6 +48,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import io.github.cognivoxResearch.cognivox.R
 import io.github.cognivoxResearch.cognivox.screen.home.components.HostSheet
+import io.github.cognivoxResearch.cognivox.screen.home.components.JoinSheet
 import java.util.UUID
 
 // ── Palette ─────────────────────────────────────────────────────────────────
@@ -72,6 +73,7 @@ fun HomeScreen(
     onJoinTest: () -> Unit = {}
 ) {
     var hostEditOpen by remember { mutableStateOf(false) }
+    var sessionEditOpen by remember { mutableStateOf(false) }
 
     val infiniteTransition = rememberInfiniteTransition(label = "anim")
 
@@ -190,7 +192,8 @@ fun HomeScreen(
                         surfaceColor = SurfaceWht,
                         textPrimary = TextPrimary,
                         textSub = TextSub,
-                        green = GreenOnline
+                        green = GreenOnline,
+                        onJoinManual = {sessionEditOpen = true }
                     )
 
                     is HomeState.Connecting -> ConnectingContent(
@@ -211,6 +214,8 @@ fun HomeScreen(
 
     if (state is HomeState.Connecting && hostEditOpen) {
         HostSheet(state.host, onChangeHost) { hostEditOpen = false }
+    } else if (state is HomeState.Waiting && sessionEditOpen){
+        JoinSheet(onJoinManual, onJoinTest) { hostEditOpen = false }
     }
 }
 
@@ -221,7 +226,8 @@ private fun WaitingContent(
     surfaceColor: Color,
     textPrimary: Color,
     textSub: Color,
-    green: Color
+    green: Color,
+    onJoinManual: ()-> Unit,
 ) {
     // Status pill
     Box(
@@ -320,6 +326,8 @@ private fun WaitingContent(
                 color = textSub,
                 letterSpacing = 0.5.sp
             )
+
+            TextButton(onClick = onJoinManual) { Text("Manual Join")}
         }
     }
 }

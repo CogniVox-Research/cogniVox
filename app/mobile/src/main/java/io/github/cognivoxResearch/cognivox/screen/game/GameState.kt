@@ -27,5 +27,5 @@ sealed class GameState {
 
     data class Question(val onEnd: () -> Unit) : GameState()
 
-    object SpeechEnd : GameState()
+    object SessionEnd : GameState()
 }

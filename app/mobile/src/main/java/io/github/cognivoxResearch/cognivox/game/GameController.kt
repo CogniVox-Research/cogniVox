@@ -139,10 +139,14 @@ class GameController(
         emitSignal(SPEECH_UNSTUCK)
     }
 
+    private fun onSessionEnd() {
+        overlayState.value = GameState.SessionEnd
+    }
+
     internal val listener = object : GameWebSocket.Listener {
         override fun onMessage(message: ServerInbound) {
             when (message) {
-                ServerInbound.End -> onStop()
+                ServerInbound.End -> onSessionEnd()
                 is ServerInbound.Init -> onSessionInit(message.data)
                 is ServerInbound.Question -> onQuestionStart(message.data)
                 is ServerInbound.Stress -> displayStress(message.data.suggestion)

@@ -75,6 +75,9 @@ dependencies {
     implementation(libs.converter.gson)
     implementation(libs.logging.interceptor)
 
+    // Icons
+    implementation("androidx.compose.material:material-icons-core")
+
     // Godot
     implementation(libs.godot)
 }

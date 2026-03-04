@@ -106,7 +106,7 @@ class GameActivity : AppCompatActivity(), GodotHost {
         }
     }
 
-    private fun stop() {
+    internal fun stop() {
         if (hasStopped) return;
         hasStopped = true;
 
@@ -135,7 +135,7 @@ class GameOverlay : Fragment() {
 
         return ComposeView(requireContext()).apply {
             setContent {
-                GameScreen(state)
+                GameScreen(state, onSessionEnd = { activity.stop() })
             }
         }
     }

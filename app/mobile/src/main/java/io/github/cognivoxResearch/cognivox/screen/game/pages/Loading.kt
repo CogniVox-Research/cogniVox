@@ -46,30 +46,33 @@ import androidx.compose.ui.unit.sp
 import io.github.cognivoxResearch.cognivox.R
 import io.github.cognivoxResearch.cognivox.screen.game.GameState
 
-private val BackgroundGradient = Brush.verticalGradient(
-    colors = listOf(Color(0xFF0D1117), Color(0xFF0E1A32), Color(0xFF0D1117))
-)
-private val AccentCyan = Color(0xFF00E5FF)
-private val StepDoneColor = Color(0xFF00E5FF)
-private val StepPendingColor = Color(0xFF2A3A4A)
+// ── Light palette ─────────────────────────────────────────────────────────
+private val Blue        = Color(0xFF4A90E2)
+private val Purple      = Color(0xFF9B6EFF)
+private val BgColor     = Color(0xFFF4F6FF)
+private val SurfaceWht  = Color(0xFFFFFFFF)
+private val TextPrimary = Color(0xFF3D3D6B)
+private val TextSub     = Color(0xFF7A7A9A)
+private val StepDone    = Color(0xFF43A047)
+private val StepPending = Color(0xFFD0D5EE)
 
 @Composable
-private fun StepIndicator(label: String, done: Boolean) {
+private fun StepRow(label: String, done: Boolean) {
     Row(
         verticalAlignment = Alignment.CenterVertically,
-        modifier = Modifier.padding(vertical = 4.dp)
+        modifier = Modifier.padding(vertical = 5.dp)
     ) {
         Box(
-            modifier = Modifier
+            Modifier
                 .size(10.dp)
                 .clip(CircleShape)
-                .background(if (done) StepDoneColor else StepPendingColor)
+                .background(if (done) StepDone else StepPending)
         )
         Spacer(Modifier.width(10.dp))
         Text(
-            text = label,
+            label,
             fontSize = 13.sp,
-            color = if (done) Color(0xFFB0BEC5) else Color(0xFF455A64),
+            color = if (done) TextPrimary else TextSub,
             fontWeight = if (done) FontWeight.Medium else FontWeight.Normal
         )
     }
@@ -81,117 +84,105 @@ fun Loading(state: GameState.Loading = GameState.Loading()) {
 
     val infiniteTransition = rememberInfiniteTransition(label = "loading")
     val rotation by infiniteTransition.animateFloat(
-        initialValue = 0f,
-        targetValue = 360f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(1200, easing = LinearEasing),
-            repeatMode = RepeatMode.Restart
-        ),
+        initialValue = 0f, targetValue = 360f,
+        animationSpec = infiniteRepeatable(tween(1400, easing = LinearEasing), RepeatMode.Restart),
         label = "rotation"
     )
     val progressAnim by infiniteTransition.animateFloat(
-        initialValue = 0.05f,
-        targetValue = 0.95f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(3000, easing = FastOutSlowInEasing),
-            repeatMode = RepeatMode.Reverse
-        ),
+        initialValue = 0.05f, targetValue = 0.9f,
+        animationSpec = infiniteRepeatable(tween(3000, easing = FastOutSlowInEasing), RepeatMode.Reverse),
         label = "progress"
     )
 
     Box(
-        modifier = Modifier
-            .background(BackgroundGradient)
-            .fillMaxSize(),
+        modifier = Modifier.background(BgColor).fillMaxSize(),
         contentAlignment = Alignment.Center
     ) {
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(horizontal = 40.dp),
+                .padding(horizontal = 36.dp),
             verticalArrangement = Arrangement.Center,
-            horizontalAlignment = Alignment.CenterHorizontally,
+            horizontalAlignment = Alignment.CenterHorizontally
         ) {
 
-            // Logo with rotating ring
-            Box(
-                contentAlignment = Alignment.Center,
-                modifier = Modifier.padding(bottom = 24.dp)
-            ) {
-                // Rotating accent ring
+            // Logo with rotating gradient ring
+            Box(contentAlignment = Alignment.Center, modifier = Modifier.padding(bottom = 20.dp)) {
                 Box(
-                    modifier = Modifier
-                        .size(90.dp)
+                    Modifier
+                        .size(88.dp)
                         .rotate(rotation)
                         .clip(CircleShape)
                         .background(
-                            Brush.sweepGradient(
-                                listOf(Color.Transparent, AccentCyan, Color.Transparent)
-                            )
+                            Brush.sweepGradient(listOf(Color.Transparent, Blue, Purple, Color.Transparent))
                         )
                 )
-                // Logo
-                Image(
-                    painter = painterResource(id = R.drawable.app_icon),
-                    contentDescription = "CogniVox Logo",
-                    modifier = Modifier
-                        .size(64.dp)
+                // White centre backing
+                Box(
+                    Modifier
+                        .size(74.dp)
                         .clip(CircleShape)
-                        .background(Color(0xFF0D1117))
-                        .padding(4.dp)
+                        .background(BgColor)
+                )
+                Image(
+                    painter = painterResource(R.drawable.app_icon),
+                    contentDescription = "CogniVox",
+                    modifier = Modifier.size(56.dp)
                 )
             }
 
             // Title
             Text(
-                text = "Preparing VR Environment",
-                fontSize = 22.sp,
-                fontWeight = FontWeight.Bold,
-                color = Color(0xFFE0F7FA),
-                letterSpacing = 0.5.sp,
+                "Preparing VR Environment",
+                fontSize = 20.sp,
+                fontWeight = FontWeight.SemiBold,
+                color = TextPrimary,
                 textAlign = TextAlign.Center,
-                modifier = Modifier.padding(bottom = 24.dp)
+                modifier = Modifier.padding(bottom = 20.dp)
             )
 
             // Progress bar
             LinearProgressIndicator(
                 progress = { progressAnim },
                 modifier = Modifier
-                    .fillMaxWidth(0.7f)
+                    .fillMaxWidth(0.65f)
                     .height(6.dp)
                     .clip(RoundedCornerShape(50)),
-                color = AccentCyan,
-                trackColor = Color(0xFF1E2D40),
+                color = Blue,
+                trackColor = Color(0xFFD0D5EE),
                 strokeCap = StrokeCap.Round,
             )
 
-            Spacer(Modifier.height(20.dp))
+            Spacer(Modifier.height(16.dp))
 
-            // Animated loading message
+            // Animated step message
             AnimatedContent(
                 targetState = state.loadingMessage(),
-                transitionSpec = {
-                    fadeIn(tween(400)) togetherWith fadeOut(tween(300))
-                },
-                label = "loadingMessage"
-            ) { message ->
+                transitionSpec = { fadeIn(tween(350)) togetherWith fadeOut(tween(250)) },
+                label = "message"
+            ) { msg ->
                 Text(
-                    text = "$message...",
-                    fontSize = 14.sp,
-                    color = AccentCyan,
-                    letterSpacing = 1.sp,
-                    textAlign = TextAlign.Center,
-                    fontWeight = FontWeight.Medium
+                    "$msg...",
+                    fontSize = 13.sp,
+                    color = Purple,
+                    fontWeight = FontWeight.Medium,
+                    textAlign = TextAlign.Center
                 )
             }
 
-            Spacer(Modifier.height(28.dp))
+            Spacer(Modifier.height(24.dp))
 
-            // Step indicators
-            Column(horizontalAlignment = Alignment.Start) {
-                StepIndicator("Game Engine Started", done = state.godotLoaded)
-                StepIndicator("Connected to Server", done = state.connected)
-                StepIndicator("Server Ready", done = state.serverReady)
+            // Step indicators — inside a white card
+            Column(
+                modifier = Modifier
+                    .clip(RoundedCornerShape(14.dp))
+                    .background(SurfaceWht)
+                    .padding(horizontal = 20.dp, vertical = 14.dp),
+                horizontalAlignment = Alignment.Start
+            ) {
+                StepRow("Game Engine Started", done = state.godotLoaded)
+                StepRow("Connected to Server", done = state.connected)
+                StepRow("Server Ready",        done = state.serverReady)
             }
         }
     }

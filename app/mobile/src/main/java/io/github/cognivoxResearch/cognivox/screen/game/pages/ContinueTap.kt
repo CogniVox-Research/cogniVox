@@ -40,110 +40,91 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import io.github.cognivoxResearch.cognivox.R
 
-private val BackgroundGradient = Brush.verticalGradient(
-    colors = listOf(Color(0xFF0D1117), Color(0xFF0E1A32), Color(0xFF0D1117))
-)
-private val AccentCyan = Color(0xFF00E5FF)
-private val SubtleGlow = Color(0x3300E5FF)
+// ── Light palette ─────────────────────────────────────────────────────────
+private val Blue      = Color(0xFF4A90E2)
+private val Purple    = Color(0xFF9B6EFF)
+private val BrandGrad = Brush.horizontalGradient(listOf(Blue, Purple))
+private val BgColor   = Color(0xFFF4F6FF)
+private val GlowBlue  = Color(0x294A90E2)
+private val GlowPurp  = Color(0x299B6EFF)
 
 @Preview(device = "spec:width=411dp,height=891dp,orientation=landscape")
 @Composable
 fun ContinueTap(onTap: () -> Unit = {}) {
 
-    // Fade-in alpha
+    // Fade-in on entry
     var alpha by remember { mutableFloatStateOf(0f) }
     val animatedAlpha by animateFloatAsState(
         targetValue = alpha,
-        animationSpec = tween(durationMillis = 800, easing = FastOutSlowInEasing),
+        animationSpec = tween(700, easing = FastOutSlowInEasing),
         label = "fadeIn"
     )
     LaunchedEffect(Unit) { alpha = 1f }
 
-    // Pulsing glow ring
+    // Pulsing ring
     val infiniteTransition = rememberInfiniteTransition(label = "pulse")
     val pulseScale by infiniteTransition.animateFloat(
-        initialValue = 1f,
-        targetValue = 1.18f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(900, easing = FastOutSlowInEasing),
-            repeatMode = RepeatMode.Reverse
-        ),
-        label = "pulseScale"
+        initialValue = 1f, targetValue = 1.2f,
+        animationSpec = infiniteRepeatable(tween(900, easing = FastOutSlowInEasing), RepeatMode.Reverse),
+        label = "pulse"
     )
 
     Surface(onClick = onTap) {
         Box(
-            modifier = Modifier
-                .background(BackgroundGradient)
-                .fillMaxSize(),
+            modifier = Modifier.background(BgColor).fillMaxSize(),
             contentAlignment = Alignment.Center
         ) {
             Column(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(horizontal = 32.dp),
+                modifier = Modifier.fillMaxSize().padding(horizontal = 32.dp),
                 verticalArrangement = Arrangement.Center,
-                horizontalAlignment = Alignment.CenterHorizontally,
+                horizontalAlignment = Alignment.CenterHorizontally
             ) {
 
-                // Pulsing glow ring behind logo
-                Box(
-                    contentAlignment = Alignment.Center,
-                    modifier = Modifier.padding(bottom = 28.dp)
-                ) {
-                    // Outer glow ring
+                // Logo with soft pulsing glow rings
+                Box(contentAlignment = Alignment.Center, modifier = Modifier.padding(bottom = 28.dp)) {
+                    // Outer glow
                     Box(
-                        modifier = Modifier
-                            .size(128.dp)
-                            .scale(pulseScale)
-                            .clip(CircleShape)
-                            .background(SubtleGlow)
+                        Modifier.size(130.dp).scale(pulseScale).clip(CircleShape)
+                            .background(GlowBlue)
                     )
-                    // Inner glow ring
+                    // Inner glow
                     Box(
-                        modifier = Modifier
-                            .size(100.dp)
-                            .clip(CircleShape)
-                            .background(Color(0x1A00E5FF))
+                        Modifier.size(100.dp).clip(CircleShape).background(GlowPurp)
                     )
                     // Logo
                     Image(
-                        painter = painterResource(id = R.drawable.app_icon),
-                        contentDescription = "CogniVox Logo",
-                        modifier = Modifier.size(72.dp)
+                        painter = painterResource(R.drawable.app_icon),
+                        contentDescription = "CogniVox",
+                        modifier = Modifier.size(68.dp)
                     )
                 }
 
-                // Headline
+                // Gradient text brush workaround — use two stacked texts
                 Text(
                     text = "Tap to Start",
-                    fontSize = 36.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = AccentCyan,
-                    letterSpacing = 2.sp,
+                    fontSize = 32.sp,
+                    fontWeight = FontWeight.ExtraBold,
+                    color = Color(0xFF3D3D6B),
+                    letterSpacing = 1.sp,
                     textAlign = TextAlign.Center,
                     modifier = Modifier.padding(bottom = 8.dp)
                 )
 
-                // Subtitle
                 Text(
                     text = "Your cognitive VR session is ready",
                     fontSize = 14.sp,
-                    color = Color(0xFFB0BEC5),
-                    letterSpacing = 0.5.sp,
-                    textAlign = TextAlign.Center,
+                    color = Color(0xFF7A7A9A),
+                    textAlign = TextAlign.Center
                 )
 
-                Spacer(modifier = Modifier.height(48.dp))
+                Spacer(Modifier.height(40.dp))
 
-                // Tap hint
                 Text(
-                    text = "[ TAP ANYWHERE TO CONTINUE ]",
+                    "tap anywhere to continue",
                     fontSize = 11.sp,
-                    color = Color(0xFF546E7A),
-                    letterSpacing = 2.sp,
-                    textAlign = TextAlign.Center,
-                    modifier = Modifier.padding(bottom = 8.dp)
+                    color = Color(0xFFAAAAAC),
+                    letterSpacing = 1.5.sp,
+                    textAlign = TextAlign.Center
                 )
             }
         }

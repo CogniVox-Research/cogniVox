@@ -1,11 +1,12 @@
-import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
+import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { useState } from "react";
 import { loginUser } from "../api/auth";
+import { useAuth } from "../context";
 
 const loginSchema = z.object({
-  email: z.email("Enter a valid email address"),
+  username: z.string().min(1, "Username is required"),
   password: z.string().min(8, "Password must be at least 8 characters"),
 });
 
@@ -18,6 +19,7 @@ type LoginFormProps = {
 export function LoginForm({ onSuccess }: LoginFormProps) {
   const [serverError, setServerError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const { login } = useAuth();
 
   const {
     register,
@@ -31,7 +33,8 @@ export function LoginForm({ onSuccess }: LoginFormProps) {
     setServerError(null);
     setIsLoading(true);
     try {
-      await loginUser(data);
+      const response = await loginUser(data);
+      login(response.access_token);
       onSuccess?.();
     } catch (err) {
       setServerError(
@@ -51,19 +54,19 @@ export function LoginForm({ onSuccess }: LoginFormProps) {
       )}
 
       <div className="space-y-1.5">
-        <label htmlFor="email" className="text-sm font-medium text-foreground">
-          Email address
+        <label htmlFor="username" className="text-sm font-medium text-foreground">
+          Username
         </label>
         <input
-          id="email"
-          type="email"
-          autoComplete="email"
-          placeholder="you@example.com"
-          {...register("email")}
+          id="username"
+          type="text"
+          autoComplete="username"
+          placeholder="john_doe"
+          {...register("username")}
           className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 transition-colors"
         />
-        {errors.email && (
-          <p className="text-xs text-destructive">{errors.email.message}</p>
+        {errors.username && (
+          <p className="text-xs text-destructive">{errors.username.message}</p>
         )}
       </div>
 

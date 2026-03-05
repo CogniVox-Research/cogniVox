@@ -1,5 +1,5 @@
 export type LoginInput = {
-    email: string;
+    username: string;
     password: string;
 };
 
@@ -10,10 +10,6 @@ export type RegisterInput = {
 };
 
 export type AuthResponse = {
-    token: string;
-    user: {
-        id: string;
-        username: string;
-        email: string;
-    };
+    access_token: string;
+    token_type: string;
 };

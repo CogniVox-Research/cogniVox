@@ -19,4 +19,15 @@ export default defineConfig({
       "@": path.resolve(__dirname, "./src"),
     },
   },
+  server: {
+    proxy: {
+      // Forward API calls to the auth service.
+      // Strips /api/auth prefix → /login, /register, /public-key on the service.
+      "/api/auth": {
+        target: "http://localhost:8010",
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/api\/auth/, ""),
+      },
+    },
+  },
 });

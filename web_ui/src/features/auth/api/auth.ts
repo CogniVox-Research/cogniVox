@@ -1,7 +1,9 @@
 import type { AuthResponse, LoginInput, RegisterInput } from "../types";
 
+const AUTH_BASE = "/api/auth";
+
 export async function loginUser(data: LoginInput): Promise<AuthResponse> {
-  const response = await fetch(`/auth/login`, {
+  const response = await fetch(`${AUTH_BASE}/login`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(data),
@@ -10,15 +12,15 @@ export async function loginUser(data: LoginInput): Promise<AuthResponse> {
   if (!response.ok) {
     const error = await response
       .json()
-      .catch(() => ({ message: "Login failed" }));
-    throw new Error(error.message ?? "Login failed");
+      .catch(() => ({ detail: "Login failed" }));
+    throw new Error(error.detail ?? "Login failed");
   }
 
   return response.json();
 }
 
-export async function registerUser(data: RegisterInput): Promise<AuthResponse> {
-  const response = await fetch(`/auth/register`, {
+export async function registerUser(data: RegisterInput): Promise<{ id: number; username: string; email: string }> {
+  const response = await fetch(`${AUTH_BASE}/register`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(data),
@@ -27,8 +29,8 @@ export async function registerUser(data: RegisterInput): Promise<AuthResponse> {
   if (!response.ok) {
     const error = await response
       .json()
-      .catch(() => ({ message: "Registration failed" }));
-    throw new Error(error.message ?? "Registration failed");
+      .catch(() => ({ detail: "Registration failed" }));
+    throw new Error(error.detail ?? "Registration failed");
   }
 
   return response.json();

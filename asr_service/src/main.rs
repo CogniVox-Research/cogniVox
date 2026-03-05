@@ -1,5 +1,5 @@
 use common::{
-    dto::{MQMessage, SessionCreate},
+    dto::{ASRSessionCreate, MQMessage},
     file_store::Store,
     mq,
 };
@@ -63,10 +63,10 @@ async fn rocket() -> _ {
         .expect("connection should succeed");
 
     let mut listener = rabbit_mq
-        .recieve::<SessionCreate>(None)
+        .recieve::<ASRSessionCreate>(Some("start".to_owned()))
         .await
         .unwrap()
-        .bind_exchange("session_start".to_string(), "".to_string())
+        .bind_exchange("asr_start".to_string(), "start".to_string())
         .await
         .unwrap();
 

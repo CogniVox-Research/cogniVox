@@ -137,7 +137,9 @@ pub async fn start_game(
     log::info!("Game connected successfully");
 
     let session_mq = MQSession::new(&state.mq_connection, session_id).await?;
-    session_mq.send_session_start(&state.session_queue).await?;
+    session_mq
+        .create_asr_session(&state.asr_session_queue)
+        .await?;
     log::info!("MQ initialized for session");
 
     let enpoints = state.endpoints.clone();

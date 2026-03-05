@@ -5,7 +5,7 @@ use crate::{
         self, APIRequest, DeviceConnection, Inbound, Outbound, WebConnection, WebSocket,
     },
 };
-use common::{dto::SessionCreate, mq};
+use common::{dto::ASRSessionCreate, mq};
 use rocket::{
     futures::lock::Mutex,
     tokio::{self, time::sleep},
@@ -19,7 +19,7 @@ pub struct AppState {
     pub vr: Arc<Mutex<HashMap<uuid::Uuid, DeviceConnection>>>,
 
     pub mq_connection: mq::Connection,
-    pub session_queue: mq::Sender<SessionCreate>,
+    pub asr_session_queue: mq::Sender<ASRSessionCreate>,
 
     pub endpoints: Arc<proto::Endpoints>,
 }
@@ -28,8 +28,7 @@ impl AppState {
     pub async fn create(config: AppConfig) -> Result<Self> {
         let rabbitmq = common::mq::Connection::for_config(config.rabbitmq).await?;
 
-        rabbitmq.create_broadcast_exchange("session_start").await?;
-
+        rabbitmq.create_exchange("asr_start").await?;
         rabbitmq.create_exchange("audio").await?;
         rabbitmq.create_topic_exchange("asr").await?;
         rabbitmq.create_broadcast_exchange("stress").await?;
@@ -41,8 +40,8 @@ impl AppState {
             pending: Default::default(),
             vr: Default::default(),
             mq_connection: rabbitmq.clone(),
-            session_queue: rabbitmq
-                .sender("", Some("session_start".to_owned()))
+            asr_session_queue: rabbitmq
+                .sender("start", Some("asr_start".to_owned()))
                 .await?,
 
             endpoints: Arc::new(proto::Endpoints {
@@ -64,7 +63,7 @@ impl AppState {
                     log::info!("Removed {removed} disconnected connections")
                 }
 
-                sleep(Duration::from_secs(30)).await;
+                sleep(Duration::from_secs(10)).await;
             }
         });
 

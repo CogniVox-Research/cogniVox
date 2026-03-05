@@ -8,9 +8,9 @@ pub struct GameFeatures {
 }
 
 #[derive(Debug, Serialize, Deserialize)]
-pub struct SessionCreate {
+pub struct ASRSessionCreate {
     pub session_id: uuid::Uuid,
-    pub features: GameFeatures,
+    pub audio_format: String,
 }
 
 #[derive(Debug, Serialize, Deserialize)]

@@ -5,12 +5,14 @@ import android.util.Log
 import android.view.View
 import android.widget.Toast
 import androidx.compose.runtime.MutableState
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.platform.ComposeView
 import io.github.cognivoxResearch.cognivox.net.proto.GameFeatures
 import io.github.cognivoxResearch.cognivox.net.proto.GameSettings
 import io.github.cognivoxResearch.cognivox.net.proto.ServerInbound
 import io.github.cognivoxResearch.cognivox.net.proto.ServerOutbound
 import io.github.cognivoxResearch.cognivox.net.ws.GameWebSocket
+import io.github.cognivoxResearch.cognivox.screen.game.GameScreen
 import io.github.cognivoxResearch.cognivox.screen.game.GameState
 import okhttp3.Response
 import org.godotengine.godot.Godot
@@ -60,7 +62,12 @@ class GameController(
     override fun getPluginSignals() = ALL_SIGNALS
 
     override fun onMainCreate(activity: Activity?): View {
-        return ComposeView(context)
+        return ComposeView(context).apply {
+            setContent {
+                val state by overlayState;
+                GameScreen(state)
+            }
+        }
     }
 
     private fun onSessionInit(settings: GameSettings) {

@@ -1,19 +1,26 @@
 #[macro_use]
 extern crate rocket;
 
+use std::vec;
+
 use common::file_store::Store;
+use jwt::{Header, RegisteredClaims, VerifyWithKey};
 use rocket::{
     State,
     fs::{FileServer, Options},
     response::Redirect,
+    serde::json::Json,
+    tokio,
 };
 use rocket_ws::{Channel, WebSocket};
 
 use crate::{
-    app::AppState,
+    app::{AppState, Device, fetch_public_key},
     game::proto::{
-        DeviceConnection, DeviceOutbound, GameConnection, GameOutbound, WebConnection, WebOutbound,
+        self, DeviceConnection, DeviceInbound, DeviceOutbound, GameConnection, GameOutbound,
+        WebConnection, WebOutbound,
     },
+    guard::User,
 };
 
 mod app;
@@ -21,6 +28,7 @@ mod config;
 mod dto;
 mod error;
 mod game;
+mod guard;
 
 #[rocket::get("/")]
 async fn index() -> Redirect {
@@ -73,33 +81,71 @@ async fn vr_device(ws: WebSocket, state: &State<AppState>) -> Channel<'_> {
     let device_id = uuid::Uuid::now_v7();
 
     let mut con = DeviceConnection::new();
-    con.send(DeviceOutbound::Ok {
-        device_id,
-        user_name: "Test User".to_owned(),
-    })
-    .await
-    .unwrap();
-
     let channel = con.handle_websocket(ws);
 
-    let mut vr = state.vr.lock().await;
-    vr.insert(device_id, con);
-    channel
-}
+    let devices = state.vr.clone();
+    let key = fetch_public_key();
 
-#[rocket::get("/ws/web")]
-async fn web_session(ws: WebSocket, state: &State<AppState>) -> Channel<'_> {
-    let session_id = uuid::Uuid::now_v7();
-
-    let mut con = WebConnection::new();
-    con.send(WebOutbound::Pair(session_id.to_string()))
+    tokio::spawn(async move {
+        con.send(DeviceOutbound::Ok {
+            device_id,
+            user_name: "Test User".to_owned(),
+        })
         .await
         .unwrap();
 
-    // TODO: device filter
+        let info = proto::recv_message!(con, DeviceInbound::Connect).unwrap();
+        let token: jwt::Token<Header, RegisteredClaims, _> =
+            info.auth.verify_with_key(&key).unwrap();
+        let user_id = token.claims().subject.clone().unwrap();
+
+        let device = Device {
+            con,
+            device_id,
+            device_name: info.device_name,
+            user_id,
+        };
+        log::info!("Device connected: {device:?}");
+
+        let mut vr = devices.lock().await;
+        vr.insert(device.user_id.clone(), device);
+    });
+
+    channel
+}
+
+#[rocket::get("/devices")]
+async fn get_devices(state: &State<AppState>, user: User) -> Json<Vec<(String, uuid::Uuid)>> {
     let devices = state.vr.lock().await;
-    for device in devices.values() {
-        let _ = device.send(DeviceOutbound::Join { session_id }).await;
+    let mut user_devices = vec![];
+
+    for (_, device) in devices.iter() {
+        user_devices.push((device.device_name.clone(), device.device_id));
+    }
+
+    Json(user_devices)
+}
+
+#[rocket::get("/ws/web")]
+async fn web_session(ws: WebSocket, state: &State<AppState>, user: User) -> Channel<'_> {
+    let session_id = uuid::Uuid::now_v7();
+
+    let mut con = WebConnection::new();
+    con.send(WebOutbound::Session(session_id.to_string()))
+        .await
+        .unwrap();
+
+    let devices = state.vr.lock().await;
+    if let Some(device) = devices.get(&user.user_id) {
+        device
+            .con
+            .send(DeviceOutbound::Join { session_id })
+            .await
+            .unwrap();
+    } else {
+        con.send(WebOutbound::Pair(session_id.to_string()))
+            .await
+            .unwrap();
     }
 
     let channel = con.handle_websocket(ws);
@@ -127,7 +173,8 @@ async fn rocket() -> _ {
                 web_session,
                 test_game_session,
                 game_session,
-                vr_device
+                vr_device,
+                get_devices
             ],
         )
         .mount(

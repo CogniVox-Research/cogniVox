@@ -23,6 +23,15 @@ const ACTIONS = [
     new_state: true,
   },
   {
+    name: "Document",
+    mode: "web",
+    type: "document",
+    data: "placeholder-micromachines",
+
+    state: 2,
+    new_state: true,
+  },
+  {
     name: "Game ready",
     mode: "game",
     type: "ready",
@@ -31,7 +40,7 @@ const ACTIONS = [
       audio_format: "webm",
     },
 
-    state: 2,
+    state: 3,
     new_state: true,
   },
   {
@@ -39,7 +48,7 @@ const ACTIONS = [
     mode: "game",
     type: "speech_start",
 
-    state: 3,
+    state: 4,
     new_state: true,
   },
   {
@@ -53,7 +62,7 @@ const ACTIONS = [
       chunks: 30,
     },
 
-    state: 4,
+    state: 5,
   },
   {
     name: "Audio(Short)",
@@ -66,7 +75,7 @@ const ACTIONS = [
       chunks: 3,
     },
 
-    state: 4,
+    state: 5,
   },
   {
     name: "Stress",
@@ -80,7 +89,7 @@ const ACTIONS = [
       // Including some optional fields
       acc_mag_mean: 1.1,
     },
-    state: 4,
+    state: 5,
   },
   {
     name: "Silence",
@@ -93,14 +102,14 @@ const ACTIONS = [
       chunks: 10,
     },
 
-    state: 4,
+    state: 5,
   },
   {
     name: "Speech End",
     mode: "game",
     type: "speech_end",
 
-    state: 4,
+    state: 5,
     new_state: true,
   },
 ];

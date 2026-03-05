@@ -1,5 +1,5 @@
+use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, Ordering};
-use std::sync::{self, Arc};
 use std::time::Duration;
 
 use rocket::tokio::sync::Notify;
@@ -21,6 +21,11 @@ pub trait Outbound: Sized + Send + 'static {
     fn into_message(self) -> Result<Message>;
 }
 
+pub trait Connection {
+    fn is_connected(&self) -> bool;
+}
+
+#[derive(Debug)]
 pub struct WebSocket<In: Inbound, Out: Outbound> {
     inbound: mpsc::Receiver<In>,
     outbound: mpsc::Sender<Out>,
@@ -30,6 +35,7 @@ pub struct WebSocket<In: Inbound, Out: Outbound> {
 }
 
 /// inner content that is shared with the worker task
+#[derive(Debug)]
 struct WebSocketInner {
     disconnect: AtomicBool,
     shutdown: Notify,
@@ -48,10 +54,6 @@ impl<In: Inbound, Out: Outbound> WebSocket<In, Out> {
                 shutdown: Notify::new(),
             }),
         }
-    }
-
-    pub fn is_connected(&self) -> bool {
-        !self.inner.disconnect.load(Ordering::Relaxed)
     }
 
     /// disconnects the websocket connection.
@@ -185,6 +187,12 @@ impl<In: Inbound, Out: Outbound> WebSocket<In, Out> {
             }
             Err(e) => Err(e),
         }
+    }
+}
+
+impl<In: Inbound, Out: Outbound> Connection for WebSocket<In, Out> {
+    fn is_connected(&self) -> bool {
+        !self.inner.disconnect.load(Ordering::Relaxed)
     }
 }
 

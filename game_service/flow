@@ -1,0 +1,10 @@
+# mobile
+1. login
+2. /ws/device = device websocket - device id
+
+# web
+1. login
+2. session options -> start
+3. document upload -> document id
+4. get device list (rest) -> select one -> device id
+5. start

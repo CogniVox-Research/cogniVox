@@ -9,12 +9,14 @@ use crate::{
 #[derive(Debug, Deserialize, Serialize)]
 #[serde(tag = "type", content = "data", rename_all = "snake_case")]
 pub enum WebInbound {
+    Document(String),
     Start(dto::settings::Settings),
 }
 
 #[derive(Debug, Serialize)]
 #[serde(tag = "type", content = "data", rename_all = "snake_case")]
 pub enum WebOutbound {
+    Session(String),
     ASR(common::dto::asr::ASR),
     Stress(dto::stress::StressResponse),
     Pair(String),

@@ -36,4 +36,7 @@ pub enum Error {
 
     #[error("Socket timeout")]
     SocketTimeout,
+
+    #[error("Auth token error: {0}")]
+    Auth(#[from] jwt::Error),
 }

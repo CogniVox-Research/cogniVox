@@ -1,6 +1,12 @@
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Serialize, Deserialize)]
+pub struct DeviceInfo {
+    pub device_name: String,
+    pub auth: String,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
 pub struct Settings {
     pub session_type: Type,
     #[serde(flatten)]
@@ -9,6 +15,7 @@ pub struct Settings {
     pub distractions: bool,
     pub qa: bool,
     pub difficulty: AudienceDifficulty,
+    pub device_id: Option<uuid::Uuid>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]

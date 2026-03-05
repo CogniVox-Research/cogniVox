@@ -1,12 +1,15 @@
 use rocket_ws::Message;
 use serde::{Deserialize, Serialize};
 
-use crate::error::{Error, Result};
+use crate::{
+    dto::settings::DeviceInfo,
+    error::{Error, Result},
+};
 
 #[derive(Debug, Deserialize, Serialize)]
 #[serde(tag = "type", content = "data", rename_all = "snake_case")]
 pub enum DeviceInbound {
-    Connect { device_name: String, auth: String },
+    Connect(DeviceInfo),
 }
 
 #[derive(Debug, Serialize)]

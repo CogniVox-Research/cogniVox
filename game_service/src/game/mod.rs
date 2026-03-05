@@ -178,7 +178,9 @@ pub async fn start_game(
         // TODO: validate document and settings.
         log::info!("Got game settings {settings:?}");
 
-        let expected_speech = fetch_document(&store, session_id, &settings.document_id)
+        let document_id = proto::recv_message!(web, WebInbound::Document).unwrap();
+        log::info!("Got document {document_id:?}");
+        let expected_speech = fetch_document(&store, session_id, &document_id)
             .await
             .unwrap();
 

@@ -145,3 +145,42 @@ export type Grammar = {
     corrected: string;
 };
 
+/**========================= SDS =============== */
+export type SDSRequest = {
+    audio_key: string;
+    transcript: string;
+};
+
+export type SDSResponse = {
+    metrics: Metrics;
+    scores: Scores;
+    feedback: Feedback;
+};
+
+export type Metrics = {
+    wpm: number;
+    avg_pause: number;
+    max_pause: number;
+    pause_count: number;
+    pitch_variability: number;
+    disfluencies: number;
+    filled_pauses: number;
+    loudness_variance: number;
+    articulation_rate: number;
+};
+
+export type Scores = {
+    clarity: number;
+    pace: number;
+    pauses: number;
+    pitch: number;
+    loudness: number;
+};
+
+export type Feedback = {
+    clarity: string;
+    pace: string;
+    pauses: string;
+    pitch: string;
+    loudness: string;
+};

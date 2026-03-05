@@ -29,19 +29,19 @@ async fn parse_file(
     }))
 }
 
-#[rocket::post("/upload", data = "<file>")]
+#[rocket::post("/upload/<session_id>", data = "<file>")]
 async fn upload_file(
     file: Form<TempFile<'_>>,
     store: &State<Store>,
+    session_id: uuid::Uuid,
 ) -> Result<Json<dto::FileToken>, Custom<Json<String>>> {
     let (mime_type, text) = extractor::extract_text(&file).await?;
 
-    let document_id = uuid::Uuid::new_v4();
-    let dir = format!("documents/{document_id}");
+    let dir = format!("{session_id}/documents");
     let extension = mime_type.extension().map(|v| v.as_str()).unwrap_or("bin");
 
     let content = dto::FileToken {
-        document_id,
+        document_id: session_id,
         //TODO: user id
         content_path: format!("{dir}/content"),
         original_path: format!("{dir}/original.{extension}"),

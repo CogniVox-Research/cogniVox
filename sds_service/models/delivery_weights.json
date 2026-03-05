@@ -1,0 +1,23 @@
+{
+  "1": {
+    "clarity": 0.5139,
+    "pace": 0.3194,
+    "pauses": 0.0336,
+    "pitch": 0.084,
+    "loudness": 0.0491
+  },
+  "2": {
+    "clarity": 0.3381,
+    "pace": 0.1158,
+    "pauses": 0.0349,
+    "pitch": 0.4923,
+    "loudness": 0.0188
+  },
+  "3": {
+    "clarity": 0.1154,
+    "pace": 0.1722,
+    "pauses": 0.0152,
+    "pitch": 0.2531,
+    "loudness": 0.4442
+  }
+}

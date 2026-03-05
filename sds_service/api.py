@@ -1,16 +1,26 @@
 import os
-import secrets
+import shutil
 import traceback
-
-import pydantic
 import whisper
-from fastapi import FastAPI, HTTPException
-from shared.store import connect_store
+from enum import Enum
+from fastapi import FastAPI, UploadFile, File, HTTPException, Form
 
-from config import config
+from config import settings
 from features.extract_metrics import extract_metrics
-from feedback.generate_feedback import generate_feedback
 from scoring.score_speech import score_speech
+from scoring.delivery_score import compute_delivery_score
+from feedback.generate_feedback import generate_feedback
+
+
+# ---------------------------------------------------
+# ENUMS
+# ---------------------------------------------------
+
+class SpeechType(str, Enum):
+    ONE_ON_ONE = "1"
+    BOARDROOM = "2"
+    MASS_SPEECH = "3"
+
 
 # ---------------------------------------------------
 # APP SETUP
@@ -19,21 +29,19 @@ from scoring.score_speech import score_speech
 app = FastAPI(
     title="Speech Delivery Scoring API",
     description="Analyze speech delivery quality and provide feedback",
-    version="1.0.0",
+    version="1.0.0"
 )
 
 UPLOAD_DIR = "audio/uploads"
 os.makedirs(UPLOAD_DIR, exist_ok=True)
 
-# Load Whisper ONCE
-whisper_model = whisper.load_model("tiny")
+# Load Whisper model from config
+whisper_model = whisper.load_model(settings.whisper_model)
 
-store = connect_store(config.store)
 
 # ---------------------------------------------------
 # HEALTH CHECK
 # ---------------------------------------------------
-
 
 @app.get("/")
 def root():
@@ -44,21 +52,19 @@ def root():
 # MAIN ENDPOINT
 # ---------------------------------------------------
 
-
-class SDSRequest(pydantic.BaseModel):
-    audio_key: str
-    transcript: str
-
-
 @app.post("/analyze-speech")
-async def analyze_speech(req: SDSRequest):
-    data = store.get(req.audio_key)
+async def analyze_speech(
+    file: UploadFile = File(...),
+    speech_type: SpeechType = Form(...)
+):
+    if not file.filename.lower().endswith((".wav", ".mp3", ".m4a")):
+        raise HTTPException(status_code=400, detail="Unsupported audio format")
+
+    file_path = os.path.join(UPLOAD_DIR, file.filename)
 
     # Save uploaded file
-    file_name = secrets.token_urlsafe() + ".wav"
-    file_path = os.path.join(UPLOAD_DIR, file_name)
-    with open(file_path, "wb") as file:
-        file.write(data)
+    with open(file_path, "wb") as buffer:
+        shutil.copyfileobj(file.file, buffer)
 
     try:
         # 1️⃣ Transcribe
@@ -70,14 +76,23 @@ async def analyze_speech(req: SDSRequest):
         metrics = extract_metrics(file_path, transcript, segments)
 
         # 3️⃣ Score speech
-        scores = score_speech(metrics)
+        scores = score_speech(metrics, speech_type=speech_type)
 
-        # 4️⃣ Generate feedback
-        feedback = generate_feedback(scores)
+        # 4️⃣ Compute overall delivery score
+        delivery = compute_delivery_score(scores, speech_type=speech_type)
 
-        result = {"metrics": metrics, "scores": scores, "feedback": feedback}
-        print(result)
-        return result
+        # 5️⃣ Generate feedback
+        feedback = generate_feedback(scores, speech_type=speech_type)
+
+        return {
+            "speech_type": speech_type.name,
+            "speech_type_number": speech_type.value,
+            "metrics": metrics,
+            "scores": scores,
+            "delivery": delivery,
+            "feedback": feedback
+        }
+
     except Exception as e:
         print(f"SDS error: {e}")
         traceback.print_exc()

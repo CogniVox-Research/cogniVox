@@ -1,19 +1,18 @@
-[project]
+[tool.poetry]
 name = "sds-service"
 version = "0.1.0"
-description = ""
-authors = [{ name = "Your Name", email = "you@example.com" }]
-readme = "README.md"
-requires-python = ">=3.13,<4.0"
-
-[tool.poetry]
+description = "Speech Delivery Scoring Service"
+authors = ["CogniVox Team"]
 package-mode = false
 
 [tool.poetry.dependencies]
 python = ">=3.13,<3.14"
-fastapi = {extras = ["standard"], version = "^0.133.1"}
-shared = { path = "../shared", develop = true }
+fastapi = "^0.133.1"
+uvicorn = "^0.24.0"
 pydantic = "^2.12.5"
+pydantic-settings = "^2.0.0"
+python-dotenv = "^1.0.0"
+shared = { path = "../shared", develop = true }
 joblib = "^1.5.3"
 numpy = "^2.4.2"
 audioread = "^3.1.0"
@@ -24,6 +23,12 @@ openai-whisper = "^20250625"
 scipy = "^1.17.1"
 librosa = "^0.11.0"
 pandas = "^3.0.1"
+python-multipart = "^0.0.6"
+scikit-learn = "^1.7.2"
+
+[tool.poetry.group.dev.dependencies]
+pytest = "^9.0.2"
+pytest-asyncio = "^0.21.0"
 
 [build-system]
 requires = ["poetry-core>=2.0.0,<3.0.0"]

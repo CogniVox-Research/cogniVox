@@ -1,15 +1,17 @@
-from pydantic import Field
+"""Configuration module for SDS Service"""
 
-__all__ = ["Settings", "config"]
-
-from shared import SharedBaseSettings
-from shared.store import StoreConfig
+from pydantic_settings import BaseSettings
 
 
-class Settings(SharedBaseSettings):
-    rabbitmq_url: str = Field()
-    audio_recording_url: str = Field()
-    store: StoreConfig
+class Settings(BaseSettings):
+    """Application settings"""
+
+    rabbitmq_url: str = "amqp://guest:guest@rabbitmq:5672/"
+    audio_recording_url: str = ""
+    whisper_model: str = "tiny"
+
+    class Config:
+        env_file = ".env"
 
 
-config = Settings.load()
+settings = Settings()

@@ -15,7 +15,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.core.content.edit
 import io.github.cognivoxResearch.cognivox.game.GameActivity
@@ -86,7 +85,7 @@ class MainActivity : ComponentActivity(), DeviceWebSocket.Listener {
                     AppRoot(
                         loginUiState = loginUiState,
                         homeUiState = uiState,
-                        onLogin = { name, token -> this.handleLogin(name, token) },
+                        onLogin = { name, token -> Log.i(tag, "Login $name $token") },
                         onChangeHost = { this.changeHost(it) },
                         onJoinSession = { this.joinSession(it) },
                         onJoinTest = { this.joinSession(null) }
@@ -181,6 +180,7 @@ fun AppRoot(
         is LoginState.Loading -> {
             LoginScreen(state = loginState, onLogin = onLogin)
         }
+
         is LoginState.Authenticated -> {
             HomeScreen(homeState, onChangeHost, onJoinSession, onJoinTest)
         }

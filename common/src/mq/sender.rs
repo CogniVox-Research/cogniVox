@@ -2,7 +2,7 @@ use crate::mq::{Connection, error::Result};
 use serde::Serialize;
 use std::marker::PhantomData;
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Sender<T: Serialize + Sized> {
     con: Connection,
     exchange_name: String,

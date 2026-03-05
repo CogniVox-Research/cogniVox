@@ -1,5 +1,7 @@
-use std::fmt::Debug;
+use std::{fmt::Debug, io::Cursor};
 
+use byteorder::{LittleEndian, ReadBytesExt};
+use common::dto::AudioFormat;
 use once_cell::sync::OnceCell;
 use opus::Decoder as OpusDecoder;
 use rubato::{FftFixedIn, Resampler};
@@ -12,6 +14,57 @@ use crate::audio::{
     AudioError, PipelineStep, TARGET_SAMPLE_RATE,
     rust::{Header, get_header},
 };
+
+pub enum AudioDecoder {
+    PCM32F(PCM32FDecoder),
+    WebM(WebmAudioDecoder),
+}
+
+impl AudioDecoder {
+    pub fn new(fmt: AudioFormat) -> crate::error::Result<Self> {
+        let decoder = match fmt {
+            AudioFormat::WebM => AudioDecoder::WebM(WebmAudioDecoder::new()),
+            AudioFormat::PCMF32 => AudioDecoder::PCM32F(PCM32FDecoder {}),
+        };
+
+        Ok(decoder)
+    }
+}
+
+impl PipelineStep for AudioDecoder {
+    fn process_audio(&mut self, input: Vec<u8>) -> crate::error::Result<Vec<f32>> {
+        match self {
+            AudioDecoder::PCM32F(d) => d.process_audio(input),
+            AudioDecoder::WebM(d) => d.process_audio(input),
+        }
+    }
+
+    async fn finish(self) -> crate::error::Result<Option<Vec<f32>>> {
+        match self {
+            AudioDecoder::PCM32F(d) => d.finish().await,
+            AudioDecoder::WebM(d) => d.finish().await,
+        }
+    }
+}
+
+pub struct PCM32FDecoder {}
+
+impl PipelineStep for PCM32FDecoder {
+    fn process_audio(&mut self, input: Vec<u8>) -> crate::error::Result<Vec<f32>> {
+        let mut cursor = Cursor::new(&input);
+        let mut floats = Vec::with_capacity(input.len() / 4);
+
+        while let Ok(n) = cursor.read_f32::<LittleEndian>() {
+            floats.push(n);
+        }
+
+        Ok(floats)
+    }
+
+    async fn finish(self) -> crate::error::Result<Option<Vec<f32>>> {
+        Ok(None)
+    }
+}
 
 struct WebmAudioDecoderInner {
     opus_decoder: OpusDecoder,

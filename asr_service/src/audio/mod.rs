@@ -1,7 +1,7 @@
-use crate::error::Result;
+use crate::{audio::rust::AudioDecoder, error::Result};
 
 mod error;
-use common::file_store::Store;
+use common::{dto::AudioFormat, file_store::Store};
 pub use error::AudioError;
 mod recorder;
 
@@ -14,9 +14,6 @@ use ffmpeg::audio_preprocessor;
 #[cfg(feature = "rust_audio")]
 mod rust;
 
-#[cfg(feature = "rust_audio")]
-use rust::WebmAudioDecoder;
-
 #[cfg(all(feature = "ffmpeg", feature = "rust_audio"))]
 compile_error!("ffmpeg and rust_audio are mutually exclusive and cannot be enabled together");
 #[cfg(all(not(feature = "ffmpeg"), not(feature = "rust_audio")))]
@@ -25,12 +22,12 @@ compile_error!("One of the following features should be enabled: ffmpeg or rust_
 pub const TARGET_SAMPLE_RATE: usize = 16_000;
 
 pub struct Pipeline {
-    pipeline: recorder::RecordAudio<WebmAudioDecoder>,
+    pipeline: recorder::RecordAudio<AudioDecoder>,
 }
 
 impl Pipeline {
-    pub fn new(store: Store, prefix: String) -> Result<Self> {
-        let pipeline = WebmAudioDecoder::new();
+    pub fn new(store: Store, audio_format: AudioFormat, prefix: String) -> Result<Self> {
+        let pipeline = AudioDecoder::new(audio_format)?;
         let pipeline = recorder::RecordAudio::new(pipeline, store, prefix)?;
         Ok(Self { pipeline })
     }

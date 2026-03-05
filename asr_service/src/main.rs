@@ -1,5 +1,5 @@
 use common::{
-    dto::{ASRSessionCreate, MQMessage},
+    dto::{ASRSessionCreate, AudioFormat, MQMessage},
     file_store::Store,
     mq,
 };
@@ -38,6 +38,7 @@ fn stream_audio(
             transcript::run_transcription(
                 transcript::Input::WS(stream),
                 session_id,
+                AudioFormat::WebM,
                 transcriber,
                 store,
             )
@@ -93,10 +94,13 @@ async fn rocket() -> _ {
 
             let mq_store = mq_store.clone();
             let mq_transcriber = mq_transcriber.clone();
+            let audio_format = data.audio_format;
+
             tokio::spawn(async move {
                 run_transcription(
                     Input::MQ(recv, send),
                     session_id,
+                    audio_format,
                     mq_transcriber.clone(),
                     mq_store.clone(),
                 )

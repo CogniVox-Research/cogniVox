@@ -19,7 +19,10 @@ pub enum WebOutbound {
     Stress(dto::stress::StressResponse),
     Pair(String),
     GameConnected,
-    Results(dto::transcript::Response, dto::sds::Response),
+    Results(
+        Option<dto::transcript::Response>,
+        Option<dto::sds::Response>,
+    ),
 }
 
 impl super::Inbound for WebInbound {

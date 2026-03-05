@@ -2,15 +2,23 @@ use serde::{Deserialize, Serialize};
 
 pub mod asr;
 
-#[derive(Debug, Serialize, Deserialize)]
-pub struct GameFeatures {
-    pub stress: bool,
+#[derive(Debug, Serialize, Deserialize, Clone)]
+#[serde(rename_all = "lowercase")]
+pub enum AudioFormat {
+    WebM,
+    PCMF32,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
+pub struct GameFeatures {
+    pub stress: bool,
+    pub audio_format: AudioFormat,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct ASRSessionCreate {
     pub session_id: uuid::Uuid,
-    pub audio_format: String,
+    pub audio_format: AudioFormat,
 }
 
 #[derive(Debug, Serialize, Deserialize)]

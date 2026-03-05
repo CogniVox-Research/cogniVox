@@ -51,12 +51,14 @@ class MainActivity : ComponentActivity(), DeviceWebSocket.Listener {
         hostname = prefs.getString("host", API_HOST)!!
         deviceName = Settings.Global.getString(contentResolver, Settings.Global.DEVICE_NAME)!!
 
+        val TestToken = getString(R.string.test_auth)
+
         // Start in authenticated state if credentials already saved
         val initialLoginState: LoginState = if (savedName != null && savedToken != null) {
-            LoginState.Authenticated(savedName, savedToken)
+            LoginState.Authenticated(savedName, TestToken)
         } else {
 //            LoginState.Unauthenticated
-            LoginState.Authenticated("test user", "NO_TOKEN")
+            LoginState.Authenticated("test user", TestToken)
         }
 
         loginUiState = mutableStateOf(initialLoginState)
@@ -138,8 +140,12 @@ class MainActivity : ComponentActivity(), DeviceWebSocket.Listener {
      * Connects to the device websocket (for receiving session start notifications)
      */
     private suspend fun connect() {
-        websocket = DeviceWebSocket(getDeviceURL(hostname), deviceName, "INVALID", this)
-        websocket!!.connect()
+        // Only connect if already authenticated
+        if (loginUiState.value is LoginState.Authenticated) {
+            val token = (loginUiState.value as LoginState.Authenticated).authToken
+            websocket = DeviceWebSocket(getDeviceURL(hostname), deviceName, token, this)
+            websocket!!.connect()
+        }
     }
 
     /**

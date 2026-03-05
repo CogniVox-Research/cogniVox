@@ -26,6 +26,7 @@ import io.github.cognivoxResearch.cognivox.net.ws.DeviceWebSocket
 import io.github.cognivoxResearch.cognivox.screen.AppState
 import io.github.cognivoxResearch.cognivox.screen.home.HomeScreen
 import io.github.cognivoxResearch.cognivox.screen.login.LoginScreen
+import io.github.cognivoxResearch.cognivox.net.isTokenExpired
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import retrofit2.Retrofit
@@ -55,8 +56,8 @@ class MainActivity : ComponentActivity(), DeviceWebSocket.Listener {
         hostname = prefs.getString("host", API_HOST)!!
         deviceName = Settings.Global.getString(contentResolver, Settings.Global.DEVICE_NAME)!!
 
-        // Start in authenticated state if credentials already saved
-        val initialState: AppState = if (savedName != null && savedToken != null) {
+        // Start in authenticated state if credentials are saved and not expired
+        val initialState: AppState = if (savedName != null && !isTokenExpired(savedToken)) {
             AppState.Connecting(hostname, "")
         } else {
             AppState.Login(hostname)

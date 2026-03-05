@@ -14,10 +14,10 @@ import io.github.cognivoxResearch.cognivox.net.proto.ServerOutbound
 import io.github.cognivoxResearch.cognivox.net.ws.GameWebSocket
 import io.github.cognivoxResearch.cognivox.screen.game.GameScreen
 import io.github.cognivoxResearch.cognivox.screen.game.GameState
+import kotlinx.coroutines.runBlocking
 import okhttp3.Response
 import org.godotengine.godot.Godot
 import org.godotengine.godot.plugin.GodotPlugin
-import org.godotengine.godot.plugin.SignalInfo
 
 
 class GameController(
@@ -30,6 +30,7 @@ class GameController(
     GodotPlugin(godot) {
     val tag: String = this::class.java.simpleName
     lateinit var settings: GameSettings
+    var recorder: AudioRecorder? = null
 
 
     override fun getPluginName() = "GameController"
@@ -79,14 +80,19 @@ class GameController(
     private fun onSpeechStart() {
         overlayState.value = GameState.Speech { onSpeechEnd() }
         websocket.send(ServerOutbound.SpeechStart)
-        emitSignal(SCENE_START)
+        emitSignal(GameSignals.SCENE_START)
+        recorder = AudioRecorder { websocket.send(ServerOutbound.Audio(it.array())) }
 
-        // TODO: start audio+HRV recording
+        // TODO: start HRV recording
     }
 
     private fun onSpeechEnd() {
         overlayState.value = GameState.QuestionWait
         websocket.send(ServerOutbound.SpeechEnd)
+
+        runBlocking {
+            recorder?.stopRecording()
+        }
 
         // TODO: stop audio+HRV recording
     }
@@ -118,11 +124,11 @@ class GameController(
     }
 
     private fun hideStuck() {
-        emitSignal(SPEECH_UNSTUCK)
+        emitSignal(GameSignals.SPEECH_UNSTUCK)
     }
 
     private fun onSessionEnd() {
-        overlayState.value = GameState.SessionEnd
+        overlayState.value = GameState.SessionEnd { this.onStop() }
     }
 
     internal val listener = object : GameWebSocket.Listener {

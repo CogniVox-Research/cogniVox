@@ -64,13 +64,13 @@ private val FieldStroke = Color(0xFFD8D5EE)
 @Composable
 fun LoginScreen(
     state: LoginState = LoginState.Unauthenticated,
-    onLogin: (name: String, token: String) -> Unit = { _, _ -> }
+    onLogin: (email: String, token: String) -> Unit = { _, _ -> }
 ) {
     val focusManager = LocalFocusManager.current
-    var name by remember { mutableStateOf("") }
+    var email by remember { mutableStateOf("") }
     var token by remember { mutableStateOf("") }
     var tokenVisible by remember { mutableStateOf(false) }
-    var nameError by remember { mutableStateOf("") }
+    var emailError by remember { mutableStateOf("") }
     var tokenError by remember { mutableStateOf("") }
     val isLoading = state is LoginState.Loading
 
@@ -132,17 +132,17 @@ fun LoginScreen(
             Text("Welcome back!", fontSize = 13.sp, color = TextSub,
                 modifier = Modifier.padding(top = 2.dp, bottom = 20.dp))
 
-            // Name
-            Text("Name", fontSize = 12.sp, color = TextSub, fontWeight = FontWeight.Medium,
+            // Email
+            Text("Email", fontSize = 12.sp, color = TextSub, fontWeight = FontWeight.Medium,
                 modifier = Modifier.padding(bottom = 4.dp))
             OutlinedTextField(
-                value = name,
-                onValueChange = { name = it; nameError = "" },
-                placeholder = { Text("Your name", color = Color(0xFFBBBBCC), fontSize = 14.sp) },
+                value = email,
+                onValueChange = { email = it; emailError = "" },
+                placeholder = { Text("Your email address", color = Color(0xFFBBBBCC), fontSize = 14.sp) },
                 singleLine = true,
-                isError = nameError.isNotEmpty(),
-                supportingText = if (nameError.isNotEmpty()) {
-                    { Text(nameError, color = Color(0xFFD32F2F), fontSize = 11.sp) }
+                isError = emailError.isNotEmpty(),
+                supportingText = if (emailError.isNotEmpty()) {
+                    { Text(emailError, color = Color(0xFFD32F2F), fontSize = 11.sp) }
                 } else null,
                 keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next),
                 keyboardActions = KeyboardActions(
@@ -188,7 +188,7 @@ fun LoginScreen(
                 ),
                 keyboardActions = KeyboardActions(onDone = {
                     focusManager.clearFocus()
-                    attempt(name, token, onLogin) { n, t -> nameError = n; tokenError = t }
+                    attempt(email, token, onLogin) { e, t -> emailError = e; tokenError = t }
                 }),
                 modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(12.dp),
@@ -213,7 +213,7 @@ fun LoginScreen(
                 Button(
                     onClick = {
                         focusManager.clearFocus()
-                        attempt(name, token, onLogin) { n, t -> nameError = n; tokenError = t }
+                        attempt(email, token, onLogin) { e, t -> emailError = e; tokenError = t }
                     },
                     enabled = !isLoading,
                     modifier = Modifier.fillMaxSize(),
@@ -267,12 +267,12 @@ private fun fieldColors() = OutlinedTextFieldDefaults.colors(
 )
 
 private fun attempt(
-    name: String, token: String,
+    email: String, token: String,
     onLogin: (String, String) -> Unit,
     setErrors: (String, String) -> Unit
 ) {
-    val ne = if (name.isBlank()) "Name is required" else ""
+    val ee = if (email.isBlank()) "Email is required" else ""
     val te = if (token.isBlank()) "Auth token is required" else ""
-    if (ne.isNotEmpty() || te.isNotEmpty()) { setErrors(ne, te); return }
-    onLogin(name.trim(), token.trim())
+    if (ee.isNotEmpty() || te.isNotEmpty()) { setErrors(ee, te); return }
+    onLogin(email.trim(), token.trim())
 }

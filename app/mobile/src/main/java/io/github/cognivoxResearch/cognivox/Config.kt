@@ -7,6 +7,6 @@ const val RETRY_DELAY = 5000L
 
 const val PREF_TAG = "CG"
 
-
-fun getSessionURL(hostname: String, sessionId: String) = "ws://$hostname/$SESSION_URL/$sessionId"
+fun getAuthBaseURL(hostname: String) = "http://$hostname:8010/"
+fun getSessionURL(hostname: String, sessionId: String) = "ws://$hostname:8004/$SESSION_URL/$sessionId"
 fun getDeviceURL(hostname: String) = "ws://$hostname/$DEVICE_URL"

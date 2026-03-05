@@ -26,6 +26,12 @@ import io.github.cognivoxResearch.cognivox.screen.login.LoginScreen
 import io.github.cognivoxResearch.cognivox.screen.login.LoginState
 import kotlinx.coroutines.runBlocking
 import java.util.UUID
+import androidx.lifecycle.lifecycleScope
+import io.github.cognivoxResearch.cognivox.net.api.AuthApi
+import io.github.cognivoxResearch.cognivox.net.dto.LoginRequest
+import kotlinx.coroutines.launch
+import retrofit2.Retrofit
+import retrofit2.converter.gson.GsonConverterFactory
 
 
 class MainActivity : ComponentActivity(), DeviceWebSocket.Listener {
@@ -84,7 +90,7 @@ class MainActivity : ComponentActivity(), DeviceWebSocket.Listener {
                     AppRoot(
                         loginUiState = loginUiState,
                         homeUiState = uiState,
-                        onLogin = { name, token -> Log.i(tag, "Login $name $token") },
+                        onLogin = { email, token -> performLogin(email, token) },
                         onChangeHost = { this.changeHost(it) },
                         onJoinSession = { this.joinSession(it) },
                         onJoinTest = { this.joinSession(null) }
@@ -172,6 +178,48 @@ class MainActivity : ComponentActivity(), DeviceWebSocket.Listener {
             startIntent.putExtra("session", sessionId.toString())
         }
         startActivity(startIntent)
+    }
+
+    private fun performLogin(email: String, expectedToken: String) {
+        loginUiState.value = LoginState.Loading
+        lifecycleScope.launch {
+            try {
+                val retrofit = Retrofit.Builder()
+                    .baseUrl(getAuthBaseURL(hostname))
+                    .addConverterFactory(GsonConverterFactory.create())
+                    .build()
+
+                val api = retrofit.create(AuthApi::class.java)
+                val response = api.login(LoginRequest(email, expectedToken))
+
+                if (response.isSuccessful && response.body() != null) {
+                    val actualToken = response.body()!!.access_token
+
+                    // Save to SharedPreferences
+                    val prefs = getSharedPreferences(PREF_TAG, MODE_PRIVATE)
+                    prefs.edit {
+                        putString("user_name", email)
+                        putString("auth_token", actualToken)
+                    }
+
+                    auth = actualToken
+                    loginUiState.value = LoginState.Authenticated(email, actualToken)
+
+                    // Connect the websocket now that we have a real token!
+                    connect()
+                } else {
+                    loginUiState.value = LoginState.Unauthenticated
+                    runOnUiThread {
+                        Toast.makeText(this@MainActivity, "Login failed: ${response.code()}", Toast.LENGTH_SHORT).show()
+                    }
+                }
+            } catch (e: Exception) {
+                loginUiState.value = LoginState.Unauthenticated
+                runOnUiThread {
+                    Toast.makeText(this@MainActivity, "Network error: ${e.message}", Toast.LENGTH_SHORT).show()
+                }
+            }
+        }
     }
 }
 

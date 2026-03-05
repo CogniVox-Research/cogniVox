@@ -1,19 +1,21 @@
 from datetime import datetime, timedelta, timezone
 from typing import Annotated
-import bcrypt
 
-from app.config import config
-from app.database import get_db
-from app.models import User
+import bcrypt
 from fastapi import APIRouter, Depends, HTTPException, status
 from jose import jwt
 from pydantic import BaseModel, EmailStr
 from sqlalchemy.orm import Session
 
+from app.config import config
+from app.database import get_db
+from app.models import User
+
 router = APIRouter()
 
 
 # ── Pydantic schemas ────────────────────────────────────────────────────────
+
 
 class RegisterRequest(BaseModel):
     username: str
@@ -30,7 +32,7 @@ class RegisterResponse(BaseModel):
 
 
 class LoginRequest(BaseModel):
-    username: str
+    email: str
     password: str
 
 
@@ -45,6 +47,7 @@ class PublicKeyResponse(BaseModel):
 
 # ── Helpers ─────────────────────────────────────────────────────────────────
 
+
 def _hash_password(plain: str) -> str:
     return bcrypt.hashpw(plain.encode(), bcrypt.gensalt()).decode()
 
@@ -53,12 +56,12 @@ def _verify_password(plain: str, hashed: str) -> bool:
     return bcrypt.checkpw(plain.encode(), hashed.encode())
 
 
-def _create_access_token(subject: str) -> str:
+def _create_access_token(subject: int) -> str:
     expire = datetime.now(timezone.utc) + timedelta(
         minutes=config.access_token_expire_minutes
     )
     payload = {
-        "sub": subject,
+        "sub": str(subject),
         "exp": expire,
         "iat": datetime.now(timezone.utc),
     }
@@ -67,7 +70,10 @@ def _create_access_token(subject: str) -> str:
 
 # ── Endpoints ────────────────────────────────────────────────────────────────
 
-@router.post("/register", response_model=RegisterResponse, status_code=status.HTTP_201_CREATED)
+
+@router.post(
+    "/register", response_model=RegisterResponse, status_code=status.HTTP_201_CREATED
+)
 def register(body: RegisterRequest, db: Annotated[Session, Depends(get_db)]) -> User:
     """Register a new user. Returns the created user (no password)."""
     existing = (
@@ -95,7 +101,7 @@ def register(body: RegisterRequest, db: Annotated[Session, Depends(get_db)]) -> 
 @router.post("/login", response_model=TokenResponse)
 def login(body: LoginRequest, db: Annotated[Session, Depends(get_db)]) -> TokenResponse:
     """Authenticate a user and return a RS256-signed JWT."""
-    user = db.query(User).filter(User.username == body.username).first()
+    user = db.query(User).filter(User.email == body.email).first()
 
     if not user or not _verify_password(body.password, user.hashed_password):
         raise HTTPException(
@@ -104,7 +110,7 @@ def login(body: LoginRequest, db: Annotated[Session, Depends(get_db)]) -> TokenR
             headers={"WWW-Authenticate": "Bearer"},
         )
 
-    token = _create_access_token(subject=user.username)
+    token = _create_access_token(subject=user.id)
     return TokenResponse(access_token=token)
 
 

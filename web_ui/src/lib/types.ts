@@ -21,11 +21,6 @@ export type Settings = SceneType & {
     difficulty: AudienceDifficulty;
 };
 
-export type GameSettings = SceneType & {
-    distractions: boolean;
-    difficulty: AudienceDifficulty;
-};
-
 /** ================= ASR =============== */
 export type Token = {
     text: string;
@@ -70,38 +65,15 @@ export type ASR = {
     current_silence: Silence | null;
 };
 
-/** ================= Stress Request ================ */
-
-export type StressRequest = {
-    eda_mean?: number | null;
-    eda_std?: number | null;
-    eda_min?: number | null;
-    eda_max?: number | null;
-    bvp_mean: number;
-    bvp_std: number;
-    temp_mean?: number | null;
-    temp_std?: number | null;
-    acc_mag_mean?: number | null;
-    acc_mag_std?: number | null;
-
-    // Lite specific
-    bvp_min?: number | null;
-    bvp_max?: number | null;
-    bvp_range?: number | null;
-    bvp_energy?: number | null;
-    acc_mean?: number | null;
-    acc_std?: number | null;
-    acc_max?: number | null;
-
-    session_id?: string | null;
+/** ================= Stress Response ================ */
+export type StressResponse = {
+    model_used: string;
+    label: number;
+    stress_score: number;
+    suggestion: string;
 };
-
 
 /** ======================= Transcript ================ */
-export type Request = {
-    speech_text: string;
-    expected_text: string;
-};
 
 export type Response = {
     similarity: Similarity;
@@ -146,10 +118,6 @@ export type Grammar = {
 };
 
 /**========================= SDS =============== */
-export type SDSRequest = {
-    audio_key: string;
-    transcript: string;
-};
 
 export type SDSResponse = {
     metrics: Metrics;

@@ -25,7 +25,6 @@ pub enum GameInbound {
 #[serde(tag = "type", content = "data", rename_all = "snake_case")]
 pub enum GameOutbound {
     Init(dto::settings::GameSettings),
-    ASR(common::dto::asr::ASR),
     Stress(dto::stress::StressResponse),
     Stuck,
     Unstuck,

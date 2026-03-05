@@ -83,9 +83,7 @@ config = Config.load()
 
 async def read_queue(conn: AbstractChannel):
     try:
-        queue_reader = rabbitmq.read_queue(
-            conn, "stress_predictor", FeatureInput, "stress"
-        )
+        queue_reader = rabbitmq.read_queue(conn, None, FeatureInput, "stress")
         output = await conn.get_exchange("results")
         async for features in queue_reader:
             print("Got Request", features)

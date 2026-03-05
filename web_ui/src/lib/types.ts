@@ -97,3 +97,51 @@ export type StressRequest = {
 };
 
 
+/** ======================= Transcript ================ */
+export type Request = {
+    speech_text: string;
+    expected_text: string;
+};
+
+export type Response = {
+    similarity: Similarity;
+    grammar: Grammar[];
+};
+
+export type Similarity = {
+    overall_similarity: number;
+    structural_transcript: StructuralInfo;
+    structural_speech: StructuralInfo;
+    missing_points: string[];
+    key_points_transcript: string[];
+    key_points_speech: string[];
+    alignment: Alignment[];
+    order_analysis: OrderAnalysis;
+    redundant_speech_segments: string[];
+    sentence_count_transcript: number;
+    sentence_count_speech: number;
+};
+
+export type StructuralInfo = {
+    sentence_count: number;
+    avg_sentence_length: number;
+    lexical_density: number;
+};
+
+export type Alignment = {
+    transcript_sentence: string;
+    closest_speech_sentence: string;
+    similarity: number;
+    paraphrase_type: string;
+};
+
+export type OrderAnalysis = {
+    in_order_percentage: number;
+    out_of_order_percentage: number;
+};
+
+export type Grammar = {
+    original: string;
+    corrected: string;
+};
+

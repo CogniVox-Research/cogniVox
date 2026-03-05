@@ -1,14 +1,16 @@
-from pydantic import Field
+"""Configuration module for LLM Service"""
 
-__all__ = ["Settings", "config"]
-
-from shared import SharedBaseSettings
+from pydantic_settings import BaseSettings
 
 
-class Settings(SharedBaseSettings):
-    port: int = Field()
-    enable_thinking: bool = Field()
-    rabbitmq_url: str = Field()
+class Settings(BaseSettings):
+    """Application settings"""
+
+    gemini_api_key: str
+    gemini_model: str = "gemini-2.5-flash"
+
+    class Config:
+        env_file = ".env"
 
 
-config = Settings.load()
+settings = Settings()

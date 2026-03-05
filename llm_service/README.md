@@ -1,387 +1,193 @@
-# LLM Service (Large Language Model)
+# LLM Service - Interview Question Generator
 
-A microservice for the CogniVox platform that provides AI-powered contextual suggestions using large language models to help speakers continue their conversations.
-
-## Overview
-
-The LLM Service is a FastAPI-based microservice that leverages the Qwen language model to generate intelligent suggestions when speakers get stuck during conversations. It integrates with the Document Service to retrieve expected transcripts and provides contextual recommendations via RabbitMQ RPC.
+A FastAPI-based service that generates interview questions and sample answers based on CV content using Google's Gemini AI.
 
 ## Features
 
-- Contextual suggestion generation using Qwen 3 model
-- RPC-based service communication via RabbitMQ
-- Integration with Document Service for transcript retrieval
-- Optional thinking mode for enhanced reasoning
-- GPU acceleration support
-- Lightweight 0.6B parameter model for fast inference
+- **CV Analysis**: Accepts CV content as a string
+- **Question Generation**: Generates 5 professional interview questions tailored to the CV
+- **Sample Answers**: Provides comprehensive sample answers for each question
+- **Error Handling**: Robust error handling with detailed error messages
+- **Health Check**: Includes a health check endpoint for monitoring
 
-## Technology Stack
-
-- **Framework**: FastAPI
-- **LLM**: Qwen/Qwen3-0.6B (Hugging Face Transformers)
-- **Message Queue**: RabbitMQ (RPC pattern)
-- **ML Libraries**: PyTorch, Transformers, Accelerate
-- **Python**: 3.12+
-- **Dependency Management**: Poetry
-
-## Architecture
-
-```
-┌──────────────────┐         ┌──────────────┐         ┌──────────────────┐
-│  Stuck Detection │───────▶│  LLM Service │───────▶│ Document Service │
-│     Service      │   RPC   │  (RPC Server)│   RPC   │   (RPC Client)   │
-└──────────────────┘         └──────────────┘         └──────────────────┘
-                                     │
-                                     │
-                                     ▼
-                             ┌──────────────┐
-                             │  Qwen Model  │
-                             │  Generation  │
-                             └──────────────┘
-```
-
-## Installation
+## Setup
 
 ### Prerequisites
 
-- Python 3.12 or higher
-- Poetry
-- RabbitMQ server
-- CUDA-compatible GPU (optional, for acceleration)
+- Python 3.10+
+- Poetry (for dependency management)
+- Google Gemini API Key
 
-### Setup
+### Installation
 
-1. **Navigate to the service directory**:
-
-```bash
-cd llm_service
-```
-
-1. **Install dependencies**:
+1. Install dependencies using Poetry:
 
 ```bash
 poetry install
 ```
 
-1. **Configure the service**:
+2. Create a `.env` file in the root directory (optional, for overriding defaults):
 
-Edit `config.toml`:
-
-```toml
-port = 99999              # Service port (not currently used)
-enable_thinking = false   # Enable model thinking mode
-rabbitmq_url = "amqp://appuser:apppass@127.0.0.1/"
+```env
+GEMINI_API_KEY=your_api_key_here
+GEMINI_MODEL=gemini-1.5-flash
+DEBUG=false
+PORT=8000
 ```
 
-### GPU Support
+## Running the Service
 
-For GPU acceleration, ensure PyTorch with CUDA is installed:
+### Using Poetry
 
 ```bash
-# Install PyTorch with CUDA support
-poetry run pip install torch --index-url https://download.pytorch.org/whl/cu118
+poetry run python main.py
 ```
 
-## Usage
-
-### Starting the Service
+### Using Uvicorn directly
 
 ```bash
-poetry run fastapi dev main.py
+uvicorn app:app --host 0.0.0.0 --port 8000 --reload
 ```
 
-The service will:
+The service will start at `http://localhost:8000`
 
-1. Connect to RabbitMQ
-2. Load the Qwen language model
-3. Register as an RPC server (`llm-server`)
-4. Connect to Document Service as RPC client
+## API Endpoints
 
-### RPC Interface
+### 1. Generate Interview Questions
 
-The service exposes the following RPC methods:
+**Endpoint**: `POST /api/v1/generate-interview-questions`
 
-#### get_continue_for
+**Request Body**:
 
-Generate suggestions for continuing a conversation.
-
-**Parameters**:
-
-- `session_id` (str): Session identifier
-- `current_text` (str): Current speech transcript
-
-**Returns**:
-
-- `str`: Generated suggestion for continuing the conversation
-
-**Example RPC Call** (from another service):
-
-```python
-from shared import rpc
-
-# In your service
-async with rpc.RPCClient(channel) as client:
-    llm_service = client.get_server("llm-server", LLMService)
-    suggestion = await llm_service.get_continue_for(
-        session_id="session-123",
-        current_text="I was thinking about..."
-    )
-    print(suggestion)
+```json
+{
+  "cv_content": "John Doe\nSoftware Engineer\nExperience:\n- 5 years in Python development..."
+}
 ```
 
-## Model Details
+**Response**:
 
-### Qwen3-0.6B
-
-- **Model**: Qwen/Qwen3-0.6B
-- **Parameters**: 600 million
-- **Type**: Causal Language Model
-- **Context Length**: Up to 32K tokens
-- **Strengths**: Fast inference, low memory footprint, multilingual support
-
-### Generation Parameters
-
-```python
-max_new_tokens = 32768  # Maximum tokens to generate
-enable_thinking = False  # Optional thinking mode
+```json
+{
+  "questions_and_answers": [
+    {
+      "question": "Tell me about your experience with Python development?",
+      "sample_answer": "I have 5 years of professional experience in Python development..."
+    },
+    {
+      "question": "What is your approach to code quality and testing?",
+      "sample_answer": "I believe in writing clean, maintainable code..."
+    }
+  ],
+  "total_questions": 5
+}
 ```
 
-### Thinking Mode
+**Status Codes**:
 
-When `enable_thinking` is enabled, the model uses internal reasoning before generating the final response. This can improve response quality but increases generation time.
+- `200 OK`: Successfully generated questions
+- `400 Bad Request`: Invalid CV content or Gemini API error
+- `500 Internal Server Error`: Server error
 
-## Configuration
+### 2. Health Check
 
-### config.toml
+**Endpoint**: `GET /api/v1/health`
 
-```toml
-# Service port (reserved for future use)
-port = 99999
+**Response**:
 
-# Enable model thinking mode for enhanced reasoning
-enable_thinking = false
-
-# RabbitMQ connection
-rabbitmq_url = "amqp://appuser:apppass@127.0.0.1/"
+```json
+{
+  "status": "healthy",
+  "service": "LLM Service",
+  "version": "0.1.0"
+}
 ```
 
-### Configuration Options
-
-| Parameter | Type | Default | Description |
-|-----------|------|---------|-------------|
-| `port` | int | 99999 | Reserved service port |
-| `enable_thinking` | bool | false | Enable model thinking mode |
-| `rabbitmq_url` | str | - | RabbitMQ connection URL |
-
-## Integration Flow
-
-1. **Stuck Detection**: Detects when a speaker is stuck
-2. **RPC Request**: Calls `get_continue_for` on LLM Service
-3. **Document Retrieval**: LLM Service fetches expected transcript from Document Service
-4. **Prompt Construction**: Builds prompt with expected and current text
-5. **Generation**: Qwen model generates continuation suggestion
-6. **Response**: Returns suggestion to Stuck Detection Service
-7. **User Feedback**: Suggestion displayed to user
-
-## Project Structure
+## Architecture
 
 ```
 llm_service/
 ├── app/
-│   ├── __init__.py           # FastAPI app and lifespan management
-│   ├── config.py             # Configuration management
-│   ├── llm.py                # LLM generation logic
-│   └── rpc_handler.py        # RPC server implementation
-├── config.toml               # Service configuration
-├── main.py                   # Entry point
-├── pyproject.toml            # Poetry dependencies
-├── poetry.lock               # Locked dependencies
-└── README.md                 # This file
+│   ├── __init__.py          # FastAPI app initialization
+│   ├── config.py            # Configuration settings
+│   ├── models.py            # Pydantic models for request/response
+│   ├── gemini_service.py    # Gemini AI integration
+│   └── routes.py            # API route handlers
+├── main.py                  # Entry point
+├── pyproject.toml           # Poetry dependencies
+└── README.md                # This file
 ```
 
-## Code Overview
+## Code Standards
 
-### LLM Generation (`llm.py`)
+- **Type Hints**: All functions include type hints
+- **Logging**: Comprehensive logging for debugging and monitoring
+- **Error Handling**: Proper exception handling with meaningful error messages
+- **Docstrings**: All functions and classes have detailed docstrings
+- **Pydantic Models**: Strong validation using Pydantic models
+- **Async/Await**: Proper async/await patterns for FastAPI
+
+## Configuration
+
+Settings are managed in `app/config.py` using Pydantic's `BaseSettings`. Key settings:
+
+- `GEMINI_API_KEY`: Your Gemini API key (hardcoded for now)
+- `GEMINI_MODEL`: The Gemini model to use (default: `gemini-1.5-flash`)
+- `APP_NAME`: Application name
+- `DEBUG`: Debug mode (default: `False`)
+- `HOST`: Server host (default: `0.0.0.0`)
+- `PORT`: Server port (default: `8000`)
+
+## Example Usage
+
+Using `curl`:
+
+```bash
+curl -X POST "http://localhost:8000/api/v1/generate-interview-questions" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "cv_content": "Jane Smith\nData Scientist\n10 years experience\nSkills: Python, SQL, Machine Learning, TensorFlow"
+  }'
+```
+
+Using Python `requests`:
 
 ```python
-def generate_content(messages):
-    # Load tokenizer and model
-    tokenizer = AutoTokenizer.from_pretrained(model_name)
-    model = AutoModelForCausalLM.from_pretrained(
-        model_name, dtype="auto", device_map="auto"
-    )
-    
-    # Apply chat template
-    text = tokenizer.apply_chat_template(
-        messages,
-        tokenize=False,
-        add_generation_prompt=True,
-        enable_thinking=config.enable_thinking,
-    )
-    
-    # Generate response
-    generated_ids = model.generate(**model_inputs, max_new_tokens=32768)
-    
-    return content
+import requests
+
+response = requests.post(
+    "http://localhost:8000/api/v1/generate-interview-questions",
+    json={
+        "cv_content": "Your CV content here..."
+    }
+)
+
+print(response.json())
 ```
 
-### RPC Handler (`rpc_handler.py`)
+## Error Handling
 
-```python
-class LLMRPCServer:
-    async def get_continue_for(self, session_id: str, current_text: str):
-        # Retrieve expected transcript
-        content = await self.docs.get_transcript(session_id)
-        
-        # Build prompt
-        input_text = f"Expected transcript: {content['text']}\n"
-        input_text += f"Current speech: {current_text}\n"
-        input_text += "Next sentence:"
-        
-        # Generate suggestion
-        return generate_content(input_text)
-```
+The service implements comprehensive error handling:
 
-## Performance Considerations
-
-### Model Loading
-
-- First request may be slow due to model loading
-- Model is cached in memory after first use
-- Consider pre-warming model on startup for production
-
-### Memory Requirements
-
-- **CPU**: ~2GB RAM
-- **GPU**: ~2GB VRAM (with GPU acceleration)
-
-### Optimization Tips
-
-1. Use GPU acceleration for faster inference
-2. Enable model quantization for lower memory usage
-3. Adjust `max_new_tokens` based on use case
-4. Consider model caching strategies
+- **Invalid Input**: Returns 400 with details about what's wrong
+- **API Errors**: Returns 400 if Gemini API fails with specific error message
+- **Server Errors**: Returns 500 for unexpected errors
 
 ## Dependencies
 
-### Core Dependencies
+- **FastAPI**: Web framework
+- **Uvicorn**: ASGI server
+- **Pydantic**: Data validation
+- **google-generativeai**: Gemini AI API client
+- **python-dotenv**: Environment variable management
 
-- `fastapi[standard]`: Web framework
-- `transformers`: Hugging Face model library
-- `torch`: PyTorch for model inference
-- `accelerate`: GPU acceleration
-- `shared`: Internal RPC and messaging utilities
+## Future Improvements
 
-### Version Requirements
-
-```toml
-python = ">=3.12,<3.15"
-fastapi = "^0.119.0"
-transformers = "^4.57.3"
-torch = "^2.9.1"
-accelerate = "^1.12.0"
-```
-
-## Integration with CogniVox
-
-This service integrates with:
-
-- **Stuck Detection Service**: Primary consumer, requests suggestions when speakers are stuck
-- **Document Service**: Provides expected transcripts for context
-- **RabbitMQ**: RPC communication layer
-
-## Troubleshooting
-
-### Common Issues
-
-**Service won't start**:
-
-- Verify RabbitMQ is running
-- Check `rabbitmq_url` in config
-- Ensure Document Service is available
-
-**Model loading fails**:
-
-- Check internet connection (first run downloads model)
-- Verify disk space for model cache
-- Check Hugging Face Hub access
-
-**Out of memory errors**:
-
-- Reduce `max_new_tokens`
-- Use CPU instead of GPU
-- Enable model quantization
-
-**Slow generation**:
-
-- Enable GPU acceleration
-- Use smaller model variant
-- Disable thinking mode
-
-### Model Cache Location
-
-Models are cached by default in:
-
-- Linux/Mac: `~/.cache/huggingface/`
-- Windows: `C:\Users\<username>\.cache\huggingface\`
-
-To change cache location:
-
-```bash
-export TRANSFORMERS_CACHE=/path/to/cache
-```
-
-## Development
-
-### Running in Development Mode
-
-```bash
-poetry run fastapi dev main.py --reload
-```
-
-### Testing RPC Methods
-
-```python
-# Test script example
-import asyncio
-from shared import rabbitmq, rpc
-
-async def test_llm():
-    async with rabbitmq.connect("amqp://appuser:apppass@127.0.0.1/") as channel:
-        async with rpc.RPCClient(channel) as client:
-            llm = client.get_server("llm-server", LLMService)
-            result = await llm.get_continue_for(
-                "session-123",
-                "I was thinking about the importance of..."
-            )
-            print(f"Suggestion: {result}")
-
-asyncio.run(test_llm())
-```
-
-## Future Enhancements
-
-- Support for multiple LLM models
-- Fine-tuning on domain-specific data
-- Streaming response generation
-- Prompt template customization
-- Response caching for common patterns
-- Multi-language support optimization
-
-## License
-
-Part of the CogniVox project.
-
-## Author
-
-yehan2002 <yehanjaya2002@gmail.com>
-
-## Support
-
-For issues or questions, please contact the CogniVox development team or open an issue on GitHub.
-
-## References
-
-- [Qwen Model Documentation](https://huggingface.co/Qwen)
-- [Hugging Face Transformers](https://huggingface.co/docs/transformers)
-- [FastAPI Documentation](https://fastapi.tiangolo.com/)
+- [ ] Add request caching to avoid duplicate API calls
+- [ ] Add rate limiting
+- [ ] Add user authentication/authorization
+- [ ] Support for multiple languages
+- [ ] Add logging to a file
+- [ ] Add metrics/monitoring
+- [ ] Add unit tests
+- [ ] Add integration tests

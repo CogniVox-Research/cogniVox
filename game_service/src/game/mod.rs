@@ -1,9 +1,9 @@
-use std::sync::Arc;
+use std::{sync::Arc, time::Duration};
 pub mod test_session;
 
 use crate::{
     app::AppState,
-    dto::{self, settings::Settings},
+    dto::{self, sds, settings::Settings, transcript},
     error::{self, Error, Result},
     game::proto::{Endpoints, MQSession, ServiceInbound, WebOutbound},
 };
@@ -13,7 +13,7 @@ use common::{
     file_store::Store,
 };
 use proto::{GameConnection, GameInbound, GameOutbound, WebConnection, WebInbound};
-use rocket::tokio::{self, select};
+use rocket::tokio::{self, select, time::sleep};
 
 pub struct Game {
     session_id: uuid::Uuid,
@@ -26,6 +26,7 @@ pub struct Game {
 
     settings: Settings,
     expected_speech: String,
+    asr_session_queue: common::mq::Sender<common::dto::ASRSessionCreate>,
 }
 
 impl Game {
@@ -36,35 +37,27 @@ impl Game {
         let features = proto::recv_message!(self.game, GameInbound::Ready)?;
         log::info!("Game ready with features {features:?}");
 
+        self.mq
+            .create_asr_session(&self.asr_session_queue, features.audio_format)
+            .await?;
+
         log::info!("Waiting for speech to start");
         proto::wait_for!(self.game, GameInbound::SpeechStart)?;
         log::info!("Speech started");
 
-        let final_transcript = self.speech_loop().await?;
-
-        let transcript_result = self
-            .enpoints
-            .transcript
-            .send(dto::transcript::Request {
-                speech_text: final_transcript.full_text.clone(),
-                expected_text: self.expected_speech.clone(),
-            })
-            .await?;
-
-        let speech_score = self
-            .enpoints
-            .speech_score
-            .send(dto::sds::Request {
-                audio_key: format!("{}/recordings/converted.wav", self.session_id.to_string()),
-                transcript: final_transcript.full_text.clone(),
-            })
-            .await?;
+        let speech_asr = self.speech_loop().await?;
+        // TODO: questions
 
         self.game.send(GameOutbound::End).await?;
+
+        let transcript_result = self.transcript_analysis(speech_asr.full_text.clone()).await;
+        let speech_score = self.get_speech_score(speech_asr.full_text.clone()).await;
+
         self.web
             .send(WebOutbound::Results(transcript_result, speech_score))
             .await?;
 
+        sleep(Duration::from_secs(1)).await;
         Ok(())
     }
 
@@ -99,7 +92,6 @@ impl Game {
                         ServiceInbound::ASR(asr) => {
                             let is_end = asr.type_of == ResultType::Complete;
                             self.web.send(WebOutbound::ASR(asr.clone())).await?;
-                            self.game.send(GameOutbound::ASR(asr.clone())).await?;
 
                             if is_end{
                                 break Ok(asr);
@@ -124,6 +116,42 @@ impl Game {
             };
         }
     }
+
+    async fn transcript_analysis(&self, speech_text: String) -> Option<transcript::Response> {
+        let result = self
+            .enpoints
+            .transcript
+            .send(dto::transcript::Request {
+                speech_text: speech_text,
+                expected_text: self.expected_speech.clone(),
+            })
+            .await;
+        match result {
+            Ok(v) => Some(v),
+            Err(e) => {
+                log::error!("Failed to run transcript_analysis: {e}");
+                None
+            }
+        }
+    }
+
+    async fn get_speech_score(&self, speech_text: String) -> Option<sds::Response> {
+        let result = self
+            .enpoints
+            .speech_score
+            .send(dto::sds::Request {
+                audio_key: format!("{}/recordings/converted.wav", self.session_id.to_string()),
+                transcript: speech_text,
+            })
+            .await;
+        match result {
+            Ok(v) => Some(v),
+            Err(e) => {
+                log::error!("Failed to run get speech score: {e}");
+                None
+            }
+        }
+    }
 }
 
 pub async fn start_game(
@@ -137,21 +165,23 @@ pub async fn start_game(
     log::info!("Game connected successfully");
 
     let session_mq = MQSession::new(&state.mq_connection, session_id).await?;
-    session_mq
-        .create_asr_session(&state.asr_session_queue)
-        .await?;
+
     log::info!("MQ initialized for session");
 
     let enpoints = state.endpoints.clone();
-
-    let settings = proto::recv_message!(web, WebInbound::Start).unwrap();
-
-    // TODO: validate document and settings.
-    log::info!("Got game settings {settings:?}");
-
-    let expected_speech = fetch_document(store, session_id, &settings.document_id).await?;
+    let store = store.clone();
+    let asr_session_queue = state.asr_session_queue.clone();
 
     tokio::spawn(async move {
+        let settings = proto::recv_message!(web, WebInbound::Start).unwrap();
+
+        // TODO: validate document and settings.
+        log::info!("Got game settings {settings:?}");
+
+        let expected_speech = fetch_document(&store, session_id, &settings.document_id)
+            .await
+            .unwrap();
+
         let mut game = Game {
             session_id,
             game,
@@ -160,6 +190,7 @@ pub async fn start_game(
             enpoints,
             mq: session_mq,
             expected_speech,
+            asr_session_queue,
         };
 
         let result = game.run().await;

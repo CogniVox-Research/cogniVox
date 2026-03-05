@@ -1,5 +1,8 @@
 package io.github.cognivoxResearch.cognivox.screen.login
 
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Settings
+
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -22,6 +25,8 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Text
@@ -49,6 +54,8 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import io.github.cognivoxResearch.cognivox.R
+import io.github.cognivoxResearch.cognivox.screen.AppState
+import io.github.cognivoxResearch.cognivox.screen.home.components.HostSheet
 
 private val Blue        = Color(0xFF4A90E2)
 private val Purple      = Color(0xFF9B6EFF)
@@ -63,8 +70,9 @@ private val FieldStroke = Color(0xFFD8D5EE)
 @Preview(showBackground = true, backgroundColor = 0xFFF4F6FF)
 @Composable
 fun LoginScreen(
-    state: LoginState = LoginState.Unauthenticated,
-    onLogin: (email: String, token: String) -> Unit = { _, _ -> }
+    state: AppState.Login,
+    onLogin: (email: String, token: String) -> Unit = { _, _ -> },
+    onChangeHost: (String) -> Unit = {}
 ) {
     val focusManager = LocalFocusManager.current
     var email by remember { mutableStateOf("") }
@@ -72,7 +80,8 @@ fun LoginScreen(
     var tokenVisible by remember { mutableStateOf(false) }
     var emailError by remember { mutableStateOf("") }
     var tokenError by remember { mutableStateOf("") }
-    val isLoading = state is LoginState.Loading
+    var hostEditOpen by remember { mutableStateOf(false) }
+    val isLoading = state.isLoading
 
     Column(
         modifier = Modifier
@@ -84,7 +93,16 @@ fun LoginScreen(
         verticalArrangement = Arrangement.Center
     ) {
 
-        Spacer(Modifier.height(48.dp))
+        Row(
+            modifier = Modifier.fillMaxWidth().padding(top = 16.dp),
+            horizontalArrangement = Arrangement.End
+        ) {
+            IconButton(onClick = { hostEditOpen = true }) {
+                Icon(Icons.Filled.Settings, contentDescription = "Settings", tint = TextSub)
+            }
+        }
+
+        Spacer(Modifier.height(16.dp))
 
         Column(
             modifier = Modifier
@@ -248,6 +266,10 @@ fun LoginScreen(
         )
 
         Spacer(Modifier.height(32.dp))
+    }
+
+    if (hostEditOpen) {
+        HostSheet(state.host, onChangeHost) { hostEditOpen = false }
     }
 }
 

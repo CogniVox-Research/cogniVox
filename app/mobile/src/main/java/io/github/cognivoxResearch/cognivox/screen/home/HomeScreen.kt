@@ -47,6 +47,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import io.github.cognivoxResearch.cognivox.R
+import io.github.cognivoxResearch.cognivox.screen.AppState
 import io.github.cognivoxResearch.cognivox.screen.home.components.HostSheet
 import io.github.cognivoxResearch.cognivox.screen.home.components.JoinSheet
 import java.util.UUID
@@ -67,7 +68,7 @@ private val AmberWait    = Color(0xFFFFA726)
 @Preview
 @Composable
 fun HomeScreen(
-    state: HomeState = HomeState.Waiting("Test User", UUID.randomUUID()),
+    state: AppState,
     onChangeHost: (String) -> Unit = {},
     onJoinManual: (UUID) -> Unit = {},
     onJoinTest: () -> Unit = {}
@@ -186,7 +187,7 @@ fun HomeScreen(
 
                 when (state) {
 
-                    is HomeState.Waiting -> WaitingContent(
+                    is AppState.Waiting -> WaitingContent(
                         state = state,
                         pulse = pulse,
                         surfaceColor = SurfaceWht,
@@ -196,7 +197,7 @@ fun HomeScreen(
                         onJoinManual = {sessionEditOpen = true }
                     )
 
-                    is HomeState.Connecting -> ConnectingContent(
+                    is AppState.Connecting -> ConnectingContent(
                         state = state,
                         pulse = pulse,
                         surfaceColor = SurfaceWht,
@@ -207,21 +208,26 @@ fun HomeScreen(
                         brandGrad = BrandGrad,
                         onChangeHost = { hostEditOpen = true }
                     )
+                    
+                    is AppState.Login -> {
+                        // Login state is handled entirely by LoginScreen in MainActivity AppRoot
+                        // But we include it here to satisfy the Kotlin exhaustive `when` requirement
+                    }
                 }
             }
         }
     }
 
-    if (state is HomeState.Connecting && hostEditOpen) {
+    if (state is AppState.Connecting && hostEditOpen) {
         HostSheet(state.host, onChangeHost) { hostEditOpen = false }
-    } else if (state is HomeState.Waiting && sessionEditOpen){
+    } else if (state is AppState.Waiting && sessionEditOpen){
         JoinSheet(onJoinManual, onJoinTest) { hostEditOpen = false }
     }
 }
 
 @Composable
 private fun WaitingContent(
-    state: HomeState.Waiting,
+    state: AppState.Waiting,
     pulse: Float,
     surfaceColor: Color,
     textPrimary: Color,
@@ -334,7 +340,7 @@ private fun WaitingContent(
 
 @Composable
 private fun ConnectingContent(
-    state: HomeState.Connecting,
+    state: AppState.Connecting,
     pulse: Float,
     surfaceColor: Color,
     textPrimary: Color,

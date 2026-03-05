@@ -55,7 +55,8 @@ class MainActivity : ComponentActivity(), DeviceWebSocket.Listener {
         val initialLoginState: LoginState = if (savedName != null && savedToken != null) {
             LoginState.Authenticated(savedName, savedToken)
         } else {
-            LoginState.Unauthenticated
+//            LoginState.Unauthenticated
+            LoginState.Authenticated("test user", "NO_TOKEN")
         }
 
         loginUiState = mutableStateOf(initialLoginState)
@@ -71,10 +72,6 @@ class MainActivity : ComponentActivity(), DeviceWebSocket.Listener {
             }
         }
 
-        // Only connect if already authenticated
-        if (initialLoginState is LoginState.Authenticated) {
-            runBlocking { connect() }
-        }
 
         setContent {
             MaterialTheme {
@@ -92,6 +89,15 @@ class MainActivity : ComponentActivity(), DeviceWebSocket.Listener {
                     )
                 }
             }
+        }
+    }
+
+    override fun onResume() {
+        super.onResume()
+
+        // Only connect if already authenticated
+        if (loginUiState.value is LoginState.Authenticated) {
+            runBlocking { connect() }
         }
     }
 

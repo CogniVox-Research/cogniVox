@@ -4,6 +4,8 @@ import android.content.Intent
 import android.content.pm.ActivityInfo
 import android.os.Bundle
 import android.util.Log
+import android.widget.Toast
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.mutableStateOf
@@ -33,6 +35,15 @@ class GameActivity : AppCompatActivity(), GodotHost {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE;
+
+        registerForActivityResult(ActivityResultContracts.RequestPermission()) { isGranted ->
+            if (!isGranted) {
+                runOnUiThread {
+                    Toast.makeText(baseContext, "Permissions not granted", Toast.LENGTH_LONG).show()
+                }
+                finish()
+            }
+        }
 
         sessionId = intent.getStringExtra("session")!!
         val prefs = getSharedPreferences(PREF_TAG, MODE_PRIVATE)
@@ -94,6 +105,8 @@ class GameActivity : AppCompatActivity(), GodotHost {
     internal fun stop() {
         if (hasStopped) return;
         hasStopped = true;
+
+        websocket.disconnect()
 
         val intent = Intent(applicationContext, MainActivity::class.java)
 

@@ -27,8 +27,20 @@ data class GameSettings(
 
 @Serializable
 data class GameFeatures(
-    val stress: Boolean
+    val stress: Boolean,
+    @SerialName("audio_format")
+    val audioFormat: AudioFormat
 )
+
+@Serializable
+enum class AudioFormat {
+    @SerialName("pcmf32")
+    PCMF32,
+
+    @SerialName("webm")
+    WebM,
+
+}
 
 @Serializable
 enum class AudienceDifficulty {

@@ -7,6 +7,7 @@ import android.widget.Toast
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.platform.ComposeView
+import io.github.cognivoxResearch.cognivox.net.proto.AudioFormat
 import io.github.cognivoxResearch.cognivox.net.proto.GameFeatures
 import io.github.cognivoxResearch.cognivox.net.proto.GameSettings
 import io.github.cognivoxResearch.cognivox.net.proto.ServerInbound
@@ -70,7 +71,7 @@ class GameController(
 
         websocket.send(
             ServerOutbound.Ready(
-                data = GameFeatures(true)
+                data = GameFeatures(true, AudioFormat.PCMF32)
             )
         )
 
@@ -82,6 +83,7 @@ class GameController(
         websocket.send(ServerOutbound.SpeechStart)
         emitSignal(GameSignals.SCENE_START)
         recorder = AudioRecorder { websocket.send(ServerOutbound.Audio(it.array())) }
+        recorder!!.startRecording()
 
         // TODO: start HRV recording
     }

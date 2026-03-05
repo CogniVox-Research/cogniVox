@@ -1,14 +1,15 @@
 plugins {
     alias(libs.plugins.androidApplication)
-    alias(libs.plugins.jetbrainsKotlinAndroid)
+    alias(libs.plugins.kotlinCompose)
+    kotlin("plugin.serialization") version "2.3.10"
 }
 
 android {
-    namespace = "com.biosync.wear"
-    compileSdk = 34
+    namespace = "io.github.cognivoxResearch.cognivox.wear"
+    compileSdk = 36
 
     defaultConfig {
-        applicationId = "com.biosync.mobile"
+        applicationId = "io.github.cognivoxResearch.cognivox"
         minSdk = 30
         targetSdk = 34
         versionCode = 1
@@ -28,14 +29,8 @@ android {
         sourceCompatibility = JavaVersion.VERSION_1_8
         targetCompatibility = JavaVersion.VERSION_1_8
     }
-    kotlinOptions {
-        jvmTarget = "1.8"
-    }
     buildFeatures {
         compose = true
-    }
-    composeOptions {
-        kotlinCompilerExtensionVersion = "1.5.4"
     }
     packaging {
         resources {
@@ -59,4 +54,5 @@ dependencies {
     androidTestImplementation(libs.androidx.ui.test.junit4)
     debugImplementation(libs.androidx.ui.tooling)
     debugImplementation(libs.androidx.ui.test.manifest)
+    implementation(libs.kotlinx.serialization.json)
 }

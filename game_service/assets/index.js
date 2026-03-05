@@ -12,6 +12,7 @@ const ACTIONS = [
     data: {
       scene: "stage",
       size: 10,
+      session_type: "speech",
       document_id: "placeholder-micromachines",
       distractions: true,
       qa: true,
@@ -27,6 +28,7 @@ const ACTIONS = [
     type: "ready",
     data: {
       stress: true,
+      audio_format: "webm",
     },
 
     state: 2,
@@ -108,6 +110,7 @@ class App {
     this.connected = false;
     this.logs = [];
     this.state = 1;
+    this.web_only = false;
 
     this.actions = ACTIONS;
 
@@ -201,7 +204,7 @@ class App {
   }
 
   handle_message(mode, message) {
-    if (mode === "web" && message.type === "pair") {
+    if (!this.web_only && mode === "web" && message.type === "pair") {
       this.connect("game", message.data);
     } else if (message.type === "a_s_r") {
       message.data.lines = undefined;
@@ -210,12 +213,9 @@ class App {
   }
 
   reconnect() {
+    this.state = 1;
     this.clearLogs();
     this.connect("web");
-  }
-
-  init() {
-    this.reconnect();
   }
 }
 

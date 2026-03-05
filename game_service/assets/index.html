@@ -14,19 +14,32 @@
             >
                 Disconnected
             </div>
-            <button @click="reconnect()" class="secondary">Reconnect</button>
+            <button
+                @click="reconnect()"
+                :class="connected ? 'secondary' : ''"
+                x-text="connected ? 'Reconnect': 'Connect'"
+            ></button>
 
+            <input
+                type="checkbox"
+                id="with-game"
+                :disabled="connected"
+                x-model="web_only"
+            />
+            <label for="with-game">Web Only</label>
             <hr />
 
             <div class="btn-group">
                 <template x-for="action in actions">
-                    <button
-                        @click="
-                            sendMessage(action)
-                        "
-                        x-text="`Send ${action.name}`"
-                        :disabled="state != action.state"
-                    ></button>
+                    <template x-if="!web_only || action.mode != 'game'">
+                        <button
+                            @click="
+                                sendMessage(action)
+                            "
+                            x-text="`Send ${action.name}`"
+                            :disabled="state != action.state"
+                        ></button>
+                    </template>
                 </template>
             </div>
         </div>

@@ -1,5 +1,5 @@
 use common::{
-    dto::{GameFeatures, SessionCreate},
+    dto::{ASRSessionCreate, AudioFormat},
     mq::{self, Message, Sender},
 };
 
@@ -54,11 +54,15 @@ impl MQSession {
         Ok(())
     }
 
-    pub async fn send_session_start(&self, session_queue: &Sender<SessionCreate>) -> Result<()> {
+    pub async fn create_asr_session(
+        &self,
+        session_queue: &Sender<ASRSessionCreate>,
+        audio_format: AudioFormat,
+    ) -> Result<()> {
         session_queue
-            .send(SessionCreate {
+            .send(ASRSessionCreate {
                 session_id: self.session_id,
-                features: GameFeatures { stress: false },
+                audio_format,
             })
             .await?;
 

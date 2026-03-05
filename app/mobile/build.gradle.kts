@@ -1,14 +1,15 @@
 plugins {
     alias(libs.plugins.androidApplication)
-    alias(libs.plugins.jetbrainsKotlinAndroid)
+    alias(libs.plugins.kotlinCompose)
+    kotlin("plugin.serialization") version "2.3.10"
 }
 
 android {
-    namespace = "com.biosync.mobile"
-    compileSdk = 34
+    namespace = "io.github.cognivoxResearch.cognivox"
+    compileSdk = 36
 
     defaultConfig {
-        applicationId = "com.biosync.mobile"
+        applicationId = "io.github.cognivoxResearch.cognivox"
         minSdk = 26
         targetSdk = 34
         versionCode = 1
@@ -18,7 +19,11 @@ android {
         vectorDrawables {
             useSupportLibrary = true
         }
+        androidResources{
+            ignoreAssetsPattern ="!.svn:!.git:!.gitignore:!.ds_store:!*.scc:<dir>_*:!CVS:!thumbs.db:!picasa.ini:!*~"
+        }
     }
+
 
     buildTypes {
         release {
@@ -30,20 +35,16 @@ android {
         sourceCompatibility = JavaVersion.VERSION_1_8
         targetCompatibility = JavaVersion.VERSION_1_8
     }
-    kotlinOptions {
-        jvmTarget = "1.8"
-    }
     buildFeatures {
         compose = true
-    }
-    composeOptions {
-        kotlinCompilerExtensionVersion = "1.5.4"
+        viewBinding = true
     }
     packaging {
         resources {
             excludes += "/META-INF/{AL2.0,LGPL2.1}"
         }
     }
+
 }
 
 dependencies {
@@ -56,6 +57,10 @@ dependencies {
     implementation(libs.androidx.ui.tooling.preview)
     implementation(libs.androidx.material3)
     implementation(libs.play.services.wearable)
+    implementation(libs.appcompat)
+    implementation(libs.androidx.fragment)
+    implementation(libs.androidx.constraintlayout)
+    implementation(libs.androidx.fragment.compose)
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
@@ -63,9 +68,16 @@ dependencies {
     androidTestImplementation(libs.androidx.ui.test.junit4)
     debugImplementation(libs.androidx.ui.tooling)
     debugImplementation(libs.androidx.ui.test.manifest)
+    implementation(libs.kotlinx.serialization.json)
 
     // Networking
-    implementation("com.squareup.retrofit2:retrofit:2.9.0")
-    implementation("com.squareup.retrofit2:converter-gson:2.9.0")
-    implementation("com.squareup.okhttp3:logging-interceptor:4.12.0")
+    implementation(libs.retrofit)
+    implementation(libs.converter.gson)
+    implementation(libs.logging.interceptor)
+
+    // Icons
+    implementation("androidx.compose.material:material-icons-core")
+
+    // Godot
+    implementation(libs.godot)
 }

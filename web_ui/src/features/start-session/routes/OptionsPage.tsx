@@ -19,17 +19,7 @@ export function OptionsPage() {
   };
 
   return (
-    <div className="min-h-screen bg-background">
-      {/* Top bar — branding only, no button */}
-      <header className="sticky top-0 z-10 border-b border-border bg-background/80 backdrop-blur-sm">
-        <div className="mx-auto max-w-4xl px-4 py-4">
-          <h1 className="text-lg font-bold text-foreground">CogniVox</h1>
-          <p className="text-xs text-muted-foreground">
-            VR public speaking platform
-          </p>
-        </div>
-      </header>
-
+    <>
       {/* Content */}
       <main className="mx-auto max-w-4xl px-4 py-10">
         <div className="mb-8">
@@ -74,6 +64,6 @@ export function OptionsPage() {
           </div>
         </fieldset>
       </main>
-    </div>
+    </>
   );
 }

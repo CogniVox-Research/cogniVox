@@ -1,5 +1,5 @@
 use common::{
-    dto,
+    dto::{self, AudioFormat},
     file_store::Store,
     mq::{Consumer, Sender},
 };
@@ -15,11 +15,12 @@ use crate::{audio, dto::TranscriptionResult, error};
 pub(crate) async fn run_transcription(
     mut input: Input,
     session_id: String,
+    audio_format: AudioFormat,
     transcriber: asr_rs::Transcriber,
     store: Store,
 ) -> error::Result<()> {
     let prefix = format!("{session_id}/recordings");
-    let mut audio_pipeline = audio::Pipeline::new(store, prefix)?;
+    let mut audio_pipeline = audio::Pipeline::new(store, audio_format, prefix)?;
 
     let ts = transcriber.create_async_stream().await?;
 

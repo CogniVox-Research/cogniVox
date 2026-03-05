@@ -11,3 +11,10 @@ services:
     build:
       context: .
       dockerfile: ./document_service/Dockerfile
+
+  auth_service:
+    build:
+      context: .
+      dockerfile: ./auth_service/Dockerfile
+    ports:
+      - "8010:8010"

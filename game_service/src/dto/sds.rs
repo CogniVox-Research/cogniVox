@@ -30,16 +30,16 @@ pub struct Metrics {
     pub articulation_rate: f64,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct Scores {
-    pub clarity: u8,
-    pub pace: u8,
-    pub pauses: u8,
-    pub pitch: u8,
-    pub loudness: u8,
+    pub clarity: f64,
+    pub pace: f64,
+    pub pauses: f64,
+    pub pitch: f64,
+    pub loudness: f64,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct Feedback {
     pub clarity: String,
     pub pace: String,

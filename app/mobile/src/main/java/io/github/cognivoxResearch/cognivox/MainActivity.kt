@@ -17,20 +17,20 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.Modifier
 import androidx.core.content.edit
-import io.github.cognivoxResearch.cognivox.game.GameActivity
-import io.github.cognivoxResearch.cognivox.net.proto.DeviceInbound
-import io.github.cognivoxResearch.cognivox.net.ws.DeviceWebSocket
-import io.github.cognivoxResearch.cognivox.screen.home.HomeScreen
-import io.github.cognivoxResearch.cognivox.screen.login.LoginScreen
-import io.github.cognivoxResearch.cognivox.screen.AppState
-import kotlinx.coroutines.runBlocking
-import java.util.UUID
 import androidx.lifecycle.lifecycleScope
+import io.github.cognivoxResearch.cognivox.game.GameActivity
 import io.github.cognivoxResearch.cognivox.net.api.AuthApi
 import io.github.cognivoxResearch.cognivox.net.dto.LoginRequest
+import io.github.cognivoxResearch.cognivox.net.proto.DeviceInbound
+import io.github.cognivoxResearch.cognivox.net.ws.DeviceWebSocket
+import io.github.cognivoxResearch.cognivox.screen.AppState
+import io.github.cognivoxResearch.cognivox.screen.home.HomeScreen
+import io.github.cognivoxResearch.cognivox.screen.login.LoginScreen
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.runBlocking
 import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
+import java.util.UUID
 
 
 class MainActivity : ComponentActivity(), DeviceWebSocket.Listener {
@@ -55,13 +55,11 @@ class MainActivity : ComponentActivity(), DeviceWebSocket.Listener {
         hostname = prefs.getString("host", API_HOST)!!
         deviceName = Settings.Global.getString(contentResolver, Settings.Global.DEVICE_NAME)!!
 
-        val TestToken = getString(R.string.test_auth)
-
         // Start in authenticated state if credentials already saved
         val initialState: AppState = if (savedName != null && savedToken != null) {
-             AppState.Connecting(hostname, "")
+            AppState.Connecting(hostname, "")
         } else {
-             AppState.Login(hostname)
+            AppState.Login(hostname)
         }
 
         appState = mutableStateOf(initialState)
@@ -210,13 +208,21 @@ class MainActivity : ComponentActivity(), DeviceWebSocket.Listener {
                 } else {
                     appState.value = AppState.Login(hostname)
                     runOnUiThread {
-                        Toast.makeText(this@MainActivity, "Login failed: ${response.code()}", Toast.LENGTH_SHORT).show()
+                        Toast.makeText(
+                            this@MainActivity,
+                            "Login failed: ${response.code()}",
+                            Toast.LENGTH_SHORT
+                        ).show()
                     }
                 }
             } catch (e: Exception) {
                 appState.value = AppState.Login(hostname)
                 runOnUiThread {
-                    Toast.makeText(this@MainActivity, "Network error: ${e.message}", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(
+                        this@MainActivity,
+                        "Network error: ${e.message}",
+                        Toast.LENGTH_SHORT
+                    ).show()
                 }
             }
         }
@@ -237,6 +243,7 @@ fun AppRoot(
         is AppState.Login -> {
             LoginScreen(state as AppState.Login, onLogin = onLogin, onChangeHost = onChangeHost)
         }
+
         else -> {
             HomeScreen(state, onChangeHost, onJoinSession, onJoinTest)
         }

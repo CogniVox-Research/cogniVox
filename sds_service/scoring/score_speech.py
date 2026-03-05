@@ -10,23 +10,47 @@ MODEL_DIR = os.path.join(BASE_DIR, "models")
 # LOAD MODELS ONCE
 # ---------------------------------------------------
 
-clarity_model = joblib.load(os.path.join(MODEL_DIR, "clarity_model.joblib"))
-pace_model = joblib.load(os.path.join(MODEL_DIR, "pace_model.joblib"))
-pauses_model = joblib.load(os.path.join(MODEL_DIR, "pauses_model.joblib"))
-pitch_model = joblib.load(os.path.join(MODEL_DIR, "pitch_model.joblib"))
-loudness_model = joblib.load(os.path.join(MODEL_DIR, "loudness_model.joblib"))
+def _load_model(*filenames):
+    for filename in filenames:
+        file_path = os.path.join(MODEL_DIR, filename)
+        if os.path.exists(file_path):
+            return joblib.load(file_path)
+    raise FileNotFoundError(f"None of the model files were found: {filenames}")
+
+
+MODEL_SETS = {
+    "1": {
+        "clarity":  _load_model("clarity_model_1on1.joblib"),
+        "pace":     _load_model("pace_model_1on1.joblib"),
+        "pauses":   _load_model("pauses_model_1on1.joblib"),
+        "pitch":    _load_model("pitch_model_1on1.joblib"),
+        "loudness": _load_model("loudness_model_1on1.joblib"),
+    },
+    "2": {
+        "clarity":  _load_model("clarity_model_boardroom.joblib"),
+        "pace":     _load_model("pace_model_boardroom.joblib"),
+        "pauses":   _load_model("pauses_model_boardroom.joblib"),
+        "pitch":    _load_model("pitch_model_boardroom.joblib"),
+        "loudness": _load_model("loudness_model_boardroom.joblib"),
+    },
+    "3": {
+        "clarity":  _load_model("clarity_model_mass.joblib"),
+        "pace":     _load_model("pace_model_mass.joblib"),
+        "pauses":   _load_model("pauses_model_mass.joblib"),
+        "pitch":    _load_model("pitch_model_mass.joblib"),
+        "loudness": _load_model("loudness_model_mass.joblib"),
+    },
+}
 
 
 # ---------------------------------------------------
 # UTILS
 # ---------------------------------------------------
 
-def clamp(value, min_val=1.0, max_val=5.0):
-    return max(min_val, min(max_val, float(value)))
-
-
-def round_score(value):
-    return int(round(value))
+def clamp_and_round(value, min_val=1.0, max_val=5.0, step=0.1):
+    value = float(value)
+    value = max(min_val, min(max_val, value))
+    return np.round(value / step) * step
 
 
 def predict(model, features, feature_names):
@@ -38,9 +62,9 @@ def predict(model, features, feature_names):
 # SCORING FUNCTIONS
 # ---------------------------------------------------
 
-def score_clarity(metrics):
+def score_clarity(metrics, model):
     raw = predict(
-        clarity_model,
+        model,
         [
             metrics["articulation_rate"],
             metrics["disfluencies"],
@@ -48,12 +72,12 @@ def score_clarity(metrics):
         ],
         ["articulation_rate", "disfluencies", "filled_pauses"]
     )
-    return round_score(clamp(raw))
+    return clamp_and_round(raw)
 
 
-def score_pace(metrics):
+def score_pace(metrics, model):
     raw = predict(
-        pace_model,
+        model,
         [metrics["wpm"]],
         ["wpm"]
     )
@@ -61,12 +85,12 @@ def score_pace(metrics):
     if metrics["wpm"] < 90 or metrics["wpm"] > 180:
         raw = min(raw, 2.0)
 
-    return round_score(clamp(raw))
+    return clamp_and_round(raw)
 
 
-def score_pauses(metrics):
+def score_pauses(metrics, model):
     raw = predict(
-        pauses_model,
+        model,
         [metrics["avg_pause"]],
         ["avg_pause"]
     )
@@ -76,36 +100,48 @@ def score_pauses(metrics):
     elif metrics["avg_pause"] < 0.15:
         raw = min(raw, 3.0)
 
-    return round_score(clamp(raw))
+    return clamp_and_round(raw)
 
 
-def score_pitch(metrics):
+def score_pitch(metrics, model):
     raw = predict(
-        pitch_model,
+        model,
         [metrics["pitch_variability"]],
         ["pitch_variability"]
     )
-    return round_score(clamp(raw))
+    return clamp_and_round(raw)
 
 
-def score_loudness(metrics):
+def score_loudness(metrics, model):
     raw = predict(
-        loudness_model,
+        model,
         [metrics["loudness_variance"]],
         ["loudness_variance"]
     )
-    return round_score(clamp(raw))
+    return clamp_and_round(raw)
 
 
 # ---------------------------------------------------
 # FINAL SCORING ENTRY POINT
 # ---------------------------------------------------
 
-def score_speech(metrics):
-    return {
-        "clarity": score_clarity(metrics),
-        "pace": score_pace(metrics),
-        "pauses": score_pauses(metrics),
-        "pitch": score_pitch(metrics),
-        "loudness": score_loudness(metrics),
+def score_speech(metrics, speech_type=None):
+    """
+    Score speech metrics with the model set selected by speech type.
+    
+    Args:
+        metrics: Dictionary of extracted metrics
+        speech_type: SpeechType enum (1=One-on-One, 2=Boardroom, 3=Mass Speech)
+    """
+    speech_type_value = speech_type.value if hasattr(speech_type, "value") else str(speech_type or "2")
+    model_set = MODEL_SETS.get(speech_type_value, MODEL_SETS["2"])
+
+    scores = {
+        "clarity": score_clarity(metrics, model_set["clarity"]),
+        "pace": score_pace(metrics, model_set["pace"]),
+        "pauses": score_pauses(metrics, model_set["pauses"]),
+        "pitch": score_pitch(metrics, model_set["pitch"]),
+        "loudness": score_loudness(metrics, model_set["loudness"]),
     }
+
+    return scores

@@ -1,5 +1,8 @@
 package io.github.cognivoxResearch.cognivox.screen.login
 
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Settings
+
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -22,6 +25,8 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Text
@@ -49,6 +54,8 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import io.github.cognivoxResearch.cognivox.R
+import io.github.cognivoxResearch.cognivox.screen.AppState
+import io.github.cognivoxResearch.cognivox.screen.home.components.HostSheet
 
 private val Blue        = Color(0xFF4A90E2)
 private val Purple      = Color(0xFF9B6EFF)
@@ -63,16 +70,18 @@ private val FieldStroke = Color(0xFFD8D5EE)
 @Preview(showBackground = true, backgroundColor = 0xFFF4F6FF)
 @Composable
 fun LoginScreen(
-    state: LoginState = LoginState.Unauthenticated,
-    onLogin: (name: String, token: String) -> Unit = { _, _ -> }
+    state: AppState.Login,
+    onLogin: (email: String, token: String) -> Unit = { _, _ -> },
+    onChangeHost: (String) -> Unit = {}
 ) {
     val focusManager = LocalFocusManager.current
-    var name by remember { mutableStateOf("") }
+    var email by remember { mutableStateOf("") }
     var token by remember { mutableStateOf("") }
     var tokenVisible by remember { mutableStateOf(false) }
-    var nameError by remember { mutableStateOf("") }
+    var emailError by remember { mutableStateOf("") }
     var tokenError by remember { mutableStateOf("") }
-    val isLoading = state is LoginState.Loading
+    var hostEditOpen by remember { mutableStateOf(false) }
+    val isLoading = state.isLoading
 
     Column(
         modifier = Modifier
@@ -84,7 +93,16 @@ fun LoginScreen(
         verticalArrangement = Arrangement.Center
     ) {
 
-        Spacer(Modifier.height(48.dp))
+        Row(
+            modifier = Modifier.fillMaxWidth().padding(top = 16.dp),
+            horizontalArrangement = Arrangement.End
+        ) {
+            IconButton(onClick = { hostEditOpen = true }) {
+                Icon(Icons.Filled.Settings, contentDescription = "Settings", tint = TextSub)
+            }
+        }
+
+        Spacer(Modifier.height(16.dp))
 
         Column(
             modifier = Modifier
@@ -132,17 +150,17 @@ fun LoginScreen(
             Text("Welcome back!", fontSize = 13.sp, color = TextSub,
                 modifier = Modifier.padding(top = 2.dp, bottom = 20.dp))
 
-            // Name
-            Text("Name", fontSize = 12.sp, color = TextSub, fontWeight = FontWeight.Medium,
+            // Email
+            Text("Email", fontSize = 12.sp, color = TextSub, fontWeight = FontWeight.Medium,
                 modifier = Modifier.padding(bottom = 4.dp))
             OutlinedTextField(
-                value = name,
-                onValueChange = { name = it; nameError = "" },
-                placeholder = { Text("Your name", color = Color(0xFFBBBBCC), fontSize = 14.sp) },
+                value = email,
+                onValueChange = { email = it; emailError = "" },
+                placeholder = { Text("Your email address", color = Color(0xFFBBBBCC), fontSize = 14.sp) },
                 singleLine = true,
-                isError = nameError.isNotEmpty(),
-                supportingText = if (nameError.isNotEmpty()) {
-                    { Text(nameError, color = Color(0xFFD32F2F), fontSize = 11.sp) }
+                isError = emailError.isNotEmpty(),
+                supportingText = if (emailError.isNotEmpty()) {
+                    { Text(emailError, color = Color(0xFFD32F2F), fontSize = 11.sp) }
                 } else null,
                 keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next),
                 keyboardActions = KeyboardActions(
@@ -188,7 +206,7 @@ fun LoginScreen(
                 ),
                 keyboardActions = KeyboardActions(onDone = {
                     focusManager.clearFocus()
-                    attempt(name, token, onLogin) { n, t -> nameError = n; tokenError = t }
+                    attempt(email, token, onLogin) { e, t -> emailError = e; tokenError = t }
                 }),
                 modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(12.dp),
@@ -213,7 +231,7 @@ fun LoginScreen(
                 Button(
                     onClick = {
                         focusManager.clearFocus()
-                        attempt(name, token, onLogin) { n, t -> nameError = n; tokenError = t }
+                        attempt(email, token, onLogin) { e, t -> emailError = e; tokenError = t }
                     },
                     enabled = !isLoading,
                     modifier = Modifier.fillMaxSize(),
@@ -249,6 +267,10 @@ fun LoginScreen(
 
         Spacer(Modifier.height(32.dp))
     }
+
+    if (hostEditOpen) {
+        HostSheet(state.host, onChangeHost) { hostEditOpen = false }
+    }
 }
 
 @Composable
@@ -267,12 +289,12 @@ private fun fieldColors() = OutlinedTextFieldDefaults.colors(
 )
 
 private fun attempt(
-    name: String, token: String,
+    email: String, token: String,
     onLogin: (String, String) -> Unit,
     setErrors: (String, String) -> Unit
 ) {
-    val ne = if (name.isBlank()) "Name is required" else ""
+    val ee = if (email.isBlank()) "Email is required" else ""
     val te = if (token.isBlank()) "Auth token is required" else ""
-    if (ne.isNotEmpty() || te.isNotEmpty()) { setErrors(ne, te); return }
-    onLogin(name.trim(), token.trim())
+    if (ee.isNotEmpty() || te.isNotEmpty()) { setErrors(ee, te); return }
+    onLogin(email.trim(), token.trim())
 }

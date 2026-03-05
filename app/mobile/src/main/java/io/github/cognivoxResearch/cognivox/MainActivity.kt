@@ -17,21 +17,26 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.Modifier
 import androidx.core.content.edit
+import androidx.lifecycle.lifecycleScope
 import io.github.cognivoxResearch.cognivox.game.GameActivity
+import io.github.cognivoxResearch.cognivox.net.api.AuthApi
+import io.github.cognivoxResearch.cognivox.net.dto.LoginRequest
 import io.github.cognivoxResearch.cognivox.net.proto.DeviceInbound
 import io.github.cognivoxResearch.cognivox.net.ws.DeviceWebSocket
+import io.github.cognivoxResearch.cognivox.screen.AppState
 import io.github.cognivoxResearch.cognivox.screen.home.HomeScreen
-import io.github.cognivoxResearch.cognivox.screen.home.HomeState
 import io.github.cognivoxResearch.cognivox.screen.login.LoginScreen
-import io.github.cognivoxResearch.cognivox.screen.login.LoginState
+import io.github.cognivoxResearch.cognivox.net.isTokenExpired
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
+import retrofit2.Retrofit
+import retrofit2.converter.gson.GsonConverterFactory
 import java.util.UUID
 
 
 class MainActivity : ComponentActivity(), DeviceWebSocket.Listener {
     lateinit var hostname: String
-    lateinit var uiState: MutableState<HomeState>
-    lateinit var loginUiState: MutableState<LoginState>
+    lateinit var appState: MutableState<AppState>
     var websocket: DeviceWebSocket? = null
     lateinit var deviceName: String
     lateinit var auth: String
@@ -51,18 +56,14 @@ class MainActivity : ComponentActivity(), DeviceWebSocket.Listener {
         hostname = prefs.getString("host", API_HOST)!!
         deviceName = Settings.Global.getString(contentResolver, Settings.Global.DEVICE_NAME)!!
 
-        val TestToken = getString(R.string.test_auth)
-
-        // Start in authenticated state if credentials already saved
-        val initialLoginState: LoginState = if (savedName != null && savedToken != null) {
-            LoginState.Authenticated(savedName, TestToken)
+        // Start in authenticated state if credentials are saved and not expired
+        val initialState: AppState = if (savedName != null && !isTokenExpired(savedToken)) {
+            AppState.Connecting(hostname, "")
         } else {
-//            LoginState.Unauthenticated
-            LoginState.Authenticated("test user", TestToken)
+            AppState.Login(hostname)
         }
 
-        loginUiState = mutableStateOf(initialLoginState)
-        uiState = mutableStateOf(HomeState.Connecting(hostname, ""))
+        appState = mutableStateOf(initialState)
 
         // request perms for microphone, wearables
         registerForActivityResult(ActivityResultContracts.RequestPermission()) { isGranted ->
@@ -82,9 +83,8 @@ class MainActivity : ComponentActivity(), DeviceWebSocket.Listener {
                     color = MaterialTheme.colorScheme.background
                 ) {
                     AppRoot(
-                        loginUiState = loginUiState,
-                        homeUiState = uiState,
-                        onLogin = { name, token -> Log.i(tag, "Login $name $token") },
+                        appState = appState,
+                        onLogin = { email, token -> performLogin(email, token) },
                         onChangeHost = { this.changeHost(it) },
                         onJoinSession = { this.joinSession(it) },
                         onJoinTest = { this.joinSession(null) }
@@ -98,7 +98,7 @@ class MainActivity : ComponentActivity(), DeviceWebSocket.Listener {
         super.onResume()
 
         // Only connect if already authenticated
-        if (loginUiState.value is LoginState.Authenticated) {
+        if (appState.value !is AppState.Login) {
             runBlocking { connect() }
         }
     }
@@ -123,16 +123,16 @@ class MainActivity : ComponentActivity(), DeviceWebSocket.Listener {
 
     override fun onConnect(con: DeviceInbound.Ok) {
         Log.i(tag, "Connected to server $con")
-        uiState.value = HomeState.Waiting(con.userName, con.deviceId);
+        appState.value = AppState.Waiting(con.userName, con.deviceId);
     }
 
     override fun onError(err: DeviceInbound.Err) {
-        uiState.value = HomeState.Connecting(hostname, "Error: $err")
+        appState.value = AppState.Connecting(hostname, "Error: $err")
         Log.i(tag, "Error $err")
     }
 
     override fun onDisconnect() {
-        uiState.value = HomeState.Connecting(hostname, "")
+        appState.value = AppState.Connecting(hostname, "")
         Log.i(tag, "Disconnected")
     }
 
@@ -141,9 +141,8 @@ class MainActivity : ComponentActivity(), DeviceWebSocket.Listener {
      */
     private suspend fun connect() {
         // Only connect if already authenticated
-        if (loginUiState.value is LoginState.Authenticated) {
-            val token = (loginUiState.value as LoginState.Authenticated).authToken
-            websocket = DeviceWebSocket(getDeviceURL(hostname), deviceName, token, this)
+        if (appState.value !is AppState.Login) {
+            websocket = DeviceWebSocket(getDeviceURL(hostname), deviceName, auth, this)
             websocket!!.connect()
         }
     }
@@ -157,8 +156,14 @@ class MainActivity : ComponentActivity(), DeviceWebSocket.Listener {
 
         hostname = host
         websocket?.disconnect()
-        uiState.value = HomeState.Connecting(hostname, "")
-        runBlocking { connect() }
+
+        // If we are at the login screen, stay there but update the hostname. Otherwise, reconnect.
+        if (appState.value is AppState.Login) {
+            appState.value = AppState.Login(hostname)
+        } else {
+            appState.value = AppState.Connecting(hostname, "")
+            runBlocking { connect() }
+        }
     }
 
     /**
@@ -173,28 +178,75 @@ class MainActivity : ComponentActivity(), DeviceWebSocket.Listener {
         }
         startActivity(startIntent)
     }
+
+    private fun performLogin(email: String, expectedToken: String) {
+        appState.value = AppState.Login(hostname, isLoading = true)
+        lifecycleScope.launch {
+            try {
+                val retrofit = Retrofit.Builder()
+                    .baseUrl(getAuthBaseURL(hostname))
+                    .addConverterFactory(GsonConverterFactory.create())
+                    .build()
+
+                val api = retrofit.create(AuthApi::class.java)
+                val response = api.login(LoginRequest(email, expectedToken))
+
+                if (response.isSuccessful && response.body() != null) {
+                    val actualToken = response.body()!!.access_token
+
+                    // Save to SharedPreferences
+                    val prefs = getSharedPreferences(PREF_TAG, MODE_PRIVATE)
+                    prefs.edit {
+                        putString("user_name", email)
+                        putString("auth_token", actualToken)
+                    }
+
+                    auth = actualToken
+                    appState.value = AppState.Connecting(hostname, "")
+
+                    // Connect the websocket now that we have a real token!
+                    connect()
+                } else {
+                    appState.value = AppState.Login(hostname)
+                    runOnUiThread {
+                        Toast.makeText(
+                            this@MainActivity,
+                            "Login failed: ${response.code()}",
+                            Toast.LENGTH_SHORT
+                        ).show()
+                    }
+                }
+            } catch (e: Exception) {
+                appState.value = AppState.Login(hostname)
+                runOnUiThread {
+                    Toast.makeText(
+                        this@MainActivity,
+                        "Network error: ${e.message}",
+                        Toast.LENGTH_SHORT
+                    ).show()
+                }
+            }
+        }
+    }
 }
 
 @Composable
 fun AppRoot(
-    loginUiState: MutableState<LoginState>,
-    homeUiState: MutableState<HomeState>,
+    appState: MutableState<AppState>,
     onLogin: (String, String) -> Unit,
     onChangeHost: (String) -> Unit,
     onJoinSession: (UUID) -> Unit,
     onJoinTest: () -> Unit,
 ) {
-    val loginState by loginUiState
-    val homeState by homeUiState
+    val state by appState
 
-    when (loginState) {
-        is LoginState.Unauthenticated,
-        is LoginState.Loading -> {
-            LoginScreen(state = loginState, onLogin = onLogin)
+    when (state) {
+        is AppState.Login -> {
+            LoginScreen(state as AppState.Login, onLogin = onLogin, onChangeHost = onChangeHost)
         }
 
-        is LoginState.Authenticated -> {
-            HomeScreen(homeState, onChangeHost, onJoinSession, onJoinTest)
+        else -> {
+            HomeScreen(state, onChangeHost, onJoinSession, onJoinTest)
         }
     }
 }

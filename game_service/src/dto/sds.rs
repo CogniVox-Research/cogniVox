@@ -2,15 +2,19 @@ use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Serialize)]
 pub struct Request {
+    pub speech_type: String,
     pub audio_key: String,
     pub transcript: String,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Response {
+    pub speech_type: String,
+    pub speech_type_number: String,
     pub metrics: Metrics,
     pub scores: Scores,
     pub feedback: Feedback,
+    pub delivery: Delivery,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -42,4 +46,30 @@ pub struct Feedback {
     pub pauses: String,
     pub pitch: String,
     pub loudness: String,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct Delivery {
+    pub delivery_score: f64,
+    pub delivery_score_label: String,
+    pub weighted_breakdown: WeightedBreakdown,
+    pub weights_used: WeightsUsed,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct WeightedBreakdown {
+    pub clarity: f64,
+    pub pace: f64,
+    pub pauses: f64,
+    pub pitch: f64,
+    pub loudness: f64,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct WeightsUsed {
+    pub clarity: f64,
+    pub pace: f64,
+    pub pauses: f64,
+    pub pitch: f64,
+    pub loudness: f64,
 }

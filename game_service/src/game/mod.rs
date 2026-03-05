@@ -136,12 +136,19 @@ impl Game {
     }
 
     async fn get_speech_score(&self, speech_text: String) -> Option<sds::Response> {
+        let speech_type = match self.settings.scene {
+            dto::settings::SceneType::Interview => "1",
+            dto::settings::SceneType::BoardRoom { size: _ } => "2",
+            dto::settings::SceneType::Stage { size: _ } => "3",
+        };
+
         let result = self
             .enpoints
             .speech_score
             .send(dto::sds::Request {
                 audio_key: format!("{}/recordings/converted.wav", self.session_id.to_string()),
                 transcript: speech_text,
+                speech_type: speech_type.to_owned(),
             })
             .await;
         match result {

@@ -31,7 +31,6 @@ RUN --mount=type=cache,target=/usr/local/cargo/registry \
 
 FROM nvidia/cuda:13.1.1-runtime-ubuntu24.04
 WORKDIR /app
-COPY asr_service/Rocket.toml Rocket.toml
 COPY --from=builder /app/asr_service/target/release/asr_service /app/asr_service
 EXPOSE 8001
 CMD ["/app/asr_service"]

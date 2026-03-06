@@ -7,15 +7,25 @@ services:
     build:
       context: .
       dockerfile: ./asr_service/Dockerfile
+    volumes:
+      - ./asr_service/models:/app/models
+      - ./compose/config/asr.toml:/app/Rocket.toml
 
   document_service:
     build:
       context: .
       dockerfile: ./document_service/Dockerfile
 
-  # auth_service:
-  #   build:
-  #     context: .
-  #     dockerfile: ./auth_service/Dockerfile
-  #   ports:
-  #     - "8010:8010"
+  auth_service:
+    build:
+      context: .
+      dockerfile: ./auth_service/Dockerfile
+    ports:
+      - "8010:8010"
+
+  biometric_service:
+    build:
+      context: .
+      dockerfile: ./biometric_service/Dockerfile
+    ports:
+      - "9010:9010"

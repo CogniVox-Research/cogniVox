@@ -1,3 +1,3 @@
 #!/bin/bash
 poetry install
-poetry run fastapi dev --port 8006
+poetry run fastapi run --port 8006

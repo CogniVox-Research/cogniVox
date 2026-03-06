@@ -3,6 +3,7 @@ include:
   - compose/seaweedfs.yml
 services:
   asr_service:
+    runtime: nvidia
     build:
       context: .
       dockerfile: ./asr_service/Dockerfile
@@ -12,9 +13,9 @@ services:
       context: .
       dockerfile: ./document_service/Dockerfile
 
-  auth_service:
-    build:
-      context: .
-      dockerfile: ./auth_service/Dockerfile
-    ports:
-      - "8010:8010"
+  # auth_service:
+  #   build:
+  #     context: .
+  #     dockerfile: ./auth_service/Dockerfile
+  #   ports:
+  #     - "8010:8010"

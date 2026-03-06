@@ -1,25 +1,17 @@
-FROM python:3.12-slim AS base
-
+FROM python:3.13-slim AS build-base
 WORKDIR /app
+RUN pip install --no-cache-dir poetry==2.3.2
+RUN poetry config virtualenvs.create false
 
-# Install poetry
-RUN pip install --no-cache-dir poetry==1.8.3
-
-# Copy shared library first (it's a local dependency)
+FROM build-base
 COPY shared/ ./shared/
-
-# Copy service sources
-COPY auth_service/ ./auth_service/
-
-WORKDIR /app/auth_service
-
-# Install dependencies (no dev deps, no virtualenv inside container)
-RUN poetry config virtualenvs.create false \
-    && poetry install --no-interaction --no-ansi --without dev
-
-# Keys must be mounted at runtime — never baked into the image
+ENV SERIVCE_NAME=auth_service
+WORKDIR /app/$SERIVCE_NAME
+COPY $SERIVCE_NAME/poetry.lock ./poetry.lock
+COPY $SERIVCE_NAME/pyproject.toml ./pyproject.toml
+RUN poetry install --no-interaction --no-ansi
+COPY $SERIVCE_NAME/ .
 VOLUME ["/app/auth_service/keys"]
-
 EXPOSE 8010
 
-CMD ["python", "main.py"]
+CMD ["poetry", "run", "fastapi", "run", "--port", "8010"]

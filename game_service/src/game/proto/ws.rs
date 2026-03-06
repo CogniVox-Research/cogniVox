@@ -98,7 +98,7 @@ impl<In: Inbound, Out: Outbound> WebSocket<In, Out> {
                                 Self::send_message(&mut ws_sink, msg).await.err()
                             }
                             Some(Ok(msg)) = ws_stream.next() => {
-                                Self::parse_message(&inbound_tx, &mut last_ping, msg).await.err()
+                                Self::parse_message(&mut ws_sink, &inbound_tx, &mut last_ping, msg).await.err()
                             }
                             _ = timer.tick() =>{
                                 Self::ping_client(&mut ws_sink, &mut last_ping).await.err()
@@ -163,6 +163,7 @@ impl<In: Inbound, Out: Outbound> WebSocket<In, Out> {
 
     /// Parses the given message and puts it into the inbound_tx queue.
     async fn parse_message(
+        ws_sink: &mut SplitSink<DuplexStream, Message>,
         inbound_tx: &mpsc::Sender<In>,
         last_ping: &mut Option<Vec<u8>>,
         message: Message,
@@ -183,6 +184,10 @@ impl<In: Inbound, Out: Outbound> WebSocket<In, Out> {
                         last_ping.take();
                     }
                 }
+                Ok(())
+            }
+            Err(Error::SocketPing(data)) => {
+                let _ = ws_sink.send(Message::Pong(data)).await;
                 Ok(())
             }
             Err(e) => Err(e),

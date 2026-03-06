@@ -16,10 +16,14 @@ pub enum WebInbound {
 #[derive(Debug, Serialize)]
 #[serde(tag = "type", content = "data", rename_all = "snake_case")]
 pub enum WebOutbound {
-    Session(String),
     ASR(common::dto::asr::ASR),
     Stress(dto::stress::StressResponse),
-    Pair(String),
+    Pair {
+        session_id: uuid::Uuid,
+    },
+    Session {
+        session_id: uuid::Uuid,
+    },
     GameConnected,
     Results(
         Option<dto::transcript::Response>,
@@ -33,6 +37,7 @@ impl super::Inbound for WebInbound {
             Message::Text(text) => serde_json::de::from_str(&text).map_err(Error::Deserialize),
             Message::Pong(items) => Err(Error::SocketPong(items)),
             Message::Close(_) => Err(Error::SocketClose),
+            Message::Ping(data) => Err(Error::SocketPing(data)),
             _ => Err(Error::UnexpectedMessage(value)),
         }
     }

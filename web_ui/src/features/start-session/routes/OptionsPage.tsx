@@ -10,13 +10,14 @@ export function OptionsPage() {
 
   const handleNext = () => {
     if (config.environment === "interview") {
-      navigate({ to: "/app/session/document" });
+      navigate({ to: "/app/session/new/document" });
     } else {
-      navigate({ to: "/app/session/options" });
+      navigate({ to: "/app/session/new/options" });
     }
   };
 
-  const setEnv = (env: Environment) => setConfig({ ...config, environment: env });
+  const setEnv = (env: Environment) =>
+    setConfig({ ...config, environment: env });
 
   return (
     <>
@@ -52,7 +53,11 @@ export function OptionsPage() {
                 stroke="currentColor"
                 strokeWidth={2.5}
               >
-                <path strokeLinecap="round" strokeLinejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" />
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  d="M8.25 4.5l7.5 7.5-7.5 7.5"
+                />
               </svg>
             </button>
           </div>

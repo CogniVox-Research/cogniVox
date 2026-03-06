@@ -33,6 +33,8 @@ pub enum Error {
     /// This should not be returned by out of the ws crate.
     #[error("Pong")]
     SocketPong(Vec<u8>),
+    #[error("Ping")]
+    SocketPing(Vec<u8>),
 
     #[error("Socket timeout")]
     SocketTimeout,

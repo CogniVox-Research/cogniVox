@@ -131,9 +131,7 @@ async fn web_session(ws: WebSocket, state: &State<AppState>, user: User) -> Chan
     let session_id = uuid::Uuid::now_v7();
 
     let mut con = WebConnection::new();
-    con.send(WebOutbound::Session(session_id.to_string()))
-        .await
-        .unwrap();
+    let channel = con.handle_websocket(ws);
 
     let devices = state.vr.lock().await;
     if let Some(device) = devices.get(&user.user_id) {
@@ -143,12 +141,8 @@ async fn web_session(ws: WebSocket, state: &State<AppState>, user: User) -> Chan
             .await
             .unwrap();
     } else {
-        con.send(WebOutbound::Pair(session_id.to_string()))
-            .await
-            .unwrap();
+        con.send(WebOutbound::Pair { session_id }).await.unwrap();
     }
-
-    let channel = con.handle_websocket(ws);
 
     let mut pending = state.pending.lock().await;
     pending.insert(session_id, con);

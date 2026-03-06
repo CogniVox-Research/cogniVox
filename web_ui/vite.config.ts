@@ -21,12 +21,16 @@ export default defineConfig({
   },
   server: {
     proxy: {
-      // Forward API calls to the auth service.
-      // Strips /api/auth prefix → /login, /register, /public-key on the service.
       "/api/auth": {
         target: "http://localhost:8010",
         changeOrigin: true,
         rewrite: (path) => path.replace(/^\/api\/auth/, ""),
+      },
+      "/api/ws": {
+        target: "ws://localhost:8004",
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/api/, ""),
+        ws: true, // Enable WebSocket proxying
       },
     },
   },

@@ -168,6 +168,7 @@ pub async fn start_game(
     game: GameConnection,
     mut web: WebConnection,
 ) -> Result<()> {
+    web.send(WebOutbound::Session { session_id }).await?;
     web.send(WebOutbound::GameConnected).await?;
     log::info!("Game connected successfully");
 

@@ -1,5 +1,5 @@
 import { createFileRoute, Outlet } from "@tanstack/react-router";
-import { SessionSetupProvider } from "@/features/start-session";
+import { SessionProvider } from "@/hooks/use-session";
 
 export const Route = createFileRoute("/app/session")({
   component: RouteComponent,
@@ -7,8 +7,8 @@ export const Route = createFileRoute("/app/session")({
 
 function RouteComponent() {
   return (
-    <SessionSetupProvider>
+    <SessionProvider>
       <Outlet />
-    </SessionSetupProvider>
+    </SessionProvider>
   );
 }

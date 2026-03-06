@@ -16,6 +16,8 @@ import { Route as AuthRegisterRouteImport } from './routes/auth/register'
 import { Route as AuthLoginRouteImport } from './routes/auth/login'
 import { Route as AppSessionRouteImport } from './routes/app/session'
 import { Route as AppSessionStartRouteImport } from './routes/app/session/start'
+import { Route as AppSessionOptionsRouteImport } from './routes/app/session/options'
+import { Route as AppSessionDocumentRouteImport } from './routes/app/session/document'
 import { Route as AppSessionIdRouteImport } from './routes/app/session/$id'
 
 const AuthRoute = AuthRouteImport.update({
@@ -53,6 +55,16 @@ const AppSessionStartRoute = AppSessionStartRouteImport.update({
   path: '/start',
   getParentRoute: () => AppSessionRoute,
 } as any)
+const AppSessionOptionsRoute = AppSessionOptionsRouteImport.update({
+  id: '/options',
+  path: '/options',
+  getParentRoute: () => AppSessionRoute,
+} as any)
+const AppSessionDocumentRoute = AppSessionDocumentRouteImport.update({
+  id: '/document',
+  path: '/document',
+  getParentRoute: () => AppSessionRoute,
+} as any)
 const AppSessionIdRoute = AppSessionIdRouteImport.update({
   id: '/$id',
   path: '/$id',
@@ -67,6 +79,8 @@ export interface FileRoutesByFullPath {
   '/auth/login': typeof AuthLoginRoute
   '/auth/register': typeof AuthRegisterRoute
   '/app/session/$id': typeof AppSessionIdRoute
+  '/app/session/document': typeof AppSessionDocumentRoute
+  '/app/session/options': typeof AppSessionOptionsRoute
   '/app/session/start': typeof AppSessionStartRoute
 }
 export interface FileRoutesByTo {
@@ -77,6 +91,8 @@ export interface FileRoutesByTo {
   '/auth/login': typeof AuthLoginRoute
   '/auth/register': typeof AuthRegisterRoute
   '/app/session/$id': typeof AppSessionIdRoute
+  '/app/session/document': typeof AppSessionDocumentRoute
+  '/app/session/options': typeof AppSessionOptionsRoute
   '/app/session/start': typeof AppSessionStartRoute
 }
 export interface FileRoutesById {
@@ -88,6 +104,8 @@ export interface FileRoutesById {
   '/auth/login': typeof AuthLoginRoute
   '/auth/register': typeof AuthRegisterRoute
   '/app/session/$id': typeof AppSessionIdRoute
+  '/app/session/document': typeof AppSessionDocumentRoute
+  '/app/session/options': typeof AppSessionOptionsRoute
   '/app/session/start': typeof AppSessionStartRoute
 }
 export interface FileRouteTypes {
@@ -100,6 +118,8 @@ export interface FileRouteTypes {
     | '/auth/login'
     | '/auth/register'
     | '/app/session/$id'
+    | '/app/session/document'
+    | '/app/session/options'
     | '/app/session/start'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -110,6 +130,8 @@ export interface FileRouteTypes {
     | '/auth/login'
     | '/auth/register'
     | '/app/session/$id'
+    | '/app/session/document'
+    | '/app/session/options'
     | '/app/session/start'
   id:
     | '__root__'
@@ -120,6 +142,8 @@ export interface FileRouteTypes {
     | '/auth/login'
     | '/auth/register'
     | '/app/session/$id'
+    | '/app/session/document'
+    | '/app/session/options'
     | '/app/session/start'
   fileRoutesById: FileRoutesById
 }
@@ -180,6 +204,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppSessionStartRouteImport
       parentRoute: typeof AppSessionRoute
     }
+    '/app/session/options': {
+      id: '/app/session/options'
+      path: '/options'
+      fullPath: '/app/session/options'
+      preLoaderRoute: typeof AppSessionOptionsRouteImport
+      parentRoute: typeof AppSessionRoute
+    }
+    '/app/session/document': {
+      id: '/app/session/document'
+      path: '/document'
+      fullPath: '/app/session/document'
+      preLoaderRoute: typeof AppSessionDocumentRouteImport
+      parentRoute: typeof AppSessionRoute
+    }
     '/app/session/$id': {
       id: '/app/session/$id'
       path: '/$id'
@@ -192,11 +230,15 @@ declare module '@tanstack/react-router' {
 
 interface AppSessionRouteChildren {
   AppSessionIdRoute: typeof AppSessionIdRoute
+  AppSessionDocumentRoute: typeof AppSessionDocumentRoute
+  AppSessionOptionsRoute: typeof AppSessionOptionsRoute
   AppSessionStartRoute: typeof AppSessionStartRoute
 }
 
 const AppSessionRouteChildren: AppSessionRouteChildren = {
   AppSessionIdRoute: AppSessionIdRoute,
+  AppSessionDocumentRoute: AppSessionDocumentRoute,
+  AppSessionOptionsRoute: AppSessionOptionsRoute,
   AppSessionStartRoute: AppSessionStartRoute,
 }
 

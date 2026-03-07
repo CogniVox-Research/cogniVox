@@ -36,29 +36,24 @@ async def read_queue(conn: AbstractChannel):
             print(detection)
 
             if isinstance(detection, UnstuckDetection):
-                await output.publish(
-                    aio_pika.Message(
-                        body=json.dumps(
-                            {
-                                "type": "unstuck",
-                            }
-                        ).encode()
-                    ),
-                    routing_key=data.session_id,
-                    mandatory=False,
-                )
+                msg = {
+                    "type": "unstuck",
+                }
+
+            elif not detection.suggestions:
+                msg = {
+                    "type": "stuck",
+                }
             else:
-                await output.publish(
-                    aio_pika.Message(
-                        body=json.dumps(
-                            {
-                                "type": "stuck",
-                            }
-                        ).encode()
-                    ),
-                    routing_key=data.session_id,
-                    mandatory=False,
-                )
+                msg = {
+                    "type": "stuck_suggestion",
+                    "data": "sample suggestion",
+                }
+            await output.publish(
+                aio_pika.Message(body=json.dumps(msg).encode()),
+                routing_key=data.session_id,
+                mandatory=False,
+            )
 
     return asyncio.create_task(_task())
 

@@ -6,6 +6,8 @@ import type {
   SessionMessage,
   TranscriptResponse,
   SDSResponse,
+  Timestamped,
+  HeartRate,
 } from "./types";
 import WS from "./ws";
 
@@ -22,7 +24,8 @@ export type ErrorState = {
 export type RunningState = {
   state: "running";
   asr: ASR;
-  stress: StressResponse[];
+  stress: Timestamped<StressResponse>[];
+  heart_rate: Timestamped<HeartRate>[];
 };
 
 export type FinishedState = {
@@ -30,7 +33,8 @@ export type FinishedState = {
   transcript_analysis?: TranscriptResponse;
   speech_score?: SDSResponse;
   asr: ASR;
-  stress: StressResponse[];
+  stress: Timestamped<StressResponse>[];
+  heart_rate: Timestamped<HeartRate>[];
 };
 
 export type SessionState =
@@ -78,7 +82,22 @@ export default class Session {
 
     socket.subscribe<StressResponse>("stress", (stress) => {
       if (this.state.state !== "running") return;
-      this.state = { ...this.state, stress: [...this.state.stress, stress] };
+      this.state = {
+        ...this.state,
+        stress: [...this.state.stress, { data: stress, timestamp: new Date() }],
+      };
+      this.onChange();
+    });
+
+    socket.subscribe<HeartRate>("heart_rate", (hr) => {
+      if (this.state.state !== "running") return;
+      this.state = {
+        ...this.state,
+        heart_rate: [
+          ...this.state.heart_rate,
+          { data: hr, timestamp: new Date() },
+        ],
+      };
       this.onChange();
     });
 
@@ -93,6 +112,7 @@ export default class Session {
           type: "partial",
         },
         stress: [],
+        heart_rate: [],
       };
       this.onChange();
     });
@@ -104,6 +124,7 @@ export default class Session {
         ...results,
         asr: this.state.asr,
         stress: this.state.stress,
+        heart_rate: this.state.heart_rate,
       };
 
       this.onChange();

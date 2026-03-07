@@ -75,7 +75,8 @@ impl Game {
                         GameInbound::Stress(stress_request) => {
                             let mut request = stress_request;
                             request.session_id = Some(self.session_id);
-                            self.mq.send_stress_metrics(request).await?;
+                            self.mq.send_stress_metrics(request.clone()).await?;
+                            self.web.send(WebOutbound::HeartRate(request)).await?;
                         }
                         GameInbound::SpeechEnd => {
                             self.mq.send_audio("END".as_bytes().to_vec()).await?;

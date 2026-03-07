@@ -25,6 +25,7 @@ pub enum WebOutbound {
         session_id: uuid::Uuid,
     },
     GameConnected,
+    HeartRate(dto::stress::StressRequest),
     Results {
         transcript_analysis: Option<dto::transcript::Response>,
         speech_score: Option<dto::sds::Response>,

@@ -1,4 +1,4 @@
-use std::marker::PhantomData;
+use std::{marker::PhantomData, time::Duration};
 
 use crate::mq::{Connection, MQError, error::Result};
 
@@ -9,6 +9,7 @@ use lapin::{
     types::FieldTable,
 };
 use serde::de::DeserializeOwned;
+use tokio::time::sleep;
 
 #[derive(Debug)]
 pub struct Message<T> {
@@ -102,6 +103,7 @@ where
                 FieldTable::default(),
             )
             .await?;
+
         Ok(self)
     }
 }

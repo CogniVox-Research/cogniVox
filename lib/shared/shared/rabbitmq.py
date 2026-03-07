@@ -1,17 +1,33 @@
 import asyncio
+import logging
 import typing
 from contextlib import asynccontextmanager
+from logging import Logger
 from warnings import deprecated
 
 import pydantic
 from aio_pika import connect_robust
 from aio_pika.abc import AbstractChannel, AbstractIncomingMessage
+from aiormq import AMQPConnectionError
 
 
 @asynccontextmanager
 async def connect(rabbitmq_url: str):
-    connection = await connect_robust(rabbitmq_url, loop=asyncio.get_event_loop())
-    await connection.connect()
+    while True:
+        try:
+            connection = await connect_robust(
+                rabbitmq_url, loop=asyncio.get_event_loop()
+            )
+            await connection.connect()
+            break
+        except KeyboardInterrupt:
+            quit(1)
+        except AMQPConnectionError:
+            logging.root.error(
+                f"Failed to connect to rabbitmq at {rabbitmq_url}. Retrying in 5 seconds"
+            )
+            await asyncio.sleep(5)
+
     try:
         yield await connection.channel()
     finally:

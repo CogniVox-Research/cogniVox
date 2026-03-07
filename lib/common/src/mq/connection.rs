@@ -1,3 +1,5 @@
+use std::time::Duration;
+
 use crate::mq::{Consumer, Sender, error::Result};
 use async_rs::Runtime;
 use lapin::{
@@ -5,6 +7,7 @@ use lapin::{
     types::FieldTable,
 };
 use serde::{Deserialize, Serialize, de::DeserializeOwned};
+use tokio::time::sleep;
 
 #[derive(Debug, Deserialize, Clone)]
 pub struct Config {
@@ -19,10 +22,23 @@ pub struct Connection {
 
 impl Connection {
     pub async fn for_config(cfg: Config) -> Result<Connection> {
+        loop {
+            let result = Self::for_config_inner(&cfg).await;
+            match result {
+                Ok(v) => return Ok(v),
+                Err(err) => {
+                    log::error!("Failed to connect to rabbitmq: {err}");
+                    sleep(Duration::from_secs(10)).await;
+                }
+            }
+        }
+    }
+
+    async fn for_config_inner(cfg: &Config) -> Result<Connection> {
         let runtime = Runtime::tokio_current();
 
         let config = ConnectionProperties::default()
-            .with_connection_name(cfg.connection_name.into())
+            .with_connection_name(cfg.connection_name.as_str().into())
             .enable_auto_recover()
             .configure_backoff(|backoff| {
                 backoff.with_max_times(3);

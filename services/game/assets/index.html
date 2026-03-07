@@ -15,23 +15,34 @@
                 Disconnected
             </div>
             <button
-                @click="reconnect()"
+                @click="connected ? disconnect(): connectUI()"
                 :class="connected ? 'secondary' : ''"
-                x-text="connected ? 'Reconnect': 'Connect'"
+                x-text="connected ? 'Disconnect': 'Connect'"
             ></button>
 
+            <label for="game_join_id">Join Game</label>
+            <input
+                type="text"
+                id="game_join_id"
+                :disabled="connected || web_only"
+                x-on:input="game_only = !!$event.target.value"
+                x-model="game_join_id"
+            />
+            <br />
             <input
                 type="checkbox"
-                id="with-game"
-                :disabled="connected"
+                id="web_only"
+                :disabled="connected || game_only"
                 x-model="web_only"
             />
-            <label for="with-game">Web Only</label>
+            <label for="web_only">Web Only</label>
             <hr />
 
             <div class="btn-group">
                 <template x-for="action in actions">
-                    <template x-if="!web_only || action.mode != 'game'">
+                    <template
+                        x-if="(!web_only && !game_only) || (web_only && action.mode != 'game') || (game_only && action.mode != 'web')"
+                    >
                         <button
                             @click="
                                 sendMessage(action)

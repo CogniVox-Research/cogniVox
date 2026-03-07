@@ -71,6 +71,11 @@ export type Timestamped<T> = {
   timestamp: Date;
 };
 
+export type Stuck =
+  | { type: "stuck" }
+  | { type: "unstuck" }
+  | { type: "stuck_suggestion"; text: string };
+
 /** ================= Stress Response ================ */
 export type StressResponse = {
   model_used: string;

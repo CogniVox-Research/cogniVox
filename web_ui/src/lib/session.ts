@@ -8,8 +8,10 @@ import type {
   SDSResponse,
   Timestamped,
   HeartRate,
+  Stuck,
 } from "./types";
 import WS from "./ws";
+import { produce } from "immer";
 
 export type WaitingState = {
   state: "waiting_join";
@@ -26,6 +28,7 @@ export type RunningState = {
   asr: ASR;
   stress: Timestamped<StressResponse>[];
   heart_rate: Timestamped<HeartRate>[];
+  stuck: Timestamped<Stuck>[];
 };
 
 export type FinishedState = {
@@ -35,6 +38,7 @@ export type FinishedState = {
   asr: ASR;
   stress: Timestamped<StressResponse>[];
   heart_rate: Timestamped<HeartRate>[];
+  stuck: Timestamped<Stuck>[];
 };
 
 export type SessionState =
@@ -61,48 +65,63 @@ export default class Session {
     };
     this.getState = this.getState.bind(this);
     this.subscribe = this.subscribe.bind(this);
-
-    this.onChange();
+    this.update();
 
     socket.subscribe<string>("error", (error) => {
-      this.state = { state: "error", error };
-      this.onChange();
+      this.update({ state: "error", error });
     });
 
     socket.setErrorListener((error) => {
-      this.state = { state: "error", error };
-      this.onChange();
+      this.update({ state: "error", error });
     });
 
     socket.subscribe<ASR>("a_s_r", (asr) => {
-      if (this.state.state !== "running") return;
-      this.state = { ...this.state, asr };
-      this.onChange();
+      this.update((s) => {
+        if (s.state !== "running") return;
+        s.asr = asr;
+      });
     });
 
     socket.subscribe<StressResponse>("stress", (stress) => {
-      if (this.state.state !== "running") return;
-      this.state = {
-        ...this.state,
-        stress: [...this.state.stress, { data: stress, timestamp: new Date() }],
-      };
-      this.onChange();
+      this.update((s) => {
+        if (s.state !== "running") return;
+        s.stress.push({ data: stress, timestamp: new Date() });
+      });
     });
 
     socket.subscribe<HeartRate>("heart_rate", (hr) => {
-      if (this.state.state !== "running") return;
-      this.state = {
-        ...this.state,
-        heart_rate: [
-          ...this.state.heart_rate,
-          { data: hr, timestamp: new Date() },
-        ],
-      };
-      this.onChange();
+      this.update((s) => {
+        if (s.state !== "running") return;
+        s.heart_rate.push({ data: hr, timestamp: new Date() });
+      });
+    });
+
+    socket.subscribe("stuck", () => {
+      this.update((s) => {
+        if (s.state !== "running") return;
+        s.stuck.push({ data: { type: "stuck" }, timestamp: new Date() });
+      });
+    });
+
+    socket.subscribe("unstuck", () => {
+      this.update((s) => {
+        if (s.state !== "running") return;
+        s.stuck.push({ data: { type: "unstuck" }, timestamp: new Date() });
+      });
+    });
+
+    socket.subscribe<string>("stuck_suggestion", (sg) => {
+      this.update((s) => {
+        if (s.state !== "running") return;
+        s.stuck.push({
+          data: { type: "stuck_suggestion", text: sg },
+          timestamp: new Date(),
+        });
+      });
     });
 
     socket.subscribe("game_connected", () => {
-      this.state = {
+      this.update({
         state: "running",
         asr: {
           current_silence: null,
@@ -113,21 +132,20 @@ export default class Session {
         },
         stress: [],
         heart_rate: [],
-      };
-      this.onChange();
+        stuck: [],
+      });
     });
 
     socket.subscribe<FinalResult>("results", (results) => {
       if (this.state.state !== "running") throw Error("Invalid state change");
-      this.state = {
+      this.update({
         state: "finished",
         ...results,
         asr: this.state.asr,
         stress: this.state.stress,
         heart_rate: this.state.heart_rate,
-      };
-
-      this.onChange();
+        stuck: this.state.stuck,
+      });
     });
 
     socket.send("ready");
@@ -141,7 +159,14 @@ export default class Session {
     };
   }
 
-  private onChange() {
+  private update(fn_or_state?: ((s: SessionState) => void) | SessionState) {
+    if (fn_or_state) {
+      if (typeof fn_or_state === "function") {
+        this.state = produce(this.state, fn_or_state);
+      } else {
+        this.state = fn_or_state;
+      }
+    }
     this.watchers.forEach((v) => v());
   }
 

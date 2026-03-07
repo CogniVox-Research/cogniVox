@@ -26,6 +26,9 @@ pub enum WebOutbound {
     },
     GameConnected,
     HeartRate(dto::stress::StressRequest),
+    Stuck,
+    Unstuck,
+    StuckSuggestion(String),
     Results {
         transcript_analysis: Option<dto::transcript::Response>,
         speech_score: Option<dto::sds::Response>,

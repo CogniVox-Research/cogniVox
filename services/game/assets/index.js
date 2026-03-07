@@ -2,7 +2,11 @@ let socket;
 const logs = document.getElementById("logs");
 
 const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
-const BASE_URL = `${protocol}//${window.location.host}/ws`;
+const BASE_URL = (() => {
+  const url = new URL("../ws", window.location);
+  url.protocol = protocol;
+  return url.href;
+})();
 
 const ACTIONS = [
   {
@@ -119,10 +123,21 @@ class App {
     this.logs = [];
     this.state = 1;
     this.web_only = false;
+    this.game_only = false;
+    this.game_join_id = "";
 
     this.actions = ACTIONS;
 
     this.sockets = { web: undefined, game: undefined };
+  }
+
+  connectUI() {
+    if (this.game_only) {
+      this.connect("game", this.game_join_id);
+      this.state = 3;
+    } else {
+      this.connect("web");
+    }
   }
 
   connect(mode, session) {
@@ -220,10 +235,14 @@ class App {
     }
   }
 
-  reconnect() {
+  disconnect() {
     this.state = 1;
     this.clearLogs();
-    this.connect("web");
+    this.game_join_id = "";
+    this.web_only = false;
+    this.game_only = false;
+    this.connected = false;
+    this.sockets = { web: undefined, game: undefined };
   }
 }
 

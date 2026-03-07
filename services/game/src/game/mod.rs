@@ -107,12 +107,15 @@ impl Game {
                         }
                         ServiceInbound::Stuck => {
                             self.game.send(GameOutbound::Stuck).await?;
+                            self.web.send(WebOutbound::Stuck).await?;
                         }
                         ServiceInbound::Unstuck => {
                             self.game.send(GameOutbound::Unstuck).await?;
+                            self.web.send(WebOutbound::Unstuck).await?;
                         }
                         ServiceInbound::StuckSuggestion(sg) => {
-                            self.game.send(GameOutbound::StuckSuggestion(sg)).await?;
+                            self.game.send(GameOutbound::StuckSuggestion(sg.clone())).await?;
+                            self.web.send(WebOutbound::StuckSuggestion(sg.clone())).await?;
                         }
                     }
                 },

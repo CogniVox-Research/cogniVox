@@ -1,6 +1,6 @@
 services:
   asr_service:
-    runtime: nvidia
+    # runtime: nvidia
     restart: "unless-stopped"
     ports:
       - "8001:8001"

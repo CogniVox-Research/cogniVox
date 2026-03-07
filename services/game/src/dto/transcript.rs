@@ -22,7 +22,7 @@ pub struct Similarity {
     pub key_points_speech: Vec<String>,
     pub alignment: Vec<Alignment>,
     pub order_analysis: OrderAnalysis,
-    pub redundant_speech_segments: Vec<String>,
+    pub redundant_speech_segments: Vec<(String, String, f64)>,
     pub sentence_count_transcript: usize,
     pub sentence_count_speech: usize,
 }

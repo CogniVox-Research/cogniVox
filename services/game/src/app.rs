@@ -1,5 +1,6 @@
 use crate::{
     config::AppConfig,
+    dto::settings::Settings,
     error::Result,
     game::proto::{self, APIRequest, Connection, DeviceConnection, WebConnection},
 };
@@ -24,7 +25,7 @@ use std::{
     time::Duration,
 };
 pub struct AppState {
-    pub pending: Arc<Mutex<HashMap<uuid::Uuid, WebConnection>>>,
+    pub pending: Arc<Mutex<HashMap<uuid::Uuid, PendingSession>>>,
     pub vr: Arc<Mutex<HashMap<String, Device>>>,
 
     pub mq_connection: mq::Connection,
@@ -53,6 +54,31 @@ impl Debug for Device {
 impl Connection for Device {
     fn is_connected(&self) -> bool {
         self.con.is_connected()
+    }
+}
+
+pub struct PendingSession {
+    pub con: WebConnection,
+    pub session_id: uuid::Uuid,
+    pub user_id: String,
+    pub settings: Settings,
+    pub document: String,
+}
+
+impl Connection for PendingSession {
+    fn is_connected(&self) -> bool {
+        self.con.is_connected()
+    }
+}
+
+impl Debug for PendingSession {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("PendingSession")
+            .field("session_id", &self.session_id)
+            .field("user_id", &self.user_id)
+            .field("settings", &self.settings)
+            .field("documet", &self.document)
+            .finish()
     }
 }
 

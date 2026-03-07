@@ -23,7 +23,7 @@ const ENV_CARDS: EnvCard[] = [
     image: StageSVG,
   },
   {
-    id: "boardroom",
+    id: "board_room",
     label: "Boardroom",
     tagline: "Executive boardroom",
     audience: "Small executive group · Formal setting",

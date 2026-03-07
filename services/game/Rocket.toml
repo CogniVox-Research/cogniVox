@@ -5,8 +5,11 @@ sds_service_url="http://localhost:8006/analyze-speech"
 transcript_analysis_url="http://localhost:8005"
 
 [default.file_store]
-type="local"
-path="../storage"
+type="s3"
+endpoint="http://127.0.0.1:8333"
+bucket="cg-data"
+access_key_id="admin_access_key"
+secret_access_key="admin_secret_key"
 
 [default.rabbitmq]
 connection_name="game"

@@ -14,7 +14,6 @@ pub async fn start_test_session(mut game: GameConnection) -> Result<()> {
 
         game.send(super::proto::GameOutbound::Init(GameSettings {
             difficulty: AudienceDifficulty::Hard,
-            session_type: crate::dto::settings::Type::Speech,
             scene: SceneType::Stage { size: 10 },
             distractions: true,
             qa: true,

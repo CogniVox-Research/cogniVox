@@ -8,7 +8,7 @@ from warnings import deprecated
 import pydantic
 from aio_pika import connect_robust
 from aio_pika.abc import AbstractChannel, AbstractIncomingMessage
-from aiormq import AMQPConnectionError
+from aiormq import AMQPConnectionError, ChannelNotFoundEntity
 
 
 @asynccontextmanager
@@ -40,23 +40,23 @@ def rabbitmq_connect(url: str):
 
 
 @typing.overload
-def read_queue[T: pydantic.BaseModel](
+async def read_queue[T: pydantic.BaseModel](
     channel: AbstractChannel,
     queue_name: str | None,
     msg_type: typing.Type[T],
-    exchange: str | None = None,
+    exchange: str = "",
     routing_key: str | None = None,
-) -> typing.AsyncIterable[T]: ...
+) -> typing.AsyncGenerator[T]: ...
 
 
 @typing.overload
-def read_queue(
+async def read_queue(
     channel: AbstractChannel,
     queue_name: str | None,
-    msg_type: None,
-    exchange: str | None = None,
+    msg_type: None = None,
+    exchange: str = "",
     routing_key: str | None = None,
-) -> typing.AsyncIterable[AbstractIncomingMessage]: ...
+) -> typing.AsyncGenerator[AbstractIncomingMessage]: ...
 
 
 async def read_queue[T: pydantic.BaseModel](
@@ -65,17 +65,33 @@ async def read_queue[T: pydantic.BaseModel](
     msg_type: typing.Type[T] | None = None,
     exchange: str = "",
     routing_key: str | None = None,
-) -> typing.AsyncIterable[T] | typing.AsyncIterable[AbstractIncomingMessage]:
+) -> typing.AsyncGenerator[T | AbstractIncomingMessage]:
+    if exchange:
+        while True:
+            try:
+                exchange_obj = await channel.get_exchange(exchange, ensure=True)
+                assert exchange_obj is not None
+                break
+            except ChannelNotFoundEntity:
+                logging.error(
+                    f"Exchange {exchange} not create yet. Retrying in 5 seconds"
+                )
+                await asyncio.sleep(5)
+
     if queue_name is None:
         queue = await channel.declare_queue(None, exclusive=True, auto_delete=True)
         queue_name = queue.name
         await queue.bind(exchange, routing_key=routing_key)
 
     queue = await channel.get_queue(queue_name, ensure=True)
-    async with queue.iterator() as queue_iter:
-        async for message in queue_iter:
-            async with message.process():
-                if msg_type is not None:
-                    yield msg_type.model_validate_json(message.body)
-                else:
-                    yield message
+
+    async def _iter():
+        async with queue.iterator() as queue_iter:
+            async for message in queue_iter:
+                async with message.process():
+                    if msg_type is not None:
+                        yield msg_type.model_validate_json(message.body)
+                    else:
+                        yield message
+
+    return _iter()

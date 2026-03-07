@@ -23,10 +23,9 @@ const ACTIONS = [
     new_state: true,
   },
   {
-    name: "Document",
+    name: "Web ready",
     mode: "web",
-    type: "document",
-    data: "placeholder-micromachines",
+    type: "ready",
 
     state: 2,
     new_state: true,

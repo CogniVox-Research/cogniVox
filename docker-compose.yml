@@ -9,3 +9,4 @@ include:
   - docker/sds.yml
   - docker/stuck_detection.yml
   - docker/transcript_analysis.yml
+  - docker/gateway.yml

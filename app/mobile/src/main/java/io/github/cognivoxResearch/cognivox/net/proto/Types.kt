@@ -19,8 +19,6 @@ data class GameSettings(
     val scene: SceneType,
     val size: Int = 1,
     val distractions: Boolean,
-    @SerialName("session_type")
-    val sessionType: String,
     val difficulty: AudienceDifficulty,
     val qa: Boolean
 )

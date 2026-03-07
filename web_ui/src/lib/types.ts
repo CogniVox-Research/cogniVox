@@ -129,7 +129,7 @@ export type Similarity = {
   key_points_speech: string[];
   alignment: Alignment[];
   order_analysis: OrderAnalysis;
-  redundant_speech_segments: string[];
+  redundant_speech_segments: [string,string,number][];
   sentence_count_transcript: number;
   sentence_count_speech: number;
 };

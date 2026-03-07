@@ -6,7 +6,7 @@ import { loginUser } from "../api/auth";
 import { useAuth } from "../context";
 
 const loginSchema = z.object({
-  username: z.string().min(1, "Username is required"),
+  email: z.email(),
   password: z.string().min(8, "Password must be at least 8 characters"),
 });
 
@@ -54,7 +54,10 @@ export function LoginForm({ onSuccess }: LoginFormProps) {
       )}
 
       <div className="space-y-1.5">
-        <label htmlFor="username" className="text-sm font-medium text-foreground">
+        <label
+          htmlFor="username"
+          className="text-sm font-medium text-foreground"
+        >
           Username
         </label>
         <input
@@ -62,11 +65,11 @@ export function LoginForm({ onSuccess }: LoginFormProps) {
           type="text"
           autoComplete="username"
           placeholder="john_doe"
-          {...register("username")}
+          {...register("email")}
           className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 transition-colors"
         />
-        {errors.username && (
-          <p className="text-xs text-destructive">{errors.username.message}</p>
+        {errors.email && (
+          <p className="text-xs text-destructive">{errors.email.message}</p>
         )}
       </div>
 

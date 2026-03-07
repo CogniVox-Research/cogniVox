@@ -22,15 +22,13 @@ export default defineConfig({
   server: {
     proxy: {
       "/api/auth": {
-        target: "http://localhost:8010",
+        target: "ws://localhost:7000/",
         changeOrigin: true,
-        rewrite: (path) => path.replace(/^\/api\/auth/, ""),
       },
       "/api/ws": {
-        target: "ws://localhost:8004",
+        target: "ws://localhost:7000/",
         changeOrigin: true,
-        rewrite: (path) => path.replace(/^\/api/, ""),
-        ws: true, // Enable WebSocket proxying
+        ws: true,
       },
     },
   },

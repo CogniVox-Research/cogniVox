@@ -18,7 +18,7 @@ export default class Session {
   }
 
   async connect(): Promise<Session> {
-    this.socket = new WebSocket("ws://localhost:8004/ws/web");
+    this.socket = new WebSocket(`ws://${window.location.host}/api/ws/web`);
     this.socket.onmessage = (m) => this.onMessage(m);
     return this;
   }

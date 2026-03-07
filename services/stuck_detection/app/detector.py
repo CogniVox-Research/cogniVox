@@ -5,11 +5,12 @@ from fastapi.logger import logger
 
 from app import config, dto
 from app.dto import ASRData, Silence
+from app.util import spacy_load_or_download
 
 
 class StuckDetector:
     def __init__(self) -> None:
-        self.model = spacy.load("en_core_web_md")
+        self.model = spacy_load_or_download("en_core_web_md")
         self.detections = {}
 
     async def detect_stuck(self, data: ASRData):

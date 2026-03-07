@@ -5,13 +5,24 @@ use crate::{
 };
 use common::{dto::ASRSessionCreate, mq};
 use jwt::PKeyWithDigest;
+use openssl::hash::MessageDigest;
+use openssl::pkey::PKey;
 use openssl::pkey::Public;
 use rocket::{
     futures::lock::Mutex,
     tokio::{self, time::sleep},
 };
-use std::{cmp, collections::HashMap, fmt::Debug, hash::Hash, sync::Arc, time::Duration};
-
+use std::{
+    cmp,
+    collections::HashMap,
+    fmt::Debug,
+    fs::File,
+    hash::Hash,
+    io::Read,
+    path::Path,
+    sync::{Arc, LazyLock},
+    time::Duration,
+};
 pub struct AppState {
     pub pending: Arc<Mutex<HashMap<uuid::Uuid, WebConnection>>>,
     pub vr: Arc<Mutex<HashMap<String, Device>>>,
@@ -20,7 +31,6 @@ pub struct AppState {
     pub asr_session_queue: mq::Sender<ASRSessionCreate>,
 
     pub endpoints: Arc<proto::Endpoints>,
-    pub public_key: PKeyWithDigest<Public>,
 }
 
 pub struct Device {
@@ -57,12 +67,10 @@ impl AppState {
         rabbitmq.create_exchange("results").await?;
 
         let request_client = reqwest::Client::new();
-        let pub_key = fetch_public_key();
 
         let state = Self {
             pending: Default::default(),
             vr: Default::default(),
-            public_key: pub_key,
             mq_connection: rabbitmq.clone(),
             asr_session_queue: rabbitmq
                 .sender("start", Some("asr_start".to_owned()))
@@ -95,16 +103,27 @@ impl AppState {
     }
 }
 
-pub fn fetch_public_key() -> PKeyWithDigest<Public> {
-    use jwt::PKeyWithDigest;
-    use openssl::hash::MessageDigest;
-    use openssl::pkey::PKey;
+static PUBLIC_KEY_STR: LazyLock<String> = {
+    std::sync::LazyLock::new(|| {
+        let mut public_key_data = String::new();
+        let paths = vec!["public.pem", "../auth/keys/public.pem"];
+        let key_path = paths
+            .iter()
+            .find(|path| Path::new(path).exists())
+            .expect("Public key should exist");
 
-    let pub_key_str = include_bytes!("../../auth_service/keys/public.pem");
+        File::open(key_path)
+            .expect("Public key should be accessable")
+            .read_to_string(&mut public_key_data)
+            .expect("Read should succeed");
+        public_key_data
+    })
+};
 
+pub fn get_public_key() -> PKeyWithDigest<Public> {
     let rs256_public_key = PKeyWithDigest {
         digest: MessageDigest::sha256(),
-        key: PKey::public_key_from_pem(pub_key_str).unwrap(),
+        key: PKey::public_key_from_pem(PUBLIC_KEY_STR.as_bytes()).unwrap(),
     };
 
     rs256_public_key

@@ -1,0 +1,10 @@
+services:
+  transcript_analysis_service:
+    restart: "unless-stopped"
+    build:
+      context: ../
+      dockerfile: ./services/transcript_analysis/Dockerfile
+    ports:
+      - "8005:8005"
+    volumes:
+      - ./config/transcript_analysis.toml:/app/services/transcript_analysis/config.toml:ro

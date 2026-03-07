@@ -1,0 +1,10 @@
+services:
+  game_service:
+    restart: "unless-stopped"
+    build:
+      context: ../
+      dockerfile: ./services/game/Dockerfile
+    ports:
+      - "8004:8004"
+    volumes:
+      - ../services/game/Rocket.toml:/app/Rocket.toml:ro

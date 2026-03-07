@@ -40,6 +40,7 @@ impl super::Inbound for GameInbound {
             Message::Text(text) => serde_json::de::from_str(&text).map_err(Error::Deserialize),
             Message::Binary(items) => Ok(GameInbound::Audio(items)),
             Message::Pong(items) => Err(Error::SocketPong(items)),
+            Message::Ping(items) => Err(Error::SocketPing(items)),
             Message::Close(_) => Err(Error::SocketClose),
             _ => Err(Error::UnexpectedMessage(value)),
         }

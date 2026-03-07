@@ -17,3 +17,13 @@ path="../storage"
 [default.rabbitmq]
 connection_name="game"
 address="amqp://appuser:apppass@127.0.0.1"
+
+[release.rabbitmq]
+address="amqp://appuser:apppass@rabbitmq"
+
+[release.recording_store]
+type="s3"
+endpoint="http://seaweedfs:8333"
+bucket="cg-data"
+access_key_id="admin_access_key"
+secret_access_key="admin_secret_key"

@@ -11,3 +11,17 @@ path="../storage"
 [default.rabbitmq]
 connection_name="game"
 address="amqp://appuser:apppass@127.0.0.1"
+
+[release]
+sds_service_url="http://sds_service:8006/analyze-speech"
+transcript_analysis_url="http://transcript_analysis_service:8005"
+
+[release.file_store]
+type="s3"
+endpoint="http://seaweedfs:8333"
+bucket="cg-data"
+access_key_id="admin_access_key"
+secret_access_key="admin_secret_key"
+
+[release.rabbitmq]
+address="amqp://appuser:apppass@rabbitmq"

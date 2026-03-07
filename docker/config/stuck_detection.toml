@@ -1,0 +1,6 @@
+rabbitmq_url = "amqp://appuser:apppass@rabbitmq"
+max_silence = 7.5
+
+checked_sentences = 5
+sentence_similarity_threshold = 0.95
+repeated_sentence_threshold = 2

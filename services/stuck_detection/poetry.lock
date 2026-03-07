@@ -2316,7 +2316,7 @@ pytest = "^9.0.2"
 
 [package.source]
 type = "directory"
-url = "../shared"
+url = "../../lib/shared"
 
 [[package]]
 name = "shellingham"
@@ -3331,4 +3331,4 @@ propcache = ">=0.2.1"
 [metadata]
 lock-version = "2.1"
 python-versions = ">=3.13,<3.14"
-content-hash = "4ff225ac7a05921e46dd43963d16713ec00d5099a7f0179ea1442c0a65a21cdb"
+content-hash = "66b9aa9aac3cd9e1a0feef80ce72b8dc6b8e795d3f78d6c3c154b011a3d26b71"

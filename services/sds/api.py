@@ -66,6 +66,7 @@ def root():
 
 @app.post("/analyze-speech")
 async def analyze_speech(req: SDSRequest):
+    print(f"Getting audio file {req.audio_key}")
     data = store.get(req.audio_key)
 
     # Save uploaded file

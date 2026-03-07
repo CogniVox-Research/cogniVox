@@ -214,7 +214,7 @@ class App {
 
   handle_message(mode, message) {
     if (!this.web_only && mode === "web" && message.type === "pair") {
-      this.connect("game", message.data);
+      this.connect("game", message.data.session_id);
     } else if (message.type === "a_s_r") {
       message.data.lines = undefined;
       message.data.session_id = undefined;

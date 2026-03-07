@@ -1,0 +1,10 @@
+services:
+  biometric_service:
+    restart: "unless-stopped"
+    build:
+      context: ../
+      dockerfile: ./services/biometric/Dockerfile
+    ports:
+      - "8011:8011"
+    volumes:
+      - ./config/biometric.toml:/app/services/biometric/config.toml:ro

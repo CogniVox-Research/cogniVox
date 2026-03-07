@@ -1,31 +1,11 @@
 include:
-  - compose/rabbitmq.yml
-  - compose/seaweedfs.yml
-services:
-  asr_service:
-    runtime: nvidia
-    build:
-      context: .
-      dockerfile: ./asr_service/Dockerfile
-    volumes:
-      - ./asr_service/models:/app/models
-      - ./compose/config/asr.toml:/app/Rocket.toml
-
-  document_service:
-    build:
-      context: .
-      dockerfile: ./document_service/Dockerfile
-
-  auth_service:
-    build:
-      context: .
-      dockerfile: ./auth_service/Dockerfile
-    ports:
-      - "8010:8010"
-
-  biometric_service:
-    build:
-      context: .
-      dockerfile: ./biometric_service/Dockerfile
-    ports:
-      - "9010:9010"
+  - docker/rabbitmq.yml
+  - docker/seaweedfs.yml
+  - docker/asr.yml
+  - docker/auth.yml
+  - docker/biometric.yml
+  - docker/document.yml
+  - docker/game.yml
+  - docker/sds.yml
+  - docker/stuck_detection.yml
+  - docker/transcript_analysis.yml

@@ -15,7 +15,7 @@ use rocket::{
 use rocket_ws::{Channel, WebSocket};
 
 use crate::{
-    app::{AppState, Device, fetch_public_key},
+    app::{AppState, Device, get_public_key},
     game::proto::{
         self, DeviceConnection, DeviceInbound, DeviceOutbound, GameConnection, GameOutbound,
         WebConnection, WebOutbound,
@@ -84,7 +84,7 @@ async fn vr_device(ws: WebSocket, state: &State<AppState>) -> Channel<'_> {
     let channel = con.handle_websocket(ws);
 
     let devices = state.vr.clone();
-    let key = fetch_public_key();
+    let key = get_public_key();
 
     tokio::spawn(async move {
         con.send(DeviceOutbound::Ok {

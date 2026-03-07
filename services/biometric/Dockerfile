@@ -4,13 +4,15 @@ RUN pip install --no-cache-dir poetry==2.3.2
 RUN poetry config virtualenvs.create false
 
 FROM build-base
-COPY shared/ ./shared/
-ENV SERIVCE_NAME=biometric_service
+WORKDIR /app
+COPY lib/shared/ ./lib/shared/
+ENV SERIVCE_NAME=services/biometric
 WORKDIR /app/$SERIVCE_NAME
 COPY $SERIVCE_NAME/poetry.lock ./poetry.lock
 COPY $SERIVCE_NAME/pyproject.toml ./pyproject.toml
-RUN poetry install --no-interaction --no-ansi
+RUN --mount=type=cache,target=/root/.cache/pypoetry\
+    poetry install --no-interaction --no-ansi
 COPY $SERIVCE_NAME/ .
-EXPOSE 9010
+EXPOSE 8011
 
-CMD ["poetry", "run", "fastapi", "run", "--port", "9010"]
+CMD ["poetry", "run", "fastapi", "run", "--port", "8011"]

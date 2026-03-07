@@ -5,7 +5,7 @@ use rocket::{
     request::{self, FromRequest},
 };
 
-use crate::app::fetch_public_key;
+use crate::app::get_public_key;
 
 pub struct User {
     pub user_id: String,
@@ -17,7 +17,7 @@ impl<'r> FromRequest<'r> for User {
 
     async fn from_request(req: &'r Request<'_>) -> request::Outcome<Self, Self::Error> {
         if let Some(cookie) = req.cookies().get("auth") {
-            let key = fetch_public_key();
+            let key = get_public_key();
             let token: jwt::Token<Header, RegisteredClaims, _> =
                 cookie.value().verify_with_key(&key).unwrap();
             let user_id = token.claims().subject.clone().unwrap();

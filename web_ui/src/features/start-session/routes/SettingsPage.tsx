@@ -8,7 +8,7 @@ import ToggleOption from "../components/toggle-option";
 
 function maxSizeFor(env: Environment) {
   switch (env) {
-    case "boardroom":
+    case "board_room":
       return 8;
     case "stage":
       return 24;
@@ -24,7 +24,7 @@ export function SettingsPage() {
   const setDifficulty = (v: Difficulty) =>
     setConfig({ ...config, difficulty: v });
   const setDistractions = (v: boolean) =>
-    setConfig({ ...config, distractionsEnabled: v });
+    setConfig({ ...config, distractions: v });
   const setQA = (v: boolean) => setConfig({ ...config, qaEnabled: v });
   const setSize = (v: number) => setConfig({ ...config, audienceSize: v });
 
@@ -72,7 +72,7 @@ export function SettingsPage() {
           {/* Distractions toggle */}
           <ToggleOption
             title="Audience Distractions"
-            value={config.distractionsEnabled}
+            value={config.distractions}
             onChange={setDistractions}
           >
             Simulate real-world interruptions: audience members whispering,

@@ -9,8 +9,8 @@ use crate::{
 #[derive(Debug, Deserialize, Serialize)]
 #[serde(tag = "type", content = "data", rename_all = "snake_case")]
 pub enum WebInbound {
-    Document(String),
     Start(dto::settings::Settings),
+    Ready,
 }
 
 #[derive(Debug, Serialize)]
@@ -25,10 +25,10 @@ pub enum WebOutbound {
         session_id: uuid::Uuid,
     },
     GameConnected,
-    Results(
-        Option<dto::transcript::Response>,
-        Option<dto::sds::Response>,
-    ),
+    Results {
+        transcript_analysis: Option<dto::transcript::Response>,
+        speech_score: Option<dto::sds::Response>,
+    },
 }
 
 impl super::Inbound for WebInbound {

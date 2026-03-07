@@ -2,7 +2,7 @@ use std::{sync::Arc, time::Duration};
 pub mod test_session;
 
 use crate::{
-    app::AppState,
+    app::{AppState, PendingSession},
     dto::{self, sds, settings::Settings, transcript},
     error::{self, Error, Result},
     game::proto::{Endpoints, MQSession, ServiceInbound, WebOutbound},
@@ -12,7 +12,7 @@ use common::{
     dto::asr::{ASR, ResultType},
     file_store::Store,
 };
-use proto::{GameConnection, GameInbound, GameOutbound, WebConnection, WebInbound};
+use proto::{GameConnection, GameInbound, GameOutbound, WebConnection};
 use rocket::tokio::{self, select, time::sleep};
 
 pub struct Game {
@@ -50,11 +50,14 @@ impl Game {
 
         self.game.send(GameOutbound::End).await?;
 
-        let transcript_result = self.transcript_analysis(speech_asr.full_text.clone()).await;
+        let transcript_analysis = self.transcript_analysis(speech_asr.full_text.clone()).await;
         let speech_score = self.get_speech_score(speech_asr.full_text.clone()).await;
 
         self.web
-            .send(WebOutbound::Results(transcript_result, speech_score))
+            .send(WebOutbound::Results {
+                transcript_analysis,
+                speech_score,
+            })
             .await?;
 
         sleep(Duration::from_secs(1)).await;
@@ -161,45 +164,26 @@ impl Game {
     }
 }
 
-pub async fn start_game(
-    state: &AppState,
-    store: &Store,
-    session_id: uuid::Uuid,
-    game: GameConnection,
-    mut web: WebConnection,
-) -> Result<()> {
-    web.send(WebOutbound::Session { session_id }).await?;
-    web.send(WebOutbound::GameConnected).await?;
+pub async fn start_game(state: &AppState, game: GameConnection, web: PendingSession) -> Result<()> {
+    web.con.send(WebOutbound::GameConnected).await?;
     log::info!("Game connected successfully");
 
-    let session_mq = MQSession::new(&state.mq_connection, session_id).await?;
+    let session_mq = MQSession::new(&state.mq_connection, web.session_id).await?;
 
     log::info!("MQ initialized for session");
 
     let enpoints = state.endpoints.clone();
-    let store = store.clone();
     let asr_session_queue = state.asr_session_queue.clone();
 
     tokio::spawn(async move {
-        let settings = proto::recv_message!(web, WebInbound::Start).unwrap();
-
-        // TODO: validate document and settings.
-        log::info!("Got game settings {settings:?}");
-
-        let document_id = proto::recv_message!(web, WebInbound::Document).unwrap();
-        log::info!("Got document {document_id:?}");
-        let expected_speech = fetch_document(&store, session_id, &document_id)
-            .await
-            .unwrap();
-
         let mut game = Game {
-            session_id,
+            session_id: web.session_id,
             game,
-            web,
-            settings,
+            web: web.con,
+            settings: web.settings,
             enpoints,
             mq: session_mq,
-            expected_speech,
+            expected_speech: web.document,
             asr_session_queue,
         };
 
@@ -212,7 +196,7 @@ pub async fn start_game(
     Ok(())
 }
 
-async fn fetch_document(
+pub async fn fetch_document(
     store: &Store,
     session_id: uuid::Uuid,
     document_id: &str,

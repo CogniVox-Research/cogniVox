@@ -1,12 +1,10 @@
-export type Environment = "stage" | "boardroom" | "interview";
+export type Environment = "stage" | "board_room" | "interview";
 export type Difficulty = "easy" | "medium" | "hard";
-export type Type = "interview" | "speech";
 
 export type OptionsConfig = {
-  session_type: Type;
   environment: Environment;
   difficulty: Difficulty;
-  distractionsEnabled: boolean;
+  distractions: boolean;
   audienceSize: number;
   qaEnabled: boolean;
 };

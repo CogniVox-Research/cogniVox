@@ -1,11 +1,12 @@
 import os
 import secrets
+import shutil
 import traceback
 from enum import Enum
 
 import pydantic
 import whisper
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, File, Form, HTTPException, UploadFile
 from shared.store import connect_store
 
 from config import config
@@ -76,7 +77,26 @@ async def analyze_speech(req: SDSRequest):
         file.write(data)
 
     speech_type = req.speech_type
+    return get_score_speech(file_path, speech_type)
 
+
+@app.post("/test-analyze-speech")
+async def test_analyze_speech(
+    file: UploadFile = File(...), speech_type: SpeechType = Form(...)
+):
+    if not file.filename.lower().endswith((".wav", ".mp3", ".m4a")):
+        raise HTTPException(status_code=400, detail="Unsupported audio format")
+
+    file_path = os.path.join(UPLOAD_DIR, file.filename)
+
+    # Save uploaded file
+    with open(file_path, "wb") as buffer:
+        shutil.copyfileobj(file.file, buffer)
+
+    return get_score_speech(file_path, speech_type)
+
+
+async def get_score_speech(file_path, speech_type):
     try:
         # 1️⃣ Transcribe
         result = whisper_model.transcribe(file_path, fp16=False)

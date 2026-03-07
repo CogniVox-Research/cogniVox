@@ -23,43 +23,40 @@ llm_server: LLMService = None  # pyright: ignore[reportAssignmentType]
 
 
 async def read_queue(conn: AbstractChannel):
-    try:
-        queue_reader = rabbitmq.read_queue(conn, None, MQData, "asr", "#")
-        output = await conn.get_exchange("results")
-        async for data in queue_reader:
-            data = data.data
+    queue_reader = rabbitmq.read_queue(conn, None, MQData, "asr", "#")
+    output = await conn.get_exchange("results")
+    async for data in queue_reader:
+        data = data.data
 
-            detection = await detector.detect_stuck(data)
-            if detection is None:
-                continue
-            print(detection)
+        detection = await detector.detect_stuck(data)
+        if detection is None:
+            continue
+        print(detection)
 
-            if isinstance(detection, UnstuckDetection):
-                await output.publish(
-                    aio_pika.Message(
-                        body=json.dumps(
-                            {
-                                "type": "unstuck",
-                            }
-                        ).encode()
-                    ),
-                    routing_key=data.session_id,
-                    mandatory=False,
-                )
-            else:
-                await output.publish(
-                    aio_pika.Message(
-                        body=json.dumps(
-                            {
-                                "type": "stuck",
-                            }
-                        ).encode()
-                    ),
-                    routing_key=data.session_id,
-                    mandatory=False,
-                )
-    except Exception as e:
-        print(e)
+        if isinstance(detection, UnstuckDetection):
+            await output.publish(
+                aio_pika.Message(
+                    body=json.dumps(
+                        {
+                            "type": "unstuck",
+                        }
+                    ).encode()
+                ),
+                routing_key=data.session_id,
+                mandatory=False,
+            )
+        else:
+            await output.publish(
+                aio_pika.Message(
+                    body=json.dumps(
+                        {
+                            "type": "stuck",
+                        }
+                    ).encode()
+                ),
+                routing_key=data.session_id,
+                mandatory=False,
+            )
 
 
 @asynccontextmanager

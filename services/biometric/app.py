@@ -82,26 +82,23 @@ config = Config.load()
 
 
 async def read_queue(conn: AbstractChannel):
-    try:
-        queue_reader = rabbitmq.read_queue(conn, None, FeatureInput, "stress")
-        output = await conn.get_exchange("results")
-        async for features in queue_reader:
-            print("Got Request", features)
-            session_id = features.session_id
-            assert session_id is not None
+    queue_reader = rabbitmq.read_queue(conn, None, FeatureInput, "stress")
+    output = await conn.get_exchange("results")
+    async for features in queue_reader:
+        print("Got Request", features)
+        session_id = features.session_id
+        assert session_id is not None
 
-            response = predict_stress(features)
-            print("Response", response)
+        response = predict_stress(features)
+        print("Response", response)
 
-            await output.publish(
-                aio_pika.Message(
-                    body=json.dumps({"type": "stress", "data": response}).encode()
-                ),
-                routing_key=session_id,
-                mandatory=False,
-            )
-    except Exception as e:
-        print(e)
+        await output.publish(
+            aio_pika.Message(
+                body=json.dumps({"type": "stress", "data": response}).encode()
+            ),
+            routing_key=session_id,
+            mandatory=False,
+        )
 
 
 @asynccontextmanager

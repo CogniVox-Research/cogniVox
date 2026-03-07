@@ -23,40 +23,44 @@ llm_server: LLMService = None  # pyright: ignore[reportAssignmentType]
 
 
 async def read_queue(conn: AbstractChannel):
-    queue_reader = rabbitmq.read_queue(conn, None, MQData, "asr", "#")
+    queue_reader = await rabbitmq.read_queue(conn, None, MQData, "asr", "#")
     output = await conn.get_exchange("results")
-    async for data in queue_reader:
-        data = data.data
 
-        detection = await detector.detect_stuck(data)
-        if detection is None:
-            continue
-        print(detection)
+    async def _task():
+        async for data in queue_reader:
+            data = data.data
 
-        if isinstance(detection, UnstuckDetection):
-            await output.publish(
-                aio_pika.Message(
-                    body=json.dumps(
-                        {
-                            "type": "unstuck",
-                        }
-                    ).encode()
-                ),
-                routing_key=data.session_id,
-                mandatory=False,
-            )
-        else:
-            await output.publish(
-                aio_pika.Message(
-                    body=json.dumps(
-                        {
-                            "type": "stuck",
-                        }
-                    ).encode()
-                ),
-                routing_key=data.session_id,
-                mandatory=False,
-            )
+            detection = await detector.detect_stuck(data)
+            if detection is None:
+                continue
+            print(detection)
+
+            if isinstance(detection, UnstuckDetection):
+                await output.publish(
+                    aio_pika.Message(
+                        body=json.dumps(
+                            {
+                                "type": "unstuck",
+                            }
+                        ).encode()
+                    ),
+                    routing_key=data.session_id,
+                    mandatory=False,
+                )
+            else:
+                await output.publish(
+                    aio_pika.Message(
+                        body=json.dumps(
+                            {
+                                "type": "stuck",
+                            }
+                        ).encode()
+                    ),
+                    routing_key=data.session_id,
+                    mandatory=False,
+                )
+
+    return asyncio.create_task(_task())
 
 
 @asynccontextmanager
@@ -65,7 +69,7 @@ async def lifespan(app: FastAPI):
     async with rabbitmq.connect(config.rabbitmq_url) as con:
         async with rpc.RPCClient(con) as client:
             llm_server = client.get_server("llm-server", LLMService)
-            task = asyncio.create_task(read_queue(con))
+            task = await read_queue(con)
             yield
             task.cancel()
 

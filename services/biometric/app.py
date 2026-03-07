@@ -1,6 +1,7 @@
 import asyncio
 import json
 import os
+from asyncio.tasks import Task
 from contextlib import asynccontextmanager
 from typing import Optional
 
@@ -82,30 +83,34 @@ config = Config.load()
 
 
 async def read_queue(conn: AbstractChannel):
-    queue_reader = rabbitmq.read_queue(conn, None, FeatureInput, "stress")
+    queue_reader = await rabbitmq.read_queue(conn, None, FeatureInput, "stress")
     output = await conn.get_exchange("results")
-    async for features in queue_reader:
-        print("Got Request", features)
-        session_id = features.session_id
-        assert session_id is not None
 
-        response = predict_stress(features)
-        print("Response", response)
+    async def _task():
+        async for features in queue_reader:
+            print("Got Request", features)
+            session_id = features.session_id
+            assert session_id is not None
 
-        await output.publish(
-            aio_pika.Message(
-                body=json.dumps({"type": "stress", "data": response}).encode()
-            ),
-            routing_key=session_id,
-            mandatory=False,
-        )
+            response = predict_stress(features)
+            print("Response", response)
+
+            await output.publish(
+                aio_pika.Message(
+                    body=json.dumps({"type": "stress", "data": response}).encode()
+                ),
+                routing_key=session_id,
+                mandatory=False,
+            )
+
+    return asyncio.create_task(_task())
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     global llm_server
     async with rabbitmq.connect(config.rabbitmq_url) as con:
-        task = asyncio.create_task(read_queue(con))
+        task = await read_queue(con)
         yield
         task.cancel()
 

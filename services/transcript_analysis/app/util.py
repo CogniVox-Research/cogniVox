@@ -89,6 +89,5 @@ def download_nltk():
     from nltk.downloader import nltk
 
     nltk.data.path.append(str(model_dir))
-    if not config.skip_download:
-        nltk.download("punkt", model_dir)
-        nltk.download("punkt_tab", model_dir)
+    nltk.download("punkt", model_dir)
+    nltk.download("punkt_tab", model_dir)

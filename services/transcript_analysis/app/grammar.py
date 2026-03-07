@@ -1,7 +1,5 @@
 import warnings
 
-import spacy
-import torch
 from transformers import T5ForConditionalGeneration, T5Tokenizer
 
 from app import util
@@ -19,11 +17,15 @@ class SpeechGrammarChecker:
         print(f"Using device: {self.device}")
 
         model_name = "vennify/t5-base-grammar-correction"
-
-        self.tokenizer = T5Tokenizer.from_pretrained(model_name)
-        self.model = T5ForConditionalGeneration.from_pretrained(model_name).to(
-            self.device
+        self.tokenizer = T5Tokenizer.from_pretrained(
+            model_name,
+            cache_dir=str(util.model_dir),
         )
+        self.model = T5ForConditionalGeneration.from_pretrained(
+            model_name,
+            cache_dir=str(util.model_dir),
+        ).to(self.device)
+
         self.nlp = util.spacy_load_or_download("en_core_web_md")
 
     def correct_sentence(self, sentence):

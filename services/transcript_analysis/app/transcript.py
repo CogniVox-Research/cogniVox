@@ -1,24 +1,10 @@
-###########################################################
-from pathlib import Path
-
-import nltk
-
-from app.util import is_out_of_memory
-
-download_dir = Path(__file__).parent.parent / "models"
-download_dir.mkdir(exist_ok=True, parents=True)
-
-nltk.download("punkt", download_dir, quiet=True)
-nltk.download("punkt_tab", download_dir, quiet=True)
-nltk.data.path.append(str(download_dir))
-
-from typing import List, Tuple
-
 import nltk
 import numpy as np
 from sentence_transformers import SentenceTransformer, util
 from sklearn.cluster import KMeans
 from sklearn.metrics.pairwise import cosine_similarity
+
+from app.util import download_nltk, is_out_of_memory, model_dir
 
 # ------------------------------------------
 # CONFIGURATION
@@ -32,6 +18,8 @@ PARAPHRASE_MILD = 0.85
 KEY_POINTS_COUNT = 3
 
 
+download_nltk()
+
 # ============================================================
 #                     MAIN COMPARISON CLASS
 # ============================================================
@@ -42,14 +30,17 @@ class SpeechComparer:
 
     def __init__(self, model_name: str = MODEL_NAME):
         try:
-            self.model = SentenceTransformer(model_name, cache_folder=str(download_dir))
+            self.model = SentenceTransformer(
+                model_name,
+                cache_folder=str(model_dir),
+            )
         except Exception as e:
             if is_out_of_memory(e):
                 print("Not enough cuda memory. Falling back to CPU")
                 self.model = SentenceTransformer(
                     model_name,
                     device="cpu",
-                    cache_folder=str(download_dir),
+                    cache_folder=str(model_dir),
                 )
             else:
                 raise

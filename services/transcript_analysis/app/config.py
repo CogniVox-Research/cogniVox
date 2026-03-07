@@ -5,8 +5,7 @@ __all__ = ["Settings", "config"]
 from shared import SharedBaseSettings
 
 
-class Settings(SharedBaseSettings):
-    pass
+class Settings(SharedBaseSettings): ...
 
 
-config = Settings.load()
+config: Settings = Settings.load()

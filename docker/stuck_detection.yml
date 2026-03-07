@@ -8,3 +8,4 @@ services:
       - "8012:8012"
     volumes:
       - ./config/stuck_detection.toml:/app/services/stuck_detection/config.toml:ro
+      - ../services/stuck_detection/models:/app/models

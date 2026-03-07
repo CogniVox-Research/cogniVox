@@ -22,7 +22,7 @@ numpy = "^2.3.5"
 scikit-learn = "^1.7.2"
 aio-pika = "^9.5.8"
 triton = "^3.5.1"
-torch = "^2.10.0"
+torch = {version="^2.10.0", source="torch-cpu"}
 transformers = "^5.1.0"
 sentencepiece = "^0.2.1"
 spacy = "^3.8.11"
@@ -31,3 +31,8 @@ spacy = "^3.8.11"
 [build-system]
 requires = ["poetry-core"]
 build-backend = "poetry.core.masonry.api"
+
+[[tool.poetry.source]]
+name = "torch-cpu"
+url = "https://download.pytorch.org/whl/cpu"
+priority = "explicit"

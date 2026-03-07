@@ -4,6 +4,11 @@ import numpy as np
 import spacy
 import torch
 
+from app.config import config
+
+model_dir = Path(__file__).parent.parent / "models"
+model_dir.mkdir(exist_ok=True, parents=True)
+
 
 def convert_numpy_to_python(obj):
     """
@@ -61,7 +66,7 @@ def _download_model(model_name: str, model_path: Path):
 
 
 def spacy_load_or_download(model_name: str):
-    download_dir = Path(__file__).parent.parent / "models" / "spacy"
+    download_dir = model_dir / "spacy"
     download_dir.mkdir(exist_ok=True, parents=True)
 
     model_path = download_dir / model_name
@@ -78,3 +83,12 @@ def is_out_of_memory(e: Exception) -> bool:
         return True
 
     return False
+
+
+def download_nltk():
+    from nltk.downloader import nltk
+
+    nltk.data.path.append(str(model_dir))
+    if not config.skip_download:
+        nltk.download("punkt", model_dir)
+        nltk.download("punkt_tab", model_dir)

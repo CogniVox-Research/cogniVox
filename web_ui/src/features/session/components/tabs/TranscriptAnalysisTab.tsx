@@ -490,23 +490,62 @@ const TranscriptAnalysisTab = ({ state }: TranscriptAnalysisTabProps) => {
                         Redundant Speech Segments ({similarity.redundant_speech_segments.length})
                     </p>
                     <p className="text-xs text-slate-600 mb-4">
-                        These segments were repeated or mentioned multiple times unnecessarily, reducing presentation clarity.
+                        These segments were found in both the speech and transcript, indicating potential repetition or overlap in content delivery. The similarity score shows how closely they match.
                     </p>
-                    <div className="space-y-2 max-h-80 overflow-y-auto pr-2">
-                        {similarity.redundant_speech_segments.map((segment, idx) => (
-                            <motion.div
-                                key={idx}
-                                className="flex items-start gap-3 p-4 bg-orange-50 rounded-lg border-l-4 border-l-orange-500 hover:bg-orange-100 transition-colors"
-                                initial={{ opacity: 0, x: -10 }}
-                                animate={{ opacity: 1, x: 0 }}
-                                transition={{ delay: idx * 0.05 }}
-                            >
-                                <TrendingDown className="w-5 h-5 text-orange-600 flex-shrink-0 mt-0.5" />
-                                <div className="flex-1">
-                                    <p className="text-sm text-slate-900 leading-relaxed italic">"{segment}"</p>
-                                </div>
-                            </motion.div>
-                        ))}
+                    <div className="space-y-3 max-h-96 overflow-y-auto pr-2">
+                        {similarity.redundant_speech_segments.map(([speechSentence, transcriptSentence, similarityScore], idx) => {
+                            const similarityPercent = Math.round(similarityScore * 100);
+                            return (
+                                <motion.div
+                                    key={idx}
+                                    className="flex items-start gap-3 p-4 bg-orange-50 rounded-lg border-l-4 border-l-orange-500 hover:bg-orange-100 transition-colors shadow-sm"
+                                    initial={{ opacity: 0, x: -10 }}
+                                    animate={{ opacity: 1, x: 0 }}
+                                    transition={{ delay: idx * 0.03 }}
+                                >
+                                    <TrendingDown className="w-5 h-5 text-orange-600 flex-shrink-0 mt-0.5" />
+                                    <div className="flex-1">
+                                        {/* Speech Sentence */}
+                                        <div className="mb-3">
+                                            <p className="text-xs font-bold text-orange-700 uppercase mb-1">🎤 Spoken Segment:</p>
+                                            <p className="text-sm text-slate-900 leading-relaxed bg-white p-2 rounded border border-orange-200 italic">
+                                                "{speechSentence}"
+                                            </p>
+                                        </div>
+
+                                        {/* Transcript Sentence */}
+                                        <div className="mb-3">
+                                            <p className="text-xs font-bold text-slate-700 uppercase mb-1">📄 Also In Transcript:</p>
+                                            <p className="text-sm text-slate-800 leading-relaxed bg-white p-2 rounded border border-slate-300 italic">
+                                                "{transcriptSentence}"
+                                            </p>
+                                        </div>
+
+                                        {/* Similarity Score */}
+                                        <div className="flex items-center gap-3">
+                                            <div className="flex-1">
+                                                <div className="relative w-full h-2.5 bg-slate-300 rounded-full overflow-hidden">
+                                                    <motion.div
+                                                        className="h-full bg-gradient-to-r from-orange-400 to-orange-600"
+                                                        initial={{ width: 0 }}
+                                                        animate={{ width: `${similarityPercent}%` }}
+                                                        transition={{ duration: 0.6, delay: 0.2 }}
+                                                    />
+                                                </div>
+                                            </div>
+                                            <span className="text-sm font-bold text-orange-700 whitespace-nowrap">{similarityPercent}%</span>
+                                        </div>
+                                    </div>
+                                </motion.div>
+                            );
+                        })}
+                    </div>
+
+                    {/* Redundancy Interpretation */}
+                    <div className="mt-4 p-3 bg-orange-50 rounded-lg border border-orange-200">
+                        <p className="text-xs text-orange-800 font-semibold">
+                            💡 <strong>Tip:</strong> Redundant segments reduce presentation clarity. Consider removing or rephrasing to maintain audience engagement.
+                        </p>
                     </div>
                 </motion.div>
             )}

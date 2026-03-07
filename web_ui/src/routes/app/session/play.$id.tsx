@@ -1,3 +1,7 @@
+import ErrorPage from "@/features/session/components/error";
+import FinishedPage from "@/features/session/components/finished";
+import RunningPage from "@/features/session/components/running";
+import WaitingPage from "@/features/session/components/waiting";
 import useSessionData from "@/hooks/use-session-data";
 import { createFileRoute } from "@tanstack/react-router";
 
@@ -10,16 +14,12 @@ function RouteComponent() {
 
   switch (state.state) {
     case "waiting_join":
-      // Waiting page with qr
-      return <div>{JSON.stringify(state)}</div>;
+      return <WaitingPage state={state} />;
     case "error":
-      // Error screen
-      return <div>{JSON.stringify(state)}</div>;
+      return <ErrorPage state={state} />;
     case "running":
-      // Running screen with live updates
-      return <div>{JSON.stringify(state)}</div>;
+      return <RunningPage state={state} />;
     case "finished":
-      // Result screen here
-      return <div>{JSON.stringify(state)}</div>;
+      return <FinishedPage state={state} />;
   }
 }

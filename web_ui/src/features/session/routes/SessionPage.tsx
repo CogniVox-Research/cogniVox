@@ -1,5 +1,5 @@
-import { StressChart } from "../components/StressChart";
-import { LiveTranscript } from "../components/LiveTranscript";
+import { StressChart } from "../components/old/StressChart";
+import { LiveTranscript } from "../components/old/LiveTranscript";
 
 export function SessionPage() {
   return (

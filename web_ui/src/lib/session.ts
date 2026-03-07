@@ -83,7 +83,17 @@ export default class Session {
     });
 
     socket.subscribe("game_connected", () => {
-      this.state = { state: "running", asr: [], stress: [] };
+      this.state = {
+        state: "running",
+        asr: {
+          current_silence: null,
+          full_text: "",
+          lines: [],
+          session_id: session_id,
+          type: "partial",
+        },
+        stress: [],
+      };
       this.onChange();
     });
 

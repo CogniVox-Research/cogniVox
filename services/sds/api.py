@@ -77,7 +77,7 @@ async def analyze_speech(req: SDSRequest):
         file.write(data)
 
     speech_type = req.speech_type
-    return get_score_speech(file_path, speech_type)
+    return await get_score_speech(file_path, speech_type)
 
 
 @app.post("/test-analyze-speech")
@@ -93,7 +93,7 @@ async def test_analyze_speech(
     with open(file_path, "wb") as buffer:
         shutil.copyfileobj(file.file, buffer)
 
-    return get_score_speech(file_path, speech_type)
+    return await get_score_speech(file_path, speech_type)
 
 
 async def get_score_speech(file_path, speech_type):

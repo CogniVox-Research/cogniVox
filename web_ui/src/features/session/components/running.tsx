@@ -1,17 +1,35 @@
-'use client';
+"use client";
 
-import { useState, useEffect, useRef } from 'react';
-import { motion, AnimatePresence, type Variants } from 'framer-motion';
-import { AlertCircle, Heart, Zap, Mic } from 'lucide-react';
-import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
-import type { HeartRate, Segment, StressResponse, Timestamp, Timestamped } from '@/lib/types';
-import type { RunningState } from '@/lib/session';
-
+import { useState, useEffect, useRef } from "react";
+import { motion, AnimatePresence, type Variants } from "framer-motion";
+import { AlertCircle, Heart, Zap, Mic } from "lucide-react";
+import {
+  LineChart,
+  Line,
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  Legend,
+  ResponsiveContainer,
+} from "recharts";
+import type {
+  HeartRate,
+  Segment,
+  StressResponse,
+  Timestamp,
+  Timestamped,
+} from "@/lib/types";
+import type { RunningState } from "@/lib/session";
 
 const RunningPage = ({ state }: { state: RunningState }) => {
   const [wordCount, setWordCount] = useState(0);
-  const [currentStress, setCurrentStress] = useState<Timestamped<StressResponse> | null>(null);
-  const [currentHeartRate, setCurrentHeartRate] = useState<Timestamped<HeartRate> | null>(null);
+  const [currentStress, setCurrentStress] =
+    useState<Timestamped<StressResponse> | null>(null);
+  const [currentHeartRate, setCurrentHeartRate] =
+    useState<Timestamped<HeartRate> | null>(null);
   const [isStuck, setIsStuck] = useState(false);
   const [stuckSuggestion, setStuckSuggestion] = useState<string | null>(null);
   const [biometricChartData, setBiometricChartData] = useState<any[]>([]);
@@ -38,13 +56,13 @@ const RunningPage = ({ state }: { state: RunningState }) => {
       // Always update with the latest stuck event
       const lastStuck = state.stuck[state.stuck.length - 1];
 
-      if (lastStuck.data.type === 'stuck') {
+      if (lastStuck.data.type === "stuck") {
         setIsStuck(true);
         setStuckSuggestion(null);
-      } else if (lastStuck.data.type === 'unstuck') {
+      } else if (lastStuck.data.type === "unstuck") {
         setIsStuck(false);
         setStuckSuggestion(null);
-      } else if (lastStuck.data.type === 'stuck_suggestion') {
+      } else if (lastStuck.data.type === "stuck_suggestion") {
         setIsStuck(true);
         setStuckSuggestion(lastStuck.data.text);
       }
@@ -66,22 +84,28 @@ const RunningPage = ({ state }: { state: RunningState }) => {
 
   // Prepare stuck behavior chart data
   useEffect(() => {
-    const chartData = state.stuck.map((s) => ({
-      time: formatDateTimestamp(s.timestamp),
-      timeValue: s.timestamp.getTime(),
-      type: s.data.type,
-      status: s.data.type === 'stuck' || s.data.type === 'stuck_suggestion' ? 1 : 0,
-    }));
+    const chartData = state.stuck
+      .filter((s) => s.data.type != "stuck_suggestion")
+      .map((s) => ({
+        time: formatDateTimestamp(s.timestamp),
+        timeValue: s.timestamp.getTime(),
+        type: s.data.type,
+        status: s.data.type === "stuck" ? 1 : 0,
+      }));
     setStuckChartData(chartData);
   }, [state.stuck]);
 
   // Update word count
   useEffect(() => {
     const completedLines = state.asr.lines
-      .filter((line) => line.type !== 'silence')
+      .filter((line) => line.type !== "silence")
       .reduce((count, line) => {
         const lineWithText = line as Segment;
-        return count + lineWithText.text.split(/\s+/).filter(word => word.length > 0).length;
+        return (
+          count +
+          lineWithText.text.split(/\s+/).filter((word) => word.length > 0)
+            .length
+        );
       }, 0);
     setWordCount(completedLines);
   }, [state.asr.lines]);
@@ -89,7 +113,7 @@ const RunningPage = ({ state }: { state: RunningState }) => {
   // Auto-scroll to latest transcript
   useEffect(() => {
     if (transcriptEndRef.current) {
-      transcriptEndRef.current.scrollIntoView({ behavior: 'smooth' });
+      transcriptEndRef.current.scrollIntoView({ behavior: "smooth" });
     }
   }, [state.asr.lines]);
 
@@ -105,27 +129,29 @@ const RunningPage = ({ state }: { state: RunningState }) => {
   };
 
   const formatDateTimestamp = (date: Date): string => {
-    return date.toLocaleTimeString('en-US', {
-      hour: '2-digit',
-      minute: '2-digit',
-      second: '2-digit',
+    return date.toLocaleTimeString("en-US", {
+      hour: "2-digit",
+      minute: "2-digit",
+      second: "2-digit",
     });
   };
 
-  const getStressColor = (score: number): { gradient: string; label: string } => {
+  const getStressColor = (
+    score: number,
+  ): { gradient: string; label: string } => {
     if (score < 0.3) {
-      return { gradient: 'url(#grad-green)', label: 'Low' };
+      return { gradient: "url(#grad-green)", label: "Low" };
     }
     if (score < 0.6) {
-      return { gradient: 'url(#grad-yellow)', label: 'Medium' };
+      return { gradient: "url(#grad-yellow)", label: "Medium" };
     }
-    return { gradient: 'url(#grad-red)', label: 'High' };
+    return { gradient: "url(#grad-red)", label: "High" };
   };
 
   const getStressLabel = (score: number): string => {
-    if (score < 0.3) return 'Low';
-    if (score < 0.6) return 'Medium';
-    return 'High';
+    if (score < 0.3) return "Low";
+    if (score < 0.6) return "Medium";
+    return "High";
   };
 
   const containerVariants: Variants = {
@@ -144,7 +170,7 @@ const RunningPage = ({ state }: { state: RunningState }) => {
     visible: {
       opacity: 1,
       x: 0,
-      transition: { duration: 0.4, ease: 'easeOut' },
+      transition: { duration: 0.4, ease: "easeOut" },
     },
   };
 
@@ -154,7 +180,7 @@ const RunningPage = ({ state }: { state: RunningState }) => {
       transition: {
         duration: 2,
         repeat: Infinity,
-        ease: 'easeInOut',
+        ease: "easeInOut",
       },
     },
   };
@@ -174,7 +200,9 @@ const RunningPage = ({ state }: { state: RunningState }) => {
               <Mic className="w-6 h-6 text-red-500 relative" />
             </motion.div>
             <div>
-              <h1 className="text-xl font-bold text-slate-900">Speech Analysis</h1>
+              <h1 className="text-xl font-bold text-slate-900">
+                Speech Analysis
+              </h1>
               <p className="text-sm text-slate-500">
                 Session: {state.asr.session_id.slice(0, 8)}...
               </p>
@@ -184,7 +212,10 @@ const RunningPage = ({ state }: { state: RunningState }) => {
           {/* Metrics Row */}
           <div className="flex items-center gap-8">
             {/* Word Count */}
-            <motion.div className="flex items-center gap-2" variants={itemVariants}>
+            <motion.div
+              className="flex items-center gap-2"
+              variants={itemVariants}
+            >
               <span className="text-sm font-semibold text-slate-600">
                 {wordCount} <span className="text-slate-500">words</span>
               </span>
@@ -193,7 +224,13 @@ const RunningPage = ({ state }: { state: RunningState }) => {
             {/* Recording Status */}
             <motion.div
               className="flex items-center gap-2 px-3 py-1 bg-red-50 rounded-full"
-              animate={{ backgroundColor: ['rgba(254, 242, 242, 1)', 'rgba(254, 226, 226, 1)', 'rgba(254, 242, 242, 1)'] }}
+              animate={{
+                backgroundColor: [
+                  "rgba(254, 242, 242, 1)",
+                  "rgba(254, 226, 226, 1)",
+                  "rgba(254, 242, 242, 1)",
+                ],
+              }}
               transition={{ duration: 2, repeat: Infinity }}
             >
               <motion.span
@@ -201,7 +238,9 @@ const RunningPage = ({ state }: { state: RunningState }) => {
                 animate={{ scale: [1, 1.3, 1] }}
                 transition={{ duration: 1, repeat: Infinity }}
               />
-              <span className="text-xs font-semibold text-red-600">RECORDING</span>
+              <span className="text-xs font-semibold text-red-600">
+                RECORDING
+              </span>
             </motion.div>
           </div>
         </div>
@@ -218,9 +257,11 @@ const RunningPage = ({ state }: { state: RunningState }) => {
         >
           <div className="flex items-center gap-2 mb-4">
             <div className="h-1 w-1 rounded-full bg-blue-600" />
-            <h2 className="text-lg font-bold text-slate-900">Live Transcript</h2>
+            <h2 className="text-lg font-bold text-slate-900">
+              Live Transcript
+            </h2>
             <span className="text-xs font-medium text-slate-500 ml-auto">
-              {state.asr.type === 'partial' ? '● Listening' : '● Complete'}
+              {state.asr.type === "partial" ? "● Listening" : "● Complete"}
             </span>
           </div>
 
@@ -271,10 +312,10 @@ const RunningPage = ({ state }: { state: RunningState }) => {
             >
               {state.asr.lines.map((line, idx) => (
                 <motion.div
-                  key={`${idx}-${typeof line === 'object' && 'timestamp' in line ? line.timestamp : idx}`}
+                  key={`${idx}-${typeof line === "object" && "timestamp" in line ? line.timestamp : idx}`}
                   variants={itemVariants}
                 >
-                  {line.type === 'silence' ? (
+                  {line.type === "silence" ? (
                     <div className="flex items-center justify-center gap-2 py-2 my-2">
                       <div className="flex-1 h-px bg-gradient-to-r from-transparent via-slate-300 to-transparent" />
                       <span className="text-xs text-slate-400 font-medium px-2">
@@ -284,21 +325,29 @@ const RunningPage = ({ state }: { state: RunningState }) => {
                     </div>
                   ) : (
                     <motion.div
-                      className={`p-3 rounded-lg border transition-all ${line.type === 'partial'
-                          ? 'bg-slate-100 border-slate-300 text-slate-700'
-                          : 'bg-white border-slate-200 text-slate-900'
-                        }`}
-                      whileHover={{ scale: 1.01, backgroundColor: line.type === 'partial' ? '#f1f5f9' : '#fafbfc' }}
+                      className={`p-3 rounded-lg border transition-all ${
+                        line.type === "partial"
+                          ? "bg-slate-100 border-slate-300 text-slate-700"
+                          : "bg-white border-slate-200 text-slate-900"
+                      }`}
+                      whileHover={{
+                        scale: 1.01,
+                        backgroundColor:
+                          line.type === "partial" ? "#f1f5f9" : "#fafbfc",
+                      }}
                       transition={{ duration: 0.2 }}
                     >
                       <div className="flex items-start justify-between gap-2">
                         <p
-                          className={`text-sm leading-relaxed flex-1 ${line.type === 'partial' ? 'font-medium' : 'font-normal'
-                            }`}
+                          className={`text-sm leading-relaxed flex-1 ${
+                            line.type === "partial"
+                              ? "font-medium"
+                              : "font-normal"
+                          }`}
                         >
                           {line.text}
                         </p>
-                        {line.type === 'partial' && (
+                        {line.type === "partial" && (
                           <motion.span
                             className="text-xs text-slate-500 whitespace-nowrap"
                             animate={{ opacity: [0.5, 1, 0.5] }}
@@ -328,8 +377,15 @@ const RunningPage = ({ state }: { state: RunningState }) => {
                       <motion.div
                         key={i}
                         className="w-1.5 h-1.5 rounded-full bg-slate-300"
-                        animate={{ opacity: [0.3, 1, 0.3], scale: [0.8, 1, 0.8] }}
-                        transition={{ delay: i * 0.2, duration: 1.5, repeat: Infinity }}
+                        animate={{
+                          opacity: [0.3, 1, 0.3],
+                          scale: [0.8, 1, 0.8],
+                        }}
+                        transition={{
+                          delay: i * 0.2,
+                          duration: 1.5,
+                          repeat: Infinity,
+                        }}
                       />
                     ))}
                   </div>
@@ -361,7 +417,14 @@ const RunningPage = ({ state }: { state: RunningState }) => {
                   animate="animate"
                 >
                   <svg className="w-full h-full" viewBox="0 0 100 100">
-                    <circle cx="50" cy="50" r="45" fill="none" stroke="#e2e8f0" strokeWidth="8" />
+                    <circle
+                      cx="50"
+                      cy="50"
+                      r="45"
+                      fill="none"
+                      stroke="#e2e8f0"
+                      strokeWidth="8"
+                    />
                     <motion.circle
                       cx="50"
                       cy="50"
@@ -370,22 +433,44 @@ const RunningPage = ({ state }: { state: RunningState }) => {
                       strokeWidth="8"
                       strokeDasharray={`${2 * Math.PI * 45}`}
                       strokeDashoffset={`${2 * Math.PI * 45 * (1 - currentStress.data.stress_score)}`}
-                      stroke={getStressColor(currentStress.data.stress_score).gradient}
+                      stroke={
+                        getStressColor(currentStress.data.stress_score).gradient
+                      }
                       strokeLinecap="round"
                       initial={{ strokeDashoffset: 2 * Math.PI * 45 }}
-                      animate={{ strokeDashoffset: `${2 * Math.PI * 45 * (1 - currentStress.data.stress_score)}` }}
+                      animate={{
+                        strokeDashoffset: `${2 * Math.PI * 45 * (1 - currentStress.data.stress_score)}`,
+                      }}
                       transition={{ duration: 0.8 }}
                     />
                     <defs>
-                      <linearGradient id="grad-green" x1="0%" y1="0%" x2="100%" y2="100%">
+                      <linearGradient
+                        id="grad-green"
+                        x1="0%"
+                        y1="0%"
+                        x2="100%"
+                        y2="100%"
+                      >
                         <stop offset="0%" stopColor="#4ade80" />
                         <stop offset="100%" stopColor="#10b981" />
                       </linearGradient>
-                      <linearGradient id="grad-yellow" x1="0%" y1="0%" x2="100%" y2="100%">
+                      <linearGradient
+                        id="grad-yellow"
+                        x1="0%"
+                        y1="0%"
+                        x2="100%"
+                        y2="100%"
+                      >
                         <stop offset="0%" stopColor="#facc15" />
                         <stop offset="100%" stopColor="#f59e0b" />
                       </linearGradient>
-                      <linearGradient id="grad-red" x1="0%" y1="0%" x2="100%" y2="100%">
+                      <linearGradient
+                        id="grad-red"
+                        x1="0%"
+                        y1="0%"
+                        x2="100%"
+                        y2="100%"
+                      >
                         <stop offset="0%" stopColor="#f87171" />
                         <stop offset="100%" stopColor="#e11d48" />
                       </linearGradient>
@@ -421,7 +506,9 @@ const RunningPage = ({ state }: { state: RunningState }) => {
 
               {/* BVP Chart */}
               <div className="mb-6">
-                <p className="text-xs text-slate-600 font-medium mb-2">BVP (Blood Volume Pulse)</p>
+                <p className="text-xs text-slate-600 font-medium mb-2">
+                  BVP (Blood Volume Pulse)
+                </p>
                 <ResponsiveContainer width="100%" height={250}>
                   <LineChart data={biometricChartData}>
                     <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
@@ -430,15 +517,12 @@ const RunningPage = ({ state }: { state: RunningState }) => {
                       tick={{ fontSize: 10 }}
                       stroke="#64748b"
                     />
-                    <YAxis
-                      tick={{ fontSize: 10 }}
-                      stroke="#64748b"
-                    />
+                    <YAxis tick={{ fontSize: 10 }} stroke="#64748b" />
                     <Tooltip
                       contentStyle={{
-                        backgroundColor: '#ffffff',
-                        border: '1px solid #e2e8f0',
-                        borderRadius: '8px'
+                        backgroundColor: "#ffffff",
+                        border: "1px solid #e2e8f0",
+                        borderRadius: "8px",
                       }}
                       formatter={(value: any) => value?.toFixed(2)}
                       labelFormatter={(label: any) => `Time: ${label}`}
@@ -467,9 +551,13 @@ const RunningPage = ({ state }: { state: RunningState }) => {
               </div>
 
               {/* Additional Metrics Chart */}
-              {biometricChartData.some(d => d.temp !== null || d.eda !== null) && (
+              {biometricChartData.some(
+                (d) => d.temp !== null || d.eda !== null,
+              ) && (
                 <div>
-                  <p className="text-xs text-slate-600 font-medium mb-2">Temperature & EDA</p>
+                  <p className="text-xs text-slate-600 font-medium mb-2">
+                    Temperature & EDA
+                  </p>
                   <ResponsiveContainer width="100%" height={200}>
                     <LineChart data={biometricChartData}>
                       <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
@@ -478,21 +566,18 @@ const RunningPage = ({ state }: { state: RunningState }) => {
                         tick={{ fontSize: 10 }}
                         stroke="#64748b"
                       />
-                      <YAxis
-                        tick={{ fontSize: 10 }}
-                        stroke="#64748b"
-                      />
+                      <YAxis tick={{ fontSize: 10 }} stroke="#64748b" />
                       <Tooltip
                         contentStyle={{
-                          backgroundColor: '#ffffff',
-                          border: '1px solid #e2e8f0',
-                          borderRadius: '8px'
+                          backgroundColor: "#ffffff",
+                          border: "1px solid #e2e8f0",
+                          borderRadius: "8px",
                         }}
                         formatter={(value: any) => value?.toFixed(2)}
                         labelFormatter={(label: any) => `Time: ${label}`}
                       />
                       <Legend wrapperStyle={{ fontSize: 12 }} />
-                      {biometricChartData.some(d => d.temp !== null) && (
+                      {biometricChartData.some((d) => d.temp !== null) && (
                         <Line
                           type="monotone"
                           dataKey="temp"
@@ -503,7 +588,7 @@ const RunningPage = ({ state }: { state: RunningState }) => {
                           name="Temperature"
                         />
                       )}
-                      {biometricChartData.some(d => d.eda !== null) && (
+                      {biometricChartData.some((d) => d.eda !== null) && (
                         <Line
                           type="monotone"
                           dataKey="eda"
@@ -550,25 +635,36 @@ const RunningPage = ({ state }: { state: RunningState }) => {
                     stroke="#64748b"
                     domain={[0, 1]}
                     ticks={[0, 1]}
-                    label={{ value: 'Status', angle: -90, position: 'insideLeft', style: { fontSize: 10 } }}
+                    label={{
+                      value: "Status",
+                      angle: -90,
+                      position: "insideLeft",
+                      style: { fontSize: 10 },
+                    }}
                   />
                   <Tooltip
                     contentStyle={{
-                      backgroundColor: '#ffffff',
-                      border: '2px solid #e2e8f0',
-                      borderRadius: '8px'
+                      backgroundColor: "#ffffff",
+                      border: "2px solid #e2e8f0",
+                      borderRadius: "8px",
                     }}
                     content={({ active, payload }) => {
                       if (active && payload && payload.length) {
                         const data = payload[0].payload;
                         return (
                           <div className="p-3 bg-white border-2 border-slate-200 rounded">
-                            <p className="text-xs font-semibold text-slate-900">{data.time}</p>
-                            <p className="text-xs text-slate-500 font-mono mt-1">{data.timeValue}</p>
+                            <p className="text-xs font-semibold text-slate-900">
+                              {data.time}
+                            </p>
+                            <p className="text-xs text-slate-500 font-mono mt-1">
+                              {data.timeValue}
+                            </p>
                             <p className="text-xs text-slate-600 mt-2 font-semibold">
-                              {data.type === 'stuck' ? '🔴 Stuck Detected' :
-                                data.type === 'stuck_suggestion' ? '⚠️ Suggestion' :
-                                  '🟢 Recovered'}
+                              {data.type === "stuck"
+                                ? "🔴 Stuck Detected"
+                                : data.type === "stuck_suggestion"
+                                  ? "⚠️ Suggestion"
+                                  : "🟢 Recovered"}
                             </p>
                           </div>
                         );
@@ -614,28 +710,29 @@ const RunningPage = ({ state }: { state: RunningState }) => {
                       animate={{ opacity: 1, x: 0 }}
                       exit={{ opacity: 0, x: -10 }}
                       transition={{ duration: 0.3 }}
-                      className={`text-xs p-3 rounded-lg border-l-4 transition-all ${stuck.data.type === 'stuck'
-                          ? 'bg-red-50 border-l-red-400 text-red-800'
-                          : stuck.data.type === 'stuck_suggestion'
-                            ? 'bg-amber-50 border-l-amber-400 text-amber-800'
-                            : 'bg-green-50 border-l-green-400 text-green-800'
-                        }`}
+                      className={`text-xs p-3 rounded-lg border-l-4 transition-all ${
+                        stuck.data.type === "stuck"
+                          ? "bg-red-50 border-l-red-400 text-red-800"
+                          : stuck.data.type === "stuck_suggestion"
+                            ? "bg-amber-50 border-l-amber-400 text-amber-800"
+                            : "bg-green-50 border-l-green-400 text-green-800"
+                      }`}
                     >
                       <div className="flex items-start justify-between">
                         <div className="flex-1">
                           <p className="font-semibold">
-                            {stuck.data.type === 'stuck'
-                              ? '🔴 Stuck Detected'
-                              : stuck.data.type === 'unstuck'
-                                ? '🟢 Recovered'
-                                : '⚠️ Suggestion'}
+                            {stuck.data.type === "stuck"
+                              ? "🔴 Stuck Detected"
+                              : stuck.data.type === "unstuck"
+                                ? "🟢 Recovered"
+                                : "⚠️ Suggestion"}
                           </p>
                           <p className="text-xs opacity-75 mt-1 font-mono">
                             {formatDateTimestamp(stuck.timestamp)}
                           </p>
                         </div>
                       </div>
-                      {stuck.data.type === 'stuck_suggestion' && (
+                      {stuck.data.type === "stuck_suggestion" && (
                         <motion.p
                           className="text-xs opacity-90 mt-2 p-2 bg-white/50 rounded font-semibold"
                           initial={{ opacity: 0 }}

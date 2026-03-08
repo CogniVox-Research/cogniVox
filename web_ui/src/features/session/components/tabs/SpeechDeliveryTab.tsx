@@ -201,10 +201,6 @@ const SpeechDeliveryTab = ({ state }: SpeechDeliveryTabProps) => {
                         ))}
                     </div>
                 </motion.div>
-                <div>
-                    {feedback.context_summary}
-                </div>
-
             </motion.div>
         </div>
     );

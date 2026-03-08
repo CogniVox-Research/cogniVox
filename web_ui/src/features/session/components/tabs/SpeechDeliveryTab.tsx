@@ -178,6 +178,10 @@ const SpeechDeliveryTab = ({ state }: SpeechDeliveryTabProps) => {
                         })}
                     </div>
                 </motion.div>
+                        {/* AI feedback */}
+                <div>
+                    {feedback.context_summary}
+                </div>
 
                 {/* Raw Metrics */}
                 <motion.div variants={itemVariants} className="col-span-1 lg:col-span-3 bg-card border border-border/50 rounded-2xl p-6 shadow-sm flex flex-col">
@@ -197,6 +201,9 @@ const SpeechDeliveryTab = ({ state }: SpeechDeliveryTabProps) => {
                         ))}
                     </div>
                 </motion.div>
+                <div>
+                    {feedback.context_summary}
+                </div>
 
             </motion.div>
         </div>

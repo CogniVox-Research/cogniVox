@@ -32,6 +32,10 @@ impl Pipeline {
         Ok(Self { pipeline })
     }
 
+    pub fn recording_file(&self) -> String {
+        self.pipeline.recording_file()
+    }
+
     pub fn process_audio(&mut self, input: Vec<u8>) -> Result<Vec<f32>> {
         self.pipeline.process_audio(input)
     }

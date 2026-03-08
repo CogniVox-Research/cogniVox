@@ -23,6 +23,12 @@ pub struct RecordAudio<P: PipelineStep> {
     original_path: std::path::PathBuf,
 }
 
+impl<P: PipelineStep> RecordAudio<P> {
+    pub fn recording_file(&self) -> String {
+        self.converted_path.to_string_lossy().into_owned()
+    }
+}
+
 impl<P: PipelineStep> Debug for RecordAudio<P> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("RecordAudio")

@@ -5,7 +5,6 @@ use rocket_ws::{Channel, WebSocket};
 use crate::{
     app::{AppState, Device, get_public_key},
     game::proto::{self, DeviceConnection, DeviceInbound, DeviceOutbound},
-    guard::User,
 };
 
 #[rocket::get("/ws/device")]
@@ -47,7 +46,10 @@ pub async fn vr_device(ws: WebSocket, state: &State<AppState>) -> Channel<'_> {
 }
 
 #[rocket::get("/devices")]
-pub async fn get_devices(state: &State<AppState>, user: User) -> Json<Vec<(String, uuid::Uuid)>> {
+pub async fn get_devices(
+    state: &State<AppState>,
+    user: super::guard::User,
+) -> Json<Vec<(String, uuid::Uuid)>> {
     let devices = state.vr.lock().await;
     let mut user_devices = vec![];
 

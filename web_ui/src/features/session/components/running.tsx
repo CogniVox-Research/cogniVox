@@ -22,6 +22,7 @@ import type {
   Timestamped,
 } from "@/lib/types";
 import type { RunningState } from "@/lib/session";
+import { compactSpeech } from "@/lib/asr_util";
 
 const RunningPage = ({ state }: { state: RunningState }) => {
   const [wordCount, setWordCount] = useState(0);
@@ -109,12 +110,7 @@ const RunningPage = ({ state }: { state: RunningState }) => {
     setWordCount(completedLines);
   }, [state.asr.lines]);
 
-  // Auto-scroll to latest transcript
-  useEffect(() => {
-    if (transcriptEndRef.current) {
-      transcriptEndRef.current.scrollIntoView({ behavior: "smooth" });
-    }
-  }, [state.asr.lines]);
+  const lines = compactSpeech(state.asr.lines);
 
   // const formatTimestamp = (ts: Timestamp): string => {
   //   // Timestamp is { start: number; end: number }

@@ -1,3 +1,5 @@
+import type { SpeechSegment } from "./asr_util";
+
 export type SessionMessage = { session_id: string };
 
 export type AudienceDifficulty = "easy" | "medium" | "hard";
@@ -46,6 +48,21 @@ export type Silence = {
 
 export type ResultType = "partial" | "complete";
 
+export type ASR = {
+  type: ResultType;
+  segments: SpeechSegment[];
+  full_text: string;
+  current_silence: Silence | null;
+};
+
+export type ASRRaw = {
+  type: ResultType;
+  session_id: string;
+  lines: Line[];
+  full_text: string;
+  current_silence: Silence | null;
+};
+
 export type Line =
   | ({
       type: "complete";
@@ -57,14 +74,6 @@ export type Line =
       type: "silence";
       timestamp: Timestamp;
     };
-
-export type ASR = {
-  type: ResultType;
-  session_id: string;
-  lines: Line[];
-  full_text: string;
-  current_silence: Silence | null;
-};
 
 export type Timestamped<T> = {
   data: T;
@@ -129,7 +138,7 @@ export type Similarity = {
   key_points_speech: string[];
   alignment: Alignment[];
   order_analysis: OrderAnalysis;
-  redundant_speech_segments: [string,string,number][];
+  redundant_speech_segments: [string, string, number][];
   sentence_count_transcript: number;
   sentence_count_speech: number;
 };

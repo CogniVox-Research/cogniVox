@@ -40,9 +40,7 @@ impl Connection {
         let config = ConnectionProperties::default()
             .with_connection_name(cfg.connection_name.as_str().into())
             .enable_auto_recover()
-            .configure_backoff(|backoff| {
-                backoff.with_max_times(3);
-            });
+            .configure_backoff(|backoff| backoff.with_max_times(3));
 
         let connection =
             lapin::Connection::connect_with_runtime(&cfg.address, config, runtime.clone()).await?;

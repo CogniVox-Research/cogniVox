@@ -1,3 +1,5 @@
+use std::ops::{Deref, DerefMut};
+
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -26,13 +28,6 @@ pub struct Timestamp {
     pub end: f64,
 }
 
-#[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
-#[serde(rename_all = "snake_case")]
-pub enum ResultType {
-    Partial,
-    Complete,
-}
-
 #[derive(Debug, Serialize, Deserialize, Clone)]
 #[serde(tag = "type", rename_all = "snake_case")]
 pub enum Line {
@@ -42,11 +37,57 @@ pub enum Line {
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
-pub struct ASR {
-    #[serde(rename = "type")]
-    pub type_of: ResultType,
+#[serde(tag = "type", rename_all = "snake_case")]
+pub enum ASR {
+    Partial(ASRContent),
+    Complete(ASRContentComplete),
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct ASRContentComplete {
+    #[serde(flatten)]
+    pub content: ASRContent,
+    pub recording_file: String,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct ASRContent {
     pub session_id: String,
     pub lines: Vec<Line>,
     pub full_text: String,
     pub current_silence: Option<Silence>,
+}
+
+impl DerefMut for ASR {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        match self {
+            ASR::Partial(c) => c,
+            ASR::Complete(cc) => &mut cc.content,
+        }
+    }
+}
+
+impl Deref for ASR {
+    type Target = ASRContent;
+
+    fn deref(&self) -> &Self::Target {
+        match self {
+            ASR::Partial(c) => c,
+            ASR::Complete(cc) => &cc.content,
+        }
+    }
+}
+
+impl DerefMut for ASRContentComplete {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.content
+    }
+}
+
+impl Deref for ASRContentComplete {
+    type Target = ASRContent;
+
+    fn deref(&self) -> &Self::Target {
+        &self.content
+    }
 }

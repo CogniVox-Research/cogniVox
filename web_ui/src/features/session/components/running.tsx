@@ -332,6 +332,9 @@ const RunningPage = ({ state }: { state: RunningState }) => {
                           {segment.unconfirmed_text}
                         </span>
                       )}
+                      <span className="text-sm font-medium text-slate-400 opacity-60 mx-1 whitespace-nowrap">
+                        [{segment.start.toFixed(1)}s - {segment.end.toFixed(1)}s]
+                      </span>
                       {" "}
                     </span>
                   )}

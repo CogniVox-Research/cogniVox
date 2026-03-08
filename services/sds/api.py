@@ -112,8 +112,8 @@ async def get_score_speech(file_path, speech_type):
         # 4️⃣ Compute overall delivery score
         delivery = compute_delivery_score(scores, speech_type=speech_type)
 
-        # 5️⃣ Generate feedback
-        feedback = generate_feedback(scores, speech_type=speech_type)
+        # 5️⃣ Generate feedback (with AI-powered context summary)
+        feedback = generate_feedback(scores, speech_type=speech_type, delivery_data=delivery)
 
         return {
             "speech_type": speech_type.name,

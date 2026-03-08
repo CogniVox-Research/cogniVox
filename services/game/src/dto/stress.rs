@@ -31,4 +31,5 @@ pub struct StressResponse {
     label: i64,
     stress_score: f64,
     suggestion: String,
+    feedback: String,
 }

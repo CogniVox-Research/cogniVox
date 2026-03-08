@@ -91,6 +91,7 @@ export type StressResponse = {
   label: number;
   stress_score: number;
   suggestion: string;
+  feedback: string;
 };
 
 export type HeartRate = {

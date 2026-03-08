@@ -173,6 +173,14 @@ const RunningPage = ({ state }: { state: RunningState }) => {
     },
   };
 
+  const textItemVariants: Variants = {
+    hidden: { opacity: 0 },
+    visible: {
+      opacity: 1,
+      transition: { duration: 0.4, ease: "easeOut" },
+    },
+  };
+
   const pulseVariants: Variants = {
     animate: {
       scale: [1, 1.05, 1],
@@ -302,80 +310,48 @@ const RunningPage = ({ state }: { state: RunningState }) => {
           )}
 
           {/* Transcript Content */}
-          <div className="flex-1 overflow-y-auto pr-4 space-y-2 bg-white/40 rounded-xl p-4 border border-slate-200/50">
+          <div className="flex-1 overflow-y-auto pr-4 bg-white/40 rounded-xl p-6 border border-slate-200/50">
             <motion.div
               variants={containerVariants}
               initial="hidden"
               animate="visible"
-              className="space-y-3"
+              className="text-xl md:text-2xl leading-relaxed md:leading-loose font-normal text-slate-800"
             >
               {state.asr.lines.map((line, idx) => (
-                <motion.div
+                <motion.span
                   key={`${idx}-${typeof line === "object" && "timestamp" in line ? line.timestamp : idx}`}
-                  variants={itemVariants}
+                  variants={textItemVariants}
                 >
                   {line.type === "silence" ? (
-                    <div className="flex items-center justify-center gap-2 py-2 my-2">
-                      <div className="flex-1 h-px bg-linear-to-r from-transparent via-slate-300 to-transparent" />
-                      <span className="text-xs text-slate-400 font-medium px-2">
-                        Silence • {line.timestamp.start} - {line.timestamp.end}
-                      </span>
-                      <div className="flex-1 h-px bg-linear-to-r from-transparent via-slate-300 to-transparent" />
-                    </div>
-                  ) : (
-                    <motion.div
-                      className={`p-3 rounded-lg border transition-all ${
-                        line.type === "partial"
-                          ? "bg-slate-100 border-slate-300 text-slate-700"
-                          : "bg-white border-slate-200 text-slate-900"
-                      }`}
-                      whileHover={{
-                        scale: 1.01,
-                        backgroundColor:
-                          line.type === "partial" ? "#f1f5f9" : "#fafbfc",
-                      }}
-                      transition={{ duration: 0.2 }}
+                    <span
+                      className="inline-flex items-center justify-center px-3 py-1 mx-2 align-middle bg-slate-200/60 rounded-full text-slate-500 text-sm font-medium border border-slate-300 shadow-sm"
+                      title={`Silence • ${line.timestamp.start} - ${line.timestamp.end}`}
                     >
-                      <div className="flex items-start justify-between gap-2">
-                        <p
-                          className={`text-sm leading-relaxed flex-1 ${
-                            line.type === "partial"
-                              ? "font-medium"
-                              : "font-normal"
-                          }`}
-                        >
-                          {line.text}
-                        </p>
-                        {line.type === "partial" && (
-                          <motion.span
-                            className="text-xs text-slate-500 whitespace-nowrap"
-                            animate={{ opacity: [0.5, 1, 0.5] }}
-                            transition={{ duration: 1.5, repeat: Infinity }}
-                          >
-                            speaking...
-                          </motion.span>
-                        )}
-                      </div>
-                      <p className="text-xs text-slate-500 mt-1">
-                        {line.timestamp.start} - {line.timestamp.end}
-                      </p>
-                    </motion.div>
+                      ... {Math.max(0, line.timestamp.end - line.timestamp.start).toFixed(1)}s
+                    </span>
+                  ) : (
+                    <span
+                      className={`transition-colors duration-300 ${line.type === "partial" ? "text-slate-400" : "text-slate-900"
+                        }`}
+                    >
+                      {line.text}{" "}
+                    </span>
                   )}
-                </motion.div>
+                </motion.span>
               ))}
 
               {/* Current Silence Indicator */}
               {state.asr.current_silence && (
-                <motion.div
+                <motion.span
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
-                  className="flex items-center justify-center gap-2 py-4 text-slate-400"
+                  className="inline-flex items-center justify-center px-3 py-2 mx-2 align-middle bg-slate-200/40 rounded-full border border-slate-200 shadow-sm"
                 >
-                  <div className="flex gap-1">
+                  <span className="flex gap-1.5 items-center">
                     {[0, 1, 2].map((i) => (
-                      <motion.div
+                      <motion.span
                         key={i}
-                        className="w-1.5 h-1.5 rounded-full bg-slate-300"
+                        className="w-2 h-2 rounded-full bg-slate-400"
                         animate={{
                           opacity: [0.3, 1, 0.3],
                           scale: [0.8, 1, 0.8],
@@ -387,11 +363,11 @@ const RunningPage = ({ state }: { state: RunningState }) => {
                         }}
                       />
                     ))}
-                  </div>
-                </motion.div>
+                  </span>
+                </motion.span>
               )}
 
-              <div ref={transcriptEndRef} />
+              <div ref={transcriptEndRef} className="h-8" />
             </motion.div>
           </div>
         </motion.div>
@@ -553,55 +529,55 @@ const RunningPage = ({ state }: { state: RunningState }) => {
               {biometricChartData.some(
                 (d) => d.temp !== null || d.eda !== null,
               ) && (
-                <div>
-                  <p className="text-xs text-slate-600 font-medium mb-2">
-                    Temperature & EDA
-                  </p>
-                  <ResponsiveContainer width="100%" height={200}>
-                    <LineChart data={biometricChartData}>
-                      <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
-                      <XAxis
-                        dataKey="time"
-                        tick={{ fontSize: 10 }}
-                        stroke="#64748b"
-                      />
-                      <YAxis tick={{ fontSize: 10 }} stroke="#64748b" />
-                      <Tooltip
-                        contentStyle={{
-                          backgroundColor: "#ffffff",
-                          border: "1px solid #e2e8f0",
-                          borderRadius: "8px",
-                        }}
-                        formatter={(value: any) => value?.toFixed(2)}
-                        labelFormatter={(label: any) => `Time: ${label}`}
-                      />
-                      <Legend wrapperStyle={{ fontSize: 12 }} />
-                      {biometricChartData.some((d) => d.temp !== null) && (
-                        <Line
-                          type="monotone"
-                          dataKey="temp"
-                          stroke="#f59e0b"
-                          strokeWidth={2}
-                          dot={false}
-                          isAnimationActive={true}
-                          name="Temperature"
+                  <div>
+                    <p className="text-xs text-slate-600 font-medium mb-2">
+                      Temperature & EDA
+                    </p>
+                    <ResponsiveContainer width="100%" height={200}>
+                      <LineChart data={biometricChartData}>
+                        <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
+                        <XAxis
+                          dataKey="time"
+                          tick={{ fontSize: 10 }}
+                          stroke="#64748b"
                         />
-                      )}
-                      {biometricChartData.some((d) => d.eda !== null) && (
-                        <Line
-                          type="monotone"
-                          dataKey="eda"
-                          stroke="#10b981"
-                          strokeWidth={2}
-                          dot={false}
-                          isAnimationActive={true}
-                          name="EDA"
+                        <YAxis tick={{ fontSize: 10 }} stroke="#64748b" />
+                        <Tooltip
+                          contentStyle={{
+                            backgroundColor: "#ffffff",
+                            border: "1px solid #e2e8f0",
+                            borderRadius: "8px",
+                          }}
+                          formatter={(value: any) => value?.toFixed(2)}
+                          labelFormatter={(label: any) => `Time: ${label}`}
                         />
-                      )}
-                    </LineChart>
-                  </ResponsiveContainer>
-                </div>
-              )}
+                        <Legend wrapperStyle={{ fontSize: 12 }} />
+                        {biometricChartData.some((d) => d.temp !== null) && (
+                          <Line
+                            type="monotone"
+                            dataKey="temp"
+                            stroke="#f59e0b"
+                            strokeWidth={2}
+                            dot={false}
+                            isAnimationActive={true}
+                            name="Temperature"
+                          />
+                        )}
+                        {biometricChartData.some((d) => d.eda !== null) && (
+                          <Line
+                            type="monotone"
+                            dataKey="eda"
+                            stroke="#10b981"
+                            strokeWidth={2}
+                            dot={false}
+                            isAnimationActive={true}
+                            name="EDA"
+                          />
+                        )}
+                      </LineChart>
+                    </ResponsiveContainer>
+                  </div>
+                )}
             </motion.div>
           )}
 
@@ -709,13 +685,12 @@ const RunningPage = ({ state }: { state: RunningState }) => {
                       animate={{ opacity: 1, x: 0 }}
                       exit={{ opacity: 0, x: -10 }}
                       transition={{ duration: 0.3 }}
-                      className={`text-xs p-3 rounded-lg border-l-4 transition-all ${
-                        stuck.data.type === "stuck"
-                          ? "bg-red-50 border-l-red-400 text-red-800"
-                          : stuck.data.type === "stuck_suggestion"
-                            ? "bg-amber-50 border-l-amber-400 text-amber-800"
-                            : "bg-green-50 border-l-green-400 text-green-800"
-                      }`}
+                      className={`text-xs p-3 rounded-lg border-l-4 transition-all ${stuck.data.type === "stuck"
+                        ? "bg-red-50 border-l-red-400 text-red-800"
+                        : stuck.data.type === "stuck_suggestion"
+                          ? "bg-amber-50 border-l-amber-400 text-amber-800"
+                          : "bg-green-50 border-l-green-400 text-green-800"
+                        }`}
                     >
                       <div className="flex items-start justify-between">
                         <div className="flex-1">

@@ -115,6 +115,35 @@ const ACTIONS = [
     state: 5,
     new_state: true,
   },
+  {
+    name: "Question Start",
+    mode: "game",
+    type: "question_start",
+
+    state: 7,
+    new_state: true,
+  },
+  {
+    name: "Answer (Short)",
+    mode: "game",
+
+    type: "audio",
+    data: {
+      name: "micro-machines",
+      chunk_size: 1000,
+      chunks: 3,
+    },
+
+    state: 8,
+  },
+  {
+    name: "Question End",
+    mode: "game",
+    type: "question_end",
+
+    state: 8,
+    new_state: true,
+  },
 ];
 
 class App {
@@ -229,6 +258,8 @@ class App {
   handle_message(mode, message) {
     if (!this.web_only && mode === "web" && message.type === "pair") {
       this.connect("game", message.data.session_id);
+    } else if (mode === "game" && message.type === "question") {
+      this.state = 7;
     } else if (message.type === "a_s_r") {
       message.data.lines = undefined;
       message.data.session_id = undefined;

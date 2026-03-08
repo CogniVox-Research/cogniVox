@@ -5,13 +5,13 @@ use rocket_ws::{Channel, WebSocket};
 use crate::{
     app::{AppState, PendingSession},
     game::{
-        self, fetch_document,
+        self,
         proto::{
             self, DeviceOutbound, GameConnection, GameOutbound, WebConnection, WebInbound,
             WebOutbound,
         },
     },
-    guard::User,
+    services::documents::fetch_document,
 };
 
 #[rocket::get("/ws/web")]
@@ -19,7 +19,7 @@ pub async fn web_session<'a, 'r>(
     ws: WebSocket,
     state: &'a State<AppState>,
     store: &'a State<Store>,
-    user: User,
+    user: super::guard::User,
 ) -> Channel<'r> {
     let session_id = uuid::Uuid::new_v4();
 

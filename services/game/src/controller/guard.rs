@@ -1,7 +1,6 @@
 use jwt::{Header, RegisteredClaims, VerifyWithKey};
 use rocket::{
     Request,
-    http::Status,
     request::{self, FromRequest},
 };
 

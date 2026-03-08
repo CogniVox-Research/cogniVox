@@ -23,6 +23,7 @@ import type {
   Timestamped,
 } from "@/lib/types";
 import type { RunningState } from "@/lib/session";
+import { compactSpeech } from "@/lib/asr_util";
 
 const RunningPage = ({ state }: { state: RunningState }) => {
   const [wordCount, setWordCount] = useState(0);
@@ -110,12 +111,7 @@ const RunningPage = ({ state }: { state: RunningState }) => {
     setWordCount(completedLines);
   }, [state.asr.lines]);
 
-  // Auto-scroll to latest transcript
-  useEffect(() => {
-    if (transcriptEndRef.current) {
-      transcriptEndRef.current.scrollIntoView({ behavior: "smooth" });
-    }
-  }, [state.asr.lines]);
+  const lines = compactSpeech(state.asr.lines);
 
   const formatTimestamp = (ts: Timestamp): string => {
     // Timestamp is { start: number; end: number }
@@ -310,7 +306,7 @@ const RunningPage = ({ state }: { state: RunningState }) => {
               animate="visible"
               className="space-y-3"
             >
-              {state.asr.lines.map((line, idx) => (
+              {lines.map((line, idx) => (
                 <motion.div
                   key={`${idx}-${typeof line === "object" && "timestamp" in line ? line.timestamp : idx}`}
                   variants={itemVariants}
@@ -319,46 +315,28 @@ const RunningPage = ({ state }: { state: RunningState }) => {
                     <div className="flex items-center justify-center gap-2 py-2 my-2">
                       <div className="flex-1 h-px bg-gradient-to-r from-transparent via-slate-300 to-transparent" />
                       <span className="text-xs text-slate-400 font-medium px-2">
-                        Silence • {line.timestamp.start} - {line.timestamp.end}
+                        Silence • {line.start} - {line.end}
                       </span>
                       <div className="flex-1 h-px bg-gradient-to-r from-transparent via-slate-300 to-transparent" />
                     </div>
                   ) : (
                     <motion.div
-                      className={`p-3 rounded-lg border transition-all ${
-                        line.type === "partial"
-                          ? "bg-slate-100 border-slate-300 text-slate-700"
-                          : "bg-white border-slate-200 text-slate-900"
-                      }`}
+                      className={`p-3 rounded-lg border transition-all ${"bg-slate-100 border-slate-300 text-slate-700"}`}
                       whileHover={{
                         scale: 1.01,
-                        backgroundColor:
-                          line.type === "partial" ? "#f1f5f9" : "#fafbfc",
+                        backgroundColor: "#fafbfc",
                       }}
                       transition={{ duration: 0.2 }}
                     >
                       <div className="flex items-start justify-between gap-2">
                         <p
-                          className={`text-sm leading-relaxed flex-1 ${
-                            line.type === "partial"
-                              ? "font-medium"
-                              : "font-normal"
-                          }`}
+                          className={`text-sm leading-relaxed flex-1 ${"font-normal"}`}
                         >
-                          {line.text}
+                          {line.text} {line.unconfirmed_text}
                         </p>
-                        {line.type === "partial" && (
-                          <motion.span
-                            className="text-xs text-slate-500 whitespace-nowrap"
-                            animate={{ opacity: [0.5, 1, 0.5] }}
-                            transition={{ duration: 1.5, repeat: Infinity }}
-                          >
-                            speaking...
-                          </motion.span>
-                        )}
                       </div>
                       <p className="text-xs text-slate-500 mt-1">
-                        {line.timestamp.start} - {line.timestamp.end}
+                        {line.start} - {line.end}
                       </p>
                     </motion.div>
                   )}

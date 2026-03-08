@@ -160,9 +160,12 @@ export type Grammar = {
 /**========================= SDS =============== */
 
 export type SDSResponse = {
+  speech_type: string;
+  speech_type_number: string;
   metrics: Metrics;
   scores: Scores;
   feedback: Feedback;
+  delivery: Delivery;
 };
 
 export type Metrics = {
@@ -191,4 +194,27 @@ export type Feedback = {
   pauses: string;
   pitch: string;
   loudness: string;
+};
+
+export type Delivery = {
+  delivery_score: number;
+  delivery_score_label: string;
+  weighted_breakdown: WeightedBreakdown;
+  weights_used: WeightsUsed;
+};
+
+export type WeightedBreakdown = {
+  clarity: number;
+  pace: number;
+  pauses: number;
+  pitch: number;
+  loudness: number;
+};
+
+export type WeightsUsed = {
+  clarity: number;
+  pace: number;
+  pauses: number;
+  pitch: number;
+  loudness: number;
 };

@@ -4,8 +4,6 @@ import { motion, type Variants } from 'framer-motion';
 import {
     LineChart,
     Line,
-    BarChart,
-    Bar,
     PieChart,
     Pie,
     Cell,
@@ -15,8 +13,6 @@ import {
     Tooltip,
     Legend,
     ResponsiveContainer,
-    ScatterChart,
-    Scatter,
 } from 'recharts';
 import { Heart, Brain, AlertTriangle, Activity, TrendingUp, BarChart3 } from 'lucide-react';
 import type { FinishedState } from '@/lib/session';
@@ -164,7 +160,7 @@ const BiometricsTab = ({ state }: BiometricsTabProps) => {
                             transition={{ delay: idx * 0.1 }}
                         >
                             <div className="flex items-start gap-3 mb-3">
-                                <IconComponent className={`w-5 h-5 ${colors.accent} flex-shrink-0`} />
+                                <IconComponent className={`w-5 h-5 ${colors.accent} shrink-0`} />
                                 <p className={`text-xs font-bold ${colors.accent} uppercase tracking-wider`}>{indicator.label}</p>
                             </div>
                             <p className={`text-3xl font-bold ${colors.text}`}>{indicator.value} <span className="text-sm">{indicator.unit}</span></p>

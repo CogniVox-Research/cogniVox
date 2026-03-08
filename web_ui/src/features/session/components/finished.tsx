@@ -1,5 +1,3 @@
-'use client';
-
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Mic, Volume2, Heart, Download, Share2 } from 'lucide-react';
@@ -12,7 +10,7 @@ const FinishedPage = ({ state }: { state: FinishedState }) => {
   const [activeTab, setActiveTab] = useState<'delivery' | 'transcript' | 'biometrics'>('delivery');
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-slate-50">
+    <div className="min-h-screen bg-linear-to-br from-slate-50 via-white to-slate-50">
       {/* Header */}
       <header className="sticky top-0 z-40 bg-white/80 backdrop-blur-md border-b border-slate-200/50 shadow-sm">
         <div className="max-w-7xl mx-auto px-6 py-6">

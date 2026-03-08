@@ -1,23 +1,12 @@
-'use client';
-
 import { motion, type Variants } from 'framer-motion';
 import {
-    BarChart,
-    Bar,
     RadarChart,
     PolarGrid,
     PolarAngleAxis,
     PolarRadiusAxis,
     Radar,
-    XAxis,
-    YAxis,
-    CartesianGrid,
     Tooltip,
-    Legend,
     ResponsiveContainer,
-    LineChart,
-    Line,
-    Cell,
 } from 'recharts';
 import { Award, TrendingUp, Volume2, Mic, AlertCircle, CheckCircle, Info } from 'lucide-react';
 import type { FinishedState } from '@/lib/session';
@@ -100,7 +89,7 @@ const SpeechDeliveryTab = ({ state }: SpeechDeliveryTabProps) => {
             {/* Overall Performance Card */}
             <motion.div
                 variants={itemVariants}
-                className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-xl p-8 border-2 border-blue-200 shadow-md"
+                className="bg-linear-to-br from-blue-50 to-indigo-50 rounded-xl p-8 border-2 border-blue-200 shadow-md"
             >
                 <div className="flex items-center justify-between gap-8">
                     <div className="flex-1">
@@ -110,7 +99,7 @@ const SpeechDeliveryTab = ({ state }: SpeechDeliveryTabProps) => {
                         </p>
                     </div>
                     <motion.div
-                        className="relative w-40 h-40 flex-shrink-0"
+                        className="relative w-40 h-40 shrink-0"
                         animate={{ scale: [1, 1.05, 1] }}
                         transition={{ duration: 3, repeat: Infinity }}
                     >

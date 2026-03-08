@@ -19,7 +19,6 @@ import type {
   HeartRate,
   Segment,
   StressResponse,
-  Timestamp,
   Timestamped,
 } from "@/lib/types";
 import type { RunningState } from "@/lib/session";
@@ -113,16 +112,16 @@ const RunningPage = ({ state }: { state: RunningState }) => {
 
   const lines = compactSpeech(state.asr.lines);
 
-  const formatTimestamp = (ts: Timestamp): string => {
-    // Timestamp is { start: number; end: number }
-    // Display raw values as user specified
-    return ts.start + " - " + ts.end;
-  };
+  // const formatTimestamp = (ts: Timestamp): string => {
+  //   // Timestamp is { start: number; end: number }
+  //   // Display raw values as user specified
+  //   return ts.start + " - " + ts.end;
+  // };
 
-  const getTimestampRange = (ts: Timestamp): string => {
-    // Display raw values as user specified
-    return ts.start + " - " + ts.end;
-  };
+  // const getTimestampRange = (ts: Timestamp): string => {
+  //   // Display raw values as user specified
+  //   return ts.start + " - " + ts.end;
+  // };
 
   const formatDateTimestamp = (date: Date): string => {
     return date.toLocaleTimeString("en-US", {
@@ -182,7 +181,7 @@ const RunningPage = ({ state }: { state: RunningState }) => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-slate-50 overflow-hidden">
+    <div className="min-h-screen bg-linear-to-br from-slate-50 via-white to-slate-50 overflow-hidden">
       {/* Header with Timer */}
       <header className="sticky top-0 z-40 bg-white/80 backdrop-blur-md border-b border-slate-200/50 shadow-sm">
         <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
@@ -268,13 +267,13 @@ const RunningPage = ({ state }: { state: RunningState }) => {
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -10 }}
               transition={{ duration: 0.3 }}
-              className="mb-4 p-4 bg-gradient-to-r from-amber-50 to-red-50 border-2 border-amber-400 rounded-lg flex gap-3 shadow-md"
+              className="mb-4 p-4 bg-linear-to-r from-amber-50 to-red-50 border-2 border-amber-400 rounded-lg flex gap-3 shadow-md"
             >
               <motion.div
                 animate={{ scale: [1, 1.1, 1] }}
                 transition={{ duration: 1, repeat: Infinity }}
               >
-                <AlertCircle className="w-6 h-6 text-amber-600 flex-shrink-0 mt-0.5" />
+                <AlertCircle className="w-6 h-6 text-amber-600 shrink-0 mt-0.5" />
               </motion.div>
               <div className="flex-1">
                 <motion.p
@@ -313,11 +312,11 @@ const RunningPage = ({ state }: { state: RunningState }) => {
                 >
                   {line.type === "silence" ? (
                     <div className="flex items-center justify-center gap-2 py-2 my-2">
-                      <div className="flex-1 h-px bg-gradient-to-r from-transparent via-slate-300 to-transparent" />
+                      <div className="flex-1 h-px bg-linear-to-r from-transparent via-slate-300 to-transparent" />
                       <span className="text-xs text-slate-400 font-medium px-2">
                         Silence • {line.start} - {line.end}
                       </span>
-                      <div className="flex-1 h-px bg-gradient-to-r from-transparent via-slate-300 to-transparent" />
+                      <div className="flex-1 h-px bg-linear-to-r from-transparent via-slate-300 to-transparent" />
                     </div>
                   ) : (
                     <motion.div

@@ -22,7 +22,7 @@ import type {
   Timestamped,
 } from "@/lib/types";
 import type { RunningState } from "@/lib/session";
-import { compactSpeech } from "@/lib/asr_util";
+
 
 const RunningPage = ({ state }: { state: RunningState }) => {
   const [wordCount, setWordCount] = useState(0);
@@ -97,20 +97,21 @@ const RunningPage = ({ state }: { state: RunningState }) => {
 
   // Update word count
   useEffect(() => {
-    const completedLines = state.asr.lines
-      .filter((line) => line.type !== "silence")
-      .reduce((count, line) => {
-        const lineWithText = line as Segment;
-        return (
-          count +
-          lineWithText.text.split(/\s+/).filter((word) => word.length > 0)
-            .length
-        );
+    const completedLines = state.asr.segments
+      .filter((seg) => seg.type === "text")
+      .reduce((count, seg) => {
+        if (seg.type === "text") {
+          return (
+            count +
+            seg.text.split(/\s+/).filter((word) => word.length > 0).length
+          );
+        }
+        return count;
       }, 0);
     setWordCount(completedLines);
-  }, [state.asr.lines]);
+  }, [state.asr.segments]);
 
-  const lines = compactSpeech(state.asr.lines);
+  const lines = state.asr.segments;
 
   // const formatTimestamp = (ts: Timestamp): string => {
   //   // Timestamp is { start: number; end: number }

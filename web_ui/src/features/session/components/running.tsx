@@ -19,7 +19,6 @@ import type {
   HeartRate,
   Segment,
   StressResponse,
-  Timestamp,
   Timestamped,
 } from "@/lib/types";
 import type { RunningState } from "@/lib/session";

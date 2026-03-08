@@ -44,6 +44,69 @@ MODEL_SETS = {
 
 
 # ---------------------------------------------------
+# CROSS-METRIC RULES
+# ---------------------------------------------------
+
+# Conversational contexts tolerate less extreme pace than larger audiences.
+# Values represent the preferred WPM range before clarity is penalized.
+PACE_CLARITY_WPM_BANDS = {
+    "1": (110, 160),  # One-on-One
+    "2": (105, 155),  # Boardroom
+    "3": (95, 170),   # Mass Speech
+}
+
+
+def _apply_pace_clarity_penalty(clarity_score, pace_score, metrics, speech_type_value):
+    """
+    Reduce clarity when speaking pace is contextually unnatural.
+
+    Why:
+        Fast/slow delivery can reduce intelligibility in practice even when
+        articulation/disfluency features look good in isolation.
+
+    Strategy:
+        1) Add a penalty based on how far WPM is from context band.
+        2) Add a penalty when pace model already rates pace as weak.
+        3) Apply safety caps so clarity cannot stay very high under severe pace mismatch.
+    """
+    wpm = float(metrics.get("wpm", 0.0))
+    low, high = PACE_CLARITY_WPM_BANDS.get(str(speech_type_value), PACE_CLARITY_WPM_BANDS["2"])
+
+    if low <= wpm <= high:
+        return clarity_score
+
+    distance = (low - wpm) if wpm < low else (wpm - high)
+
+    penalty = 0.0
+
+    # WPM distance penalty
+    if distance > 30:
+        penalty += 0.8
+    elif distance > 20:
+        penalty += 0.6
+    elif distance > 10:
+        penalty += 0.4
+    else:
+        penalty += 0.2
+
+    # Pace-score severity penalty
+    if pace_score <= 2.0:
+        penalty += 0.4
+    elif pace_score <= 2.5:
+        penalty += 0.2
+
+    adjusted_clarity = clarity_score - penalty
+
+    # Hard caps for severe pace mismatch
+    if distance > 30:
+        adjusted_clarity = min(adjusted_clarity, 2.8)
+    elif distance > 20 or pace_score <= 2.0:
+        adjusted_clarity = min(adjusted_clarity, 3.2)
+
+    return clamp_and_round(adjusted_clarity)
+
+
+# ---------------------------------------------------
 # UTILS
 # ---------------------------------------------------
 
@@ -136,9 +199,18 @@ def score_speech(metrics, speech_type=None):
     speech_type_value = speech_type.value if hasattr(speech_type, "value") else str(speech_type or "2")
     model_set = MODEL_SETS.get(speech_type_value, MODEL_SETS["2"])
 
+    clarity_score = score_clarity(metrics, model_set["clarity"])
+    pace_score = score_pace(metrics, model_set["pace"])
+    clarity_score = _apply_pace_clarity_penalty(
+        clarity_score,
+        pace_score,
+        metrics,
+        speech_type_value,
+    )
+
     scores = {
-        "clarity": score_clarity(metrics, model_set["clarity"]),
-        "pace": score_pace(metrics, model_set["pace"]),
+        "clarity": clarity_score,
+        "pace": pace_score,
         "pauses": score_pauses(metrics, model_set["pauses"]),
         "pitch": score_pitch(metrics, model_set["pitch"]),
         "loudness": score_loudness(metrics, model_set["loudness"]),

@@ -26,6 +26,7 @@ pandas = "^3.0.1"
 python-multipart = "^0.0.18"
 scikit-learn = "^1.7.2"
 torch = {version="^2.10.0", source="torch-cpu"}
+google-genai = "^1.0.0"
 
 [tool.poetry.group.dev.dependencies]
 pytest = "^9.0.2"

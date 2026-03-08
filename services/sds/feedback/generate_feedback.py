@@ -1,4 +1,10 @@
 # ---------------------------------------------------
+# IMPORTS
+# ---------------------------------------------------
+
+from ai_feedback import generate_ai_context_summary
+
+# ---------------------------------------------------
 # FEEDBACK GENERATION (RULE-BASED)
 # ---------------------------------------------------
 
@@ -287,18 +293,19 @@ def _get_feedback(metric, score, speech_type_value):
 # FINAL FEEDBACK ENTRY POINT
 # ---------------------------------------------------
 
-def generate_feedback(scores, speech_type=None):
+def generate_feedback(scores, speech_type=None, delivery_data=None):
     """
     Generate context-aware, threshold-adjusted feedback.
 
     Input:
         scores:      dict with numeric values 1–5 per metric
         speech_type: SpeechType enum or string ("1", "2", "3")
+        delivery_data: dict with delivery_score, delivery_score_label, weights_used (optional)
 
     Output:
         dict with:
             - per-metric feedback strings (ordered by context priority)
-            - 'context_summary': overall guidance for the speech type
+            - 'context_summary': AI-generated overall feedback + context guidance
             - 'priority_metric': the most important metric for this context
     """
     speech_type_value = (
@@ -313,11 +320,29 @@ def generate_feedback(scores, speech_type=None):
         if metric in scores:
             feedback[metric] = _get_feedback(metric, scores[metric], speech_type_value)
 
-    # Add context summary
-    feedback["context_summary"] = CONTEXT_SUMMARIES.get(
+    # Get base context summary
+    base_context_summary = CONTEXT_SUMMARIES.get(
         speech_type_value,
         "Focus on clear delivery and confident projection."
     )
+
+    # Generate AI-powered context summary if delivery data is provided
+    if delivery_data:
+        speech_type_name = (
+            speech_type.name if hasattr(speech_type, "name") else f"TYPE_{speech_type_value}"
+        )
+        
+        feedback["context_summary"] = generate_ai_context_summary(
+            scores=scores,
+            weights=delivery_data.get("weights_used", {}),
+            delivery_score=delivery_data.get("delivery_score", 0.0),
+            delivery_label=delivery_data.get("delivery_score_label", "Unknown"),
+            speech_type_name=speech_type_name,
+            base_context_summary=base_context_summary,
+        )
+    else:
+        # Fallback to base context summary if no delivery data
+        feedback["context_summary"] = base_context_summary
 
     # Highlight the most critical metric for this context
     feedback["priority_metric"] = priority_order[0] if priority_order else "clarity"

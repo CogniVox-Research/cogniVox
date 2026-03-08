@@ -88,7 +88,7 @@ export function DocumentUploadPage() {
     const session = Session.connect(config, uploadedDoc);
     session.then((s) => {
       setSession(s);
-      navigate({ to: "/app/session/play/$id", params: { id: s.session_id } });
+      navigate({ to: "/app/session/play" });
     });
   };
 

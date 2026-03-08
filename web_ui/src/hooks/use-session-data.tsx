@@ -3,12 +3,11 @@ import { useSession } from "./use-session";
 
 const useSessionData = () => {
   const session = useSession();
-  if (session.session == null) throw Error("Session is not set");
+  const subscribe = session.session?.subscribe ?? (() => () => {});
+  const getState = session.session?.getState ?? (() => null);
+  const store = useSyncExternalStore(subscribe, getState);
 
-  return useSyncExternalStore(
-    session.session.subscribe,
-    session.session.getState,
-  );
+  return session.session ? store : null;
 };
 
 export default useSessionData;

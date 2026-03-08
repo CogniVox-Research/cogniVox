@@ -15,8 +15,8 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as AuthRegisterRouteImport } from './routes/auth/register'
 import { Route as AuthLoginRouteImport } from './routes/auth/login'
 import { Route as AppSessionRouteImport } from './routes/app/session'
+import { Route as AppSessionPlayRouteImport } from './routes/app/session/play'
 import { Route as AppSessionNewRouteImport } from './routes/app/session/new'
-import { Route as AppSessionPlayIdRouteImport } from './routes/app/session/play.$id'
 import { Route as AppSessionNewStartRouteImport } from './routes/app/session/new/start'
 import { Route as AppSessionNewOptionsRouteImport } from './routes/app/session/new/options'
 import { Route as AppSessionNewDocumentRouteImport } from './routes/app/session/new/document'
@@ -51,14 +51,14 @@ const AppSessionRoute = AppSessionRouteImport.update({
   path: '/session',
   getParentRoute: () => AppRoute,
 } as any)
+const AppSessionPlayRoute = AppSessionPlayRouteImport.update({
+  id: '/play',
+  path: '/play',
+  getParentRoute: () => AppSessionRoute,
+} as any)
 const AppSessionNewRoute = AppSessionNewRouteImport.update({
   id: '/new',
   path: '/new',
-  getParentRoute: () => AppSessionRoute,
-} as any)
-const AppSessionPlayIdRoute = AppSessionPlayIdRouteImport.update({
-  id: '/play/$id',
-  path: '/play/$id',
   getParentRoute: () => AppSessionRoute,
 } as any)
 const AppSessionNewStartRoute = AppSessionNewStartRouteImport.update({
@@ -85,10 +85,10 @@ export interface FileRoutesByFullPath {
   '/auth/login': typeof AuthLoginRoute
   '/auth/register': typeof AuthRegisterRoute
   '/app/session/new': typeof AppSessionNewRouteWithChildren
+  '/app/session/play': typeof AppSessionPlayRoute
   '/app/session/new/document': typeof AppSessionNewDocumentRoute
   '/app/session/new/options': typeof AppSessionNewOptionsRoute
   '/app/session/new/start': typeof AppSessionNewStartRoute
-  '/app/session/play/$id': typeof AppSessionPlayIdRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -98,10 +98,10 @@ export interface FileRoutesByTo {
   '/auth/login': typeof AuthLoginRoute
   '/auth/register': typeof AuthRegisterRoute
   '/app/session/new': typeof AppSessionNewRouteWithChildren
+  '/app/session/play': typeof AppSessionPlayRoute
   '/app/session/new/document': typeof AppSessionNewDocumentRoute
   '/app/session/new/options': typeof AppSessionNewOptionsRoute
   '/app/session/new/start': typeof AppSessionNewStartRoute
-  '/app/session/play/$id': typeof AppSessionPlayIdRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -112,10 +112,10 @@ export interface FileRoutesById {
   '/auth/login': typeof AuthLoginRoute
   '/auth/register': typeof AuthRegisterRoute
   '/app/session/new': typeof AppSessionNewRouteWithChildren
+  '/app/session/play': typeof AppSessionPlayRoute
   '/app/session/new/document': typeof AppSessionNewDocumentRoute
   '/app/session/new/options': typeof AppSessionNewOptionsRoute
   '/app/session/new/start': typeof AppSessionNewStartRoute
-  '/app/session/play/$id': typeof AppSessionPlayIdRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -127,10 +127,10 @@ export interface FileRouteTypes {
     | '/auth/login'
     | '/auth/register'
     | '/app/session/new'
+    | '/app/session/play'
     | '/app/session/new/document'
     | '/app/session/new/options'
     | '/app/session/new/start'
-    | '/app/session/play/$id'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -140,10 +140,10 @@ export interface FileRouteTypes {
     | '/auth/login'
     | '/auth/register'
     | '/app/session/new'
+    | '/app/session/play'
     | '/app/session/new/document'
     | '/app/session/new/options'
     | '/app/session/new/start'
-    | '/app/session/play/$id'
   id:
     | '__root__'
     | '/'
@@ -153,10 +153,10 @@ export interface FileRouteTypes {
     | '/auth/login'
     | '/auth/register'
     | '/app/session/new'
+    | '/app/session/play'
     | '/app/session/new/document'
     | '/app/session/new/options'
     | '/app/session/new/start'
-    | '/app/session/play/$id'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -209,18 +209,18 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppSessionRouteImport
       parentRoute: typeof AppRoute
     }
+    '/app/session/play': {
+      id: '/app/session/play'
+      path: '/play'
+      fullPath: '/app/session/play'
+      preLoaderRoute: typeof AppSessionPlayRouteImport
+      parentRoute: typeof AppSessionRoute
+    }
     '/app/session/new': {
       id: '/app/session/new'
       path: '/new'
       fullPath: '/app/session/new'
       preLoaderRoute: typeof AppSessionNewRouteImport
-      parentRoute: typeof AppSessionRoute
-    }
-    '/app/session/play/$id': {
-      id: '/app/session/play/$id'
-      path: '/play/$id'
-      fullPath: '/app/session/play/$id'
-      preLoaderRoute: typeof AppSessionPlayIdRouteImport
       parentRoute: typeof AppSessionRoute
     }
     '/app/session/new/start': {
@@ -265,12 +265,12 @@ const AppSessionNewRouteWithChildren = AppSessionNewRoute._addFileChildren(
 
 interface AppSessionRouteChildren {
   AppSessionNewRoute: typeof AppSessionNewRouteWithChildren
-  AppSessionPlayIdRoute: typeof AppSessionPlayIdRoute
+  AppSessionPlayRoute: typeof AppSessionPlayRoute
 }
 
 const AppSessionRouteChildren: AppSessionRouteChildren = {
   AppSessionNewRoute: AppSessionNewRouteWithChildren,
-  AppSessionPlayIdRoute: AppSessionPlayIdRoute,
+  AppSessionPlayRoute: AppSessionPlayRoute,
 }
 
 const AppSessionRouteWithChildren = AppSessionRoute._addFileChildren(

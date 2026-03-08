@@ -25,7 +25,7 @@ pub struct RecordAudio<P: PipelineStep> {
 
 impl<P: PipelineStep> RecordAudio<P> {
     pub fn recording_file(&self) -> String {
-        self.converted_path.to_string_lossy().into_owned()
+        format!("{}/converted.wav", self.prefix)
     }
 }
 

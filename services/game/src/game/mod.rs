@@ -39,7 +39,7 @@ impl Game {
         proto::wait_for!(self.game, GameInbound::SpeechStart)?;
         log::info!("Speech started");
 
-        let speech_asr = self.speech_loop(false).await?;
+        let speech_asr = self.speech_loop(true).await?;
         // TODO: questions
 
         let questions = vec!["Test question".to_owned()];
@@ -50,7 +50,7 @@ impl Game {
                 .await?;
             log::info!("Waiting for answer to start");
             proto::wait_for!(self.game, GameInbound::QuestionStart)?;
-            let question_asr = self.speech_loop(true).await?;
+            let question_asr = self.speech_loop(false).await?;
             // TODO: question processing
         }
 
@@ -89,7 +89,11 @@ impl Game {
     }
 
     async fn speech_loop(&mut self, is_speech: bool) -> Result<ASRContentComplete> {
-        let asr_session_id = uuid::Uuid::new_v4();
+        let asr_session_id = if is_speech {
+            self.session_id
+        } else {
+            uuid::Uuid::new_v4()
+        };
         let mut speech_mq = MQSession::new(&self.mq_connection, asr_session_id).await?;
         log::info!("MQ initialized for speech");
 

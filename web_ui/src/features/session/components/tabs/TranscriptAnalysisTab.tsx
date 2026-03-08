@@ -1,24 +1,16 @@
-'use client';
-
 import { useState } from 'react';
 import { motion, AnimatePresence, type Variants } from 'framer-motion';
 import {
     BarChart,
     Bar,
-    ScatterChart,
-    Scatter,
     XAxis,
     YAxis,
     CartesianGrid,
     Tooltip,
-    Legend,
     ResponsiveContainer,
     Cell,
-    LineChart,
-    Line,
 } from 'recharts';
 import { AlertTriangle, CheckCircle, TrendingDown, BarChart3, Info, Copy } from 'lucide-react';
-import type { Alignment } from '@/lib/types';
 import type { FinishedState } from '@/lib/session';
 
 interface TranscriptAnalysisTabProps {
@@ -152,7 +144,7 @@ const TranscriptAnalysisTab = ({ state }: TranscriptAnalysisTabProps) => {
                 </p>
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
                     {/* Sentence Count */}
-                    <div className="bg-gradient-to-br from-slate-50 to-slate-100 rounded-lg p-4 border border-slate-200">
+                    <div className="bg-linear-to-br from-slate-50 to-slate-100 rounded-lg p-4 border border-slate-200">
                         <p className="text-xs font-bold text-slate-700 uppercase mb-4">Sentence Count Comparison</p>
                         <ResponsiveContainer width="100%" height={200}>
                             <BarChart data={structuralComparison}>
@@ -166,7 +158,7 @@ const TranscriptAnalysisTab = ({ state }: TranscriptAnalysisTabProps) => {
                     </div>
 
                     {/* Avg Sentence Length */}
-                    <div className="bg-gradient-to-br from-slate-50 to-slate-100 rounded-lg p-4 border border-slate-200">
+                    <div className="bg-linear-to-br from-slate-50 to-slate-100 rounded-lg p-4 border border-slate-200">
                         <p className="text-xs font-bold text-slate-700 uppercase mb-4">Avg Sentence Length (words)</p>
                         <ResponsiveContainer width="100%" height={200}>
                             <BarChart data={structuralComparison}>
@@ -180,7 +172,7 @@ const TranscriptAnalysisTab = ({ state }: TranscriptAnalysisTabProps) => {
                     </div>
 
                     {/* Lexical Density */}
-                    <div className="bg-gradient-to-br from-slate-50 to-slate-100 rounded-lg p-4 border border-slate-200">
+                    <div className="bg-linear-to-br from-slate-50 to-slate-100 rounded-lg p-4 border border-slate-200">
                         <p className="text-xs font-bold text-slate-700 uppercase mb-4">Lexical Density (%)</p>
                         <ResponsiveContainer width="100%" height={200}>
                             <BarChart data={structuralComparison.map(s => ({ name: s.name, value: parseFloat(s.lexical) }))}>
@@ -265,12 +257,12 @@ const TranscriptAnalysisTab = ({ state }: TranscriptAnalysisTabProps) => {
 
             {/* Sentence Count Comparison */}
             <motion.div variants={itemVariants} className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="bg-gradient-to-br from-blue-50 to-blue-100 rounded-xl p-6 border-2 border-blue-200">
+                <div className="bg-linear-to-br from-blue-50 to-blue-100 rounded-xl p-6 border-2 border-blue-200">
                     <p className="text-xs font-bold text-blue-600 uppercase mb-2 tracking-wider">Transcript Sentence Count</p>
                     <p className="text-4xl font-bold text-blue-900">{similarity.sentence_count_transcript}</p>
                     <p className="text-sm text-blue-700 mt-2">Total sentences in original transcript</p>
                 </div>
-                <div className="bg-gradient-to-br from-green-50 to-green-100 rounded-xl p-6 border-2 border-green-200">
+                <div className="bg-linear-to-br from-green-50 to-green-100 rounded-xl p-6 border-2 border-green-200">
                     <p className="text-xs font-bold text-green-600 uppercase mb-2 tracking-wider">Speech Sentence Count</p>
                     <p className="text-4xl font-bold text-green-900">{similarity.sentence_count_speech}</p>
                     <p className="text-sm text-green-700 mt-2">Total sentences delivered in speech</p>
@@ -286,7 +278,7 @@ const TranscriptAnalysisTab = ({ state }: TranscriptAnalysisTabProps) => {
                 <p className="text-xs text-slate-600 mb-4">
                     Detailed breakdown of how each transcript sentence maps to the speech content. Click to expand for full details.
                 </p>
-                <div className="space-y-4 max-h-[600px] overflow-y-auto pr-2">
+                <div className="space-y-4 max-h-150 overflow-y-auto pr-2">
                     {alignmentsSorted.map((alignment, idx) => {
                         const similarityScore = Math.round(alignment.similarity * 100);
                         const isExpanded = expandedAlignment === idx;
@@ -410,7 +402,7 @@ const TranscriptAnalysisTab = ({ state }: TranscriptAnalysisTabProps) => {
                                         animate={{ opacity: 1, x: 0 }}
                                         transition={{ delay: idx * 0.03 }}
                                     >
-                                        <Info className="w-4 h-4 text-blue-600 flex-shrink-0 mt-0.5" />
+                                        <Info className="w-4 h-4 text-blue-600 shrink-0 mt-0.5" />
                                         <p className="text-sm text-slate-700 leading-relaxed">{point}</p>
                                     </motion.div>
                                 ))
@@ -436,7 +428,7 @@ const TranscriptAnalysisTab = ({ state }: TranscriptAnalysisTabProps) => {
                                         animate={{ opacity: 1, x: 0 }}
                                         transition={{ delay: idx * 0.03 }}
                                     >
-                                        <CheckCircle className="w-4 h-4 text-green-600 flex-shrink-0 mt-0.5" />
+                                        <CheckCircle className="w-4 h-4 text-green-600 shrink-0 mt-0.5" />
                                         <p className="text-sm text-slate-700 leading-relaxed">{point}</p>
                                     </motion.div>
                                 ))
@@ -457,7 +449,7 @@ const TranscriptAnalysisTab = ({ state }: TranscriptAnalysisTabProps) => {
                 <p className="text-xs text-slate-600 mb-4">
                     These key points from the transcript were not mentioned or were insufficiently covered in the speech.
                 </p>
-                <div className="space-y-2 max-h-[500px] overflow-y-auto pr-2">
+                <div className="space-y-2 max-h-125 overflow-y-auto pr-2">
                     {similarity.missing_points.length > 0 ? (
                         similarity.missing_points.map((point, idx) => (
                             <motion.div
@@ -467,7 +459,7 @@ const TranscriptAnalysisTab = ({ state }: TranscriptAnalysisTabProps) => {
                                 animate={{ opacity: 1, x: 0 }}
                                 transition={{ delay: idx * 0.02 }}
                             >
-                                <AlertTriangle className="w-5 h-5 text-amber-600 flex-shrink-0 mt-0.5 flex-shrink-0" />
+                                <AlertTriangle className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
                                 <div className="flex-1">
                                     <p className="text-sm text-slate-900 leading-relaxed font-medium">{point}</p>
                                 </div>
@@ -503,7 +495,7 @@ const TranscriptAnalysisTab = ({ state }: TranscriptAnalysisTabProps) => {
                                     animate={{ opacity: 1, x: 0 }}
                                     transition={{ delay: idx * 0.03 }}
                                 >
-                                    <TrendingDown className="w-5 h-5 text-orange-600 flex-shrink-0 mt-0.5" />
+                                    <TrendingDown className="w-5 h-5 text-orange-600 shrink-0 mt-0.5" />
                                     <div className="flex-1">
                                         {/* Speech Sentence */}
                                         <div className="mb-3">
@@ -526,7 +518,7 @@ const TranscriptAnalysisTab = ({ state }: TranscriptAnalysisTabProps) => {
                                             <div className="flex-1">
                                                 <div className="relative w-full h-2.5 bg-slate-300 rounded-full overflow-hidden">
                                                     <motion.div
-                                                        className="h-full bg-gradient-to-r from-orange-400 to-orange-600"
+                                                        className="h-full bg-linear-to-r from-orange-400 to-orange-600"
                                                         initial={{ width: 0 }}
                                                         animate={{ width: `${similarityPercent}%` }}
                                                         transition={{ duration: 0.6, delay: 0.2 }}

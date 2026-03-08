@@ -313,24 +313,28 @@ const RunningPage = ({ state }: { state: RunningState }) => {
               animate="visible"
               className="text-xl md:text-2xl leading-relaxed md:leading-loose font-normal text-slate-800"
             >
-              {state.asr.lines.map((line, idx) => (
+              {lines.map((segment, idx) => (
                 <motion.span
-                  key={`${idx}-${typeof line === "object" && "timestamp" in line ? line.timestamp : idx}`}
+                  key={`${idx}-${segment.start}`}
                   variants={textItemVariants}
                 >
-                  {line.type === "silence" ? (
+                  {segment.type === "silence" ? (
                     <span
                       className="inline-flex items-center justify-center px-3 py-1 mx-2 align-middle bg-slate-200/60 rounded-full text-slate-500 text-sm font-medium border border-slate-300 shadow-sm"
-                      title={`Silence • ${line.timestamp.start} - ${line.timestamp.end}`}
+                      title={`Silence • ${segment.start} - ${segment.end}`}
                     >
-                      ... {Math.max(0, line.timestamp.end - line.timestamp.start).toFixed(1)}s
+                      ... {Math.max(0, segment.end - segment.start).toFixed(1)}s
                     </span>
                   ) : (
-                    <span
-                      className={`transition-colors duration-300 ${line.type === "partial" ? "text-slate-400" : "text-slate-900"
-                        }`}
-                    >
-                      {line.text}{" "}
+                    <span className="transition-colors duration-300 text-slate-900">
+                      {segment.text}
+                      {segment.text && segment.unconfirmed_text && " "}
+                      {segment.unconfirmed_text && (
+                        <span className="text-slate-400">
+                          {segment.unconfirmed_text}
+                        </span>
+                      )}
+                      {" "}
                     </span>
                   )}
                 </motion.span>

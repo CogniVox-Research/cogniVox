@@ -46,6 +46,8 @@ pub struct Feedback {
     pub pauses: String,
     pub pitch: String,
     pub loudness: String,
+    pub context_summary: String,
+    pub priority_metric: String,
 }
 
 #[derive(Debug, Serialize, Deserialize)]

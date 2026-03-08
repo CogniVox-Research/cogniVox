@@ -203,6 +203,7 @@ export type Feedback = {
   pauses: string;
   pitch: string;
   loudness: string;
+  context_summary: string;
 };
 
 export type Delivery = {

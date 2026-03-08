@@ -1,12 +1,14 @@
-# LLM Service - Interview Question Generator
+# LLM Service - Interview Question Generator & Evaluator
 
-A FastAPI-based service that generates interview questions and sample answers based on CV content using Google's Gemini AI.
+A FastAPI-based service that generates interview questions and evaluates user answers using Google's Gemini AI.
 
 ## Features
 
 - **CV Analysis**: Accepts CV content as a string
 - **Question Generation**: Generates 5 professional interview questions tailored to the CV
 - **Sample Answers**: Provides comprehensive sample answers for each question
+- **Answer Evaluation**: Evaluates user answers against expected responses with AI-powered scoring
+- **Matching Score**: Returns overall score (0-5) and per-question matching percentage
 - **Error Handling**: Robust error handling with detailed error messages
 - **Health Check**: Includes a health check endpoint for monitoring
 
@@ -89,7 +91,61 @@ The service will start at `http://localhost:8000`
 - `400 Bad Request`: Invalid CV content or Gemini API error
 - `500 Internal Server Error`: Server error
 
-### 2. Health Check
+### 2. Evaluate Interview Answers
+
+**Endpoint**: `POST /api/v1/evaluate-answers`
+
+**Request Body**:
+
+```json
+{
+  "questions_with_answers": [
+    {
+      "question": "Tell me about your experience with Python development?",
+      "sample_answer": "I have 5 years of professional experience in Python development...",
+      "user_answer": "I have been working with Python for 5 years building REST APIs and web applications."
+    },
+    {
+      "question": "What is your approach to code quality?",
+      "sample_answer": "I believe in writing clean, maintainable code...",
+      "user_answer": "I don't really think about that much."
+    }
+  ]
+}
+```
+
+**Response**:
+
+```json
+{
+  "overall_score": 4,
+  "results": [
+    {
+      "question": "Tell me about your experience with Python development?",
+      "matching_percentage": 85.0,
+      "is_matching": 1
+    },
+    {
+      "question": "What is your approach to code quality?",
+      "matching_percentage": 25.0,
+      "is_matching": 0
+    }
+  ]
+}
+```
+
+**Fields**:
+- `overall_score`: Total number of acceptable answers (out of 5)
+- `matching_percentage`: 0-100 score indicating answer quality
+- `is_matching`: 1 = acceptable (≥60%), 0 = not acceptable (<60%)
+
+**Status Codes**:
+
+- `200 OK`: Successfully evaluated answers
+- `400 Bad Request`: Invalid request format or Gemini API error
+- `500 Internal Server Error`: Server error
+
+### 3. Health Check
 
 **Endpoint**: `GET /api/v1/health`
 

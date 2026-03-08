@@ -1,6 +1,6 @@
 import type { Line } from "./types";
 
-type TextSegment = {
+export type TextSegment = {
   type: "text";
   text: string;
   unconfirmed_text: string;
@@ -8,7 +8,7 @@ type TextSegment = {
   end: number;
 };
 
-type Segment =
+export type SpeechSegment =
   | TextSegment
   | {
       type: "silence";
@@ -17,7 +17,7 @@ type Segment =
     };
 
 export const compactSpeech = (lines: Line[]) => {
-  const segments: Segment[] = [];
+  const segments: SpeechSegment[] = [];
   let current_segment: TextSegment | null = null;
 
   for (let i = 0; i < lines.length; i++) {

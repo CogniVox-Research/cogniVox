@@ -9,9 +9,11 @@ import type {
   Timestamped,
   HeartRate,
   Stuck,
+  ASRRaw,
 } from "./types";
 import WS from "./ws";
 import { produce } from "immer";
+import { compactSpeech } from "./asr_util";
 
 export type WaitingState = {
   state: "waiting_join";
@@ -75,10 +77,13 @@ export default class Session {
       this.update({ state: "error", error });
     });
 
-    socket.subscribe<ASR>("a_s_r", (asr) => {
+    socket.subscribe<ASRRaw>("a_s_r", (asr) => {
       this.update((s) => {
         if (s.state !== "running") return;
-        s.asr = asr;
+        s.asr = {
+          ...asr,
+          segments: compactSpeech(asr.lines),
+        };
       });
     });
 
@@ -126,8 +131,7 @@ export default class Session {
         asr: {
           current_silence: null,
           full_text: "",
-          lines: [],
-          session_id: session_id,
+          segments: [],
           type: "partial",
         },
         stress: [],

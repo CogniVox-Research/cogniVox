@@ -207,9 +207,6 @@ const RunningPage = ({ state }: { state: RunningState }) => {
               <h1 className="text-xl font-bold text-slate-900">
                 Speech Analysis
               </h1>
-              <p className="text-sm text-slate-500">
-                Session: {state.asr.session_id.slice(0, 8)}...
-              </p>
             </div>
           </div>
 

@@ -16,6 +16,8 @@ from pydantic import BaseModel
 from shared import rabbitmq
 from typing_extensions import Literal
 
+from ai_feedback import generate_ai_biometric_feedback
+
 # Load models
 current_dir = os.path.dirname(os.path.abspath(__file__))
 model_dir = os.path.join(current_dir, "models")
@@ -159,7 +161,7 @@ def generate_suggestion(label, stress_score):
 
 @app.post("/predict_stress")
 def predict_stress_route(input: FeatureInput):
-    predict_stress(input)
+    return predict_stress(input)
 
 
 def predict_stress(input: FeatureInput):
@@ -194,11 +196,20 @@ def predict_stress(input: FeatureInput):
         raise HTTPException(status_code=500, detail=f"Prediction error: {e}")
 
     suggestion = generate_suggestion(label, score)
+    ai_feedback = generate_ai_biometric_feedback(
+        model_used=model_name,
+        label=int(label),
+        stress_score=float(score),
+        suggestion=suggestion,
+        features=feat_dict,
+    )
+
     return {
         "model_used": model_name,
         "label": int(label),
         "stress_score": score,
         "suggestion": suggestion,
+        "feedback": ai_feedback,
     }
 
 

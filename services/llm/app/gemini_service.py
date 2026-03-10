@@ -177,3 +177,33 @@ Return ONLY a JSON object:
         "continuation_hint": data.get("continuation_hint", ""),
         "status": "success"
     }
+
+
+def generate_speech_questions(speech_content: str) -> dict:
+    """Generate 5 questions and sample answers from speech content"""
+    client = genai.Client(api_key=settings.gemini_api_key)
+    
+    prompt = f"""Based on this speech, generate exactly 5 questions and sample answers that evaluate understanding of the speech.
+
+Return ONLY valid JSON array with this structure:
+[
+    {{"question": "...", "sample_answer": "..."}},
+    ...
+]
+
+Speech Content:
+{speech_content}"""
+    
+    response = client.models.generate_content(model=settings.gemini_model, contents=prompt)
+    text = response.text.strip()
+    
+    # Remove markdown code blocks if present
+    if text.startswith("```"):
+        text = "\n".join(line for line in text.split("\n") if not line.startswith("```"))
+    
+    data = json.loads(text)
+    
+    return {
+        "questions_and_answers": data,
+        "total_questions": len(data)
+    }

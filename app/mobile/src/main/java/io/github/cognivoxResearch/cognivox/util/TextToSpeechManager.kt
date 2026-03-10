@@ -1,11 +1,14 @@
 package io.github.cognivoxResearch.cognivox.util
+
 import android.content.Context
 import android.os.Build
 import android.os.Bundle
 import android.speech.tts.TextToSpeech
 import android.speech.tts.UtteranceProgressListener
+import kotlinx.coroutines.CancellableContinuation
 import kotlinx.coroutines.suspendCancellableCoroutine
 import java.util.Locale
+import java.util.concurrent.ConcurrentHashMap
 import kotlin.coroutines.resume
 
 /**
@@ -16,6 +19,7 @@ class TextToSpeechManager(private val context: Context) {
 
     private var textToSpeech: TextToSpeech? = null
     private var isInitialized = false
+    private val activeUtterances = ConcurrentHashMap<String, CancellableContinuation<Result<Unit>>>()
 
     /**
      * Initialize TextToSpeech engine
@@ -35,6 +39,7 @@ class TextToSpeechManager(private val context: Context) {
                             Result.failure(Exception("Language not supported"))
                         )
                     } else {
+                        setupProgressListener()
                         continuation.resume(Result.success(Unit))
                     }
                 } else {
@@ -47,6 +52,67 @@ class TextToSpeechManager(private val context: Context) {
         } catch (e: Exception) {
             continuation.resume(Result.failure(e))
         }
+    }
+
+    private fun setupProgressListener() {
+        textToSpeech?.setOnUtteranceProgressListener(object : UtteranceProgressListener() {
+            override fun onStart(utteranceId: String) {
+                // Speech started
+            }
+
+            override fun onDone(utteranceId: String) {
+                // Speech completed successfully
+                activeUtterances.remove(utteranceId)?.let { continuation ->
+                    if (continuation.isActive) {
+                        continuation.resume(Result.success(Unit))
+                    }
+                }
+            }
+
+            @Deprecated("Deprecated in Java", ReplaceWith("onError(utteranceId, TextToSpeech.ERROR)"))
+            override fun onError(utteranceId: String) {
+                // Speech failed (deprecated onError)
+                activeUtterances.remove(utteranceId)?.let { continuation ->
+                    if (continuation.isActive) {
+                        continuation.resume(Result.failure(Exception("TTS Error: Speech synthesis failed")))
+                    }
+                }
+            }
+
+            override fun onError(utteranceId: String, errorCode: Int) {
+                // Speech failed (new API)
+                val errorMessage = when (errorCode) {
+                    TextToSpeech.ERROR_SYNTHESIS -> "Synthesis failed"
+                    TextToSpeech.ERROR_SERVICE -> "Service error"
+                    TextToSpeech.ERROR_NETWORK -> "Network error"
+                    TextToSpeech.ERROR_INVALID_REQUEST -> "Invalid request"
+                    TextToSpeech.ERROR_NETWORK_TIMEOUT -> "Network timeout"
+                    else -> "Unknown error: $errorCode"
+                }
+                activeUtterances.remove(utteranceId)?.let { continuation ->
+                    if (continuation.isActive) {
+                        continuation.resume(Result.failure(Exception("TTS Error: $errorMessage")))
+                    }
+                }
+            }
+
+            // For API 21+
+            override fun onStop(utteranceId: String, interrupted: Boolean) {
+                if (interrupted) {
+                    activeUtterances.remove(utteranceId)?.let { continuation ->
+                        if (continuation.isActive) {
+                            continuation.resume(Result.failure(Exception("Speech interrupted")))
+                        }
+                    }
+                } else {
+                    activeUtterances.remove(utteranceId)?.let { continuation ->
+                        if (continuation.isActive) {
+                            continuation.resume(Result.success(Unit))
+                        }
+                    }
+                }
+            }
+        })
     }
 
     /**
@@ -95,57 +161,13 @@ class TextToSpeechManager(private val context: Context) {
             textToSpeech?.setSpeechRate(speechRate.coerceIn(0.5f, 2.0f))
             textToSpeech?.setPitch(pitch.coerceIn(0.5f, 2.0f))
 
-            // Set up utterance progress listener to know when speech is complete
-            textToSpeech?.setOnUtteranceProgressListener(object : UtteranceProgressListener() {
-                override fun onStart(utteranceId: String) {
-                    // Speech started
-                }
-
-                override fun onDone(utteranceId: String) {
-                    // Speech completed successfully
-                    continuation.resume(Result.success(Unit))
-                }
-
-                override fun onError(utteranceId: String) {
-                    // Speech failed (deprecated onError)
-                    continuation.resume(
-                        Result.failure(Exception("TTS Error: Speech synthesis failed"))
-                    )
-                }
-
-                override fun onError(utteranceId: String, errorCode: Int) {
-                    // Speech failed (new API)
-                    val errorMessage = when (errorCode) {
-                        TextToSpeech.ERROR_SYNTHESIS -> "Synthesis failed"
-                        TextToSpeech.ERROR_SERVICE -> "Service error"
-                        TextToSpeech.ERROR_NETWORK -> "Network error"
-                        TextToSpeech.ERROR_INVALID_REQUEST -> "Invalid request"
-                        TextToSpeech.ERROR_NETWORK_TIMEOUT -> "Network timeout"
-                        else -> "Unknown error: $errorCode"
-                    }
-                    continuation.resume(
-                        Result.failure(Exception("TTS Error: $errorMessage"))
-                    )
-                }
-
-                // For API 21+
-                override fun onStop(utteranceId: String, interrupted: Boolean) {
-                    if (interrupted) {
-                        continuation.resume(
-                            Result.failure(Exception("Speech interrupted"))
-                        )
-                    }
-                }
-            })
-
             val utteranceId = "tts_utterance_${System.currentTimeMillis()}"
+            activeUtterances[utteranceId] = continuation
 
             // Speak the text with appropriate parameter format for API level
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
-                val params = Bundle().apply {
-                    putString(TextToSpeech.Engine.KEY_PARAM_UTTERANCE_ID, utteranceId)
-                }
-                textToSpeech?.speak(text, TextToSpeech.QUEUE_FLUSH, params)
+            val speakResult = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+                val params = Bundle()
+                textToSpeech?.speak(text, TextToSpeech.QUEUE_FLUSH, params, utteranceId)
             } else {
                 @Suppress("DEPRECATION")
                 val params = HashMap<String, String>().apply {
@@ -155,8 +177,30 @@ class TextToSpeechManager(private val context: Context) {
                 textToSpeech?.speak(text, TextToSpeech.QUEUE_FLUSH, params)
             }
 
+            if (speakResult == TextToSpeech.ERROR) {
+                activeUtterances.remove(utteranceId)
+                if (continuation.isActive) {
+                    continuation.resume(Result.failure(Exception("TextToSpeech speak failed with ERROR")))
+                }
+            }
+
+            // Clean up upon coroutine cancellation
+            continuation.invokeOnCancellation {
+                activeUtterances.remove(utteranceId)
+            }
+
         } catch (e: Exception) {
-            continuation.resume(Result.failure(e))
+            activeUtterances.iterator().apply {
+                while (hasNext()) {
+                    val entry = next()
+                    if (entry.value == continuation) {
+                        remove()
+                    }
+                }
+            }
+            if (continuation.isActive) {
+                continuation.resume(Result.failure(e))
+            }
         }
     }
 
@@ -181,6 +225,12 @@ class TextToSpeechManager(private val context: Context) {
             textToSpeech?.shutdown()
             textToSpeech = null
             isInitialized = false
+            for ((_, continuation) in activeUtterances) {
+                if (continuation.isActive) {
+                    continuation.resume(Result.failure(Exception("TextToSpeech shutdown")))
+                }
+            }
+            activeUtterances.clear()
         } catch (e: Exception) {
             e.printStackTrace()
         }

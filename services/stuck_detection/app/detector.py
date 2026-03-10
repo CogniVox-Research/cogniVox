@@ -1,22 +1,26 @@
-import datetime
+import asyncio
+
 import httpx
-import spacy
 from fastapi.logger import logger
+from shared.store import connect_store
 
 from app import config, dto
 from app.dto import ASRData, Silence
 from app.util import spacy_load_or_download
-from shared.store import connect_store
-
 
 store = connect_store(config.store)
-SERVICE_B_URL = "http://llm_service:8013/generate-continuation-hint"
+
+
+class Task:
+    def __init__(self) -> None:
+        self.lock = asyncio.Lock()
+        self.complete = False
 
 
 class StuckDetector:
     def __init__(self) -> None:
         self.model = spacy_load_or_download("en_core_web_md")
-        self.detections = {}
+        self.detections: dict[str, Task] = {}
 
     async def detect_stuck(self, data: ASRData):
         has_spoken = data.full_text != ""
@@ -30,40 +34,54 @@ class StuckDetector:
         if not is_repeating and not has_long_silence:
             was_stuck = self.detections.pop(data.session_id, None) is not None
             if was_stuck:
-                return dto.UnstuckDetection(stuck_id="PLACEHOLDER")
+                return dto.UnstuckDetection()
             return None
 
         if data.session_id in self.detections:
-            if not self.detections[data.session_id]:
-                logger.debug("Generating suggestions")
+            task = self.detections[data.session_id]
+            await task.lock.acquire()
+            try:
+                if not task.complete:
+                    logger.error("Generating suggestions")
 
-                # from . import llm_server
-                # suggestions = await llm_server.get_continue_for(data.session_id, data.full_text)
-                expected_speech = store.get(f"{data.session_id}/documents/content")
-                delivered_speech = data.full_text
-                payload = {
-                    "full_speech": expected_speech,
-                    "delivered_so_far": delivered_speech
-                }
+                    try:
+                        expected_speech = store.get(
+                            f"{data.session_id}/documents/content"
+                        ).decode("utf-8")
+                    except:
+                        expected_speech = """This is the Micro Machine Man presenting the most midget miniature motorcade of Micro Machines. Each one has dramatic details, terrific trims, precision paint jobs,
+                            plus incredible Micro Machine Pocket play sets. There's a police station, fire station, restaurant, service station, and more. Perfect pocket portables to take any place.
+                            And there are many miniature play sets to play with and each one comes with its own special edition Micro Machine vehicle and fun, fantastic features that miraculously move.
+                            Raise the boat lift at the airport marina, man the gun turret at the army base, clean your car at the car wash, raise the toll bridge. And these play sets fit together to
+                            form a Micro Machine world. Micro Machine Pocket play sets, so tremendously tiny, so perfectly precise, so dazzlingly detailed, you'll want to pocket them all.
+                            Micro Machines and Micro Machine Pocket play sets sold separately from Galoob. The smaller they are, the better they are"""
 
+                    delivered_speech = data.full_text
+                    payload = {
+                        "full_speech": expected_speech,
+                        "delivered_so_far": delivered_speech,
+                    }
 
-                async with httpx.AsyncClient() as client:
-                    response = await client.post(SERVICE_B_URL, json=payload)
+                    async with httpx.AsyncClient(timeout=30) as client:
+                        response = await client.post(
+                            config.llm_continue_url, json=payload
+                        )
 
-                response_data = response.json()
+                    response_data = response.json()
+                    logger.error(f"Got from LLM: {response_data}")
 
-                suggestion = response_data.get("continuation_hint")
+                    suggestion = response_data.get("continuation_hint")
 
-
-                # suggestion generation
-                self.detections[data.session_id] = True
-                return dto.StuckDetection(
-                    reason="repetition" if is_repeating else "silence",
-                    suggestions=[suggestion],
-                )
-
+                    # suggestion generation
+                    task.complete = True
+                    return dto.StuckDetection(
+                        reason="repetition" if is_repeating else "silence",
+                        suggestion=suggestion,
+                    )
+            finally:
+                task.lock.release()
         else:
-            self.detections[data.session_id] = False
+            self.detections[data.session_id] = Task()
             return dto.StuckDetection(
                 reason="repetition" if is_repeating else "silence",
             )

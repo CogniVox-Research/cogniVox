@@ -8,7 +8,7 @@ from shared.store import StoreConfig
 
 class Settings(SharedBaseSettings):
     rabbitmq_url: str = Field()
-
+    llm_continue_url: str = Field()
     max_silence: float = Field()
 
     checked_sentences: int = Field()

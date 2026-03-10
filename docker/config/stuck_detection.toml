@@ -1,4 +1,5 @@
 rabbitmq_url = "amqp://appuser:apppass@rabbitmq"
+llm_continue_url="http://llm_service:8013/api/v1/generate-continuation-hint"
 max_silence = 7.5
 
 checked_sentences = 5

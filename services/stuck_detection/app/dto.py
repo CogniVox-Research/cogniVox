@@ -4,13 +4,12 @@ from typing import Literal, Optional
 import pydantic
 
 
-class UnstuckDetection(pydantic.BaseModel):
-    stuck_id: str
+class UnstuckDetection(pydantic.BaseModel): ...
 
 
 class StuckDetection(pydantic.BaseModel):
     reason: Literal["silence", "repetition"]
-    suggestions: list[str] | None = None
+    suggestion: str | None = None
 
 
 class Timestamp(pydantic.BaseModel):

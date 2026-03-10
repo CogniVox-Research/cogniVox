@@ -7,5 +7,5 @@ services:
     ports:
       - "8010:8010"
     volumes:
-      - ../services/auth/config.toml:/app/config.toml:ro
-      - ../services/auth/keys:/app/keys:ro
+      - ../services/auth/config.toml:/app/services/auth/config.toml:ro
+      - ../services/auth/keys:/app/services/auth/keys:ro

@@ -3,12 +3,7 @@
 import traceback
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel, field_validator
-from app.gemini_service import (
-    generate_interview_questions, 
-    generate_speech_continuation, 
-    evaluate_interview_answers,
-    generate_speech_questions
-)
+from app.gemini_service import generate_interview_questions, generate_speech_continuation, evaluate_interview_answers,  generate_stress_management_plan, generate_speech_questions
 
 router = APIRouter()
 
@@ -46,6 +41,12 @@ class CVRequest(BaseModel):
             return v
         return v
 
+class StressSummaryRequest(BaseModel):
+    avg_stress: float
+    max_stress: float
+    high_stress_events: int
+    duration_seconds: float
+
 
 class ContinuationRequest(BaseModel):
     full_speech: str
@@ -70,6 +71,16 @@ async def generate_questions(request: CVRequest):
         result = generate_interview_questions(request.cv_content)
         return result
     except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+@router.post("/generate-stress-management-plan")
+async def generate_stress_plan(request: StressSummaryRequest):
+    """Generate a stress management plan from a stress metrics summary"""
+    try:
+        result = generate_stress_management_plan(request.model_dump())
+        return result
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
         print(f"LLM service error: {e}")
         traceback.print_exc()
         raise HTTPException(status_code=500, detail=str(e))

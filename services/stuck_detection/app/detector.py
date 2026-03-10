@@ -1,11 +1,16 @@
 import datetime
-
+import httpx
 import spacy
 from fastapi.logger import logger
 
 from app import config, dto
 from app.dto import ASRData, Silence
 from app.util import spacy_load_or_download
+from shared.store import connect_store
+
+
+store = connect_store(config.store)
+SERVICE_B_URL = "http://llm_service:8013/generate-continuation-hint"
 
 
 class StuckDetector:
@@ -34,8 +39,21 @@ class StuckDetector:
 
                 # from . import llm_server
                 # suggestions = await llm_server.get_continue_for(data.session_id, data.full_text)
+                expected_speech = store.get(f"{data.session_id}/documents/content")
+                delivered_speech = data.full_text
+                payload = {
+                    "full_speech": expected_speech,
+                    "delivered_so_far": delivered_speech
+                }
 
-                suggestion = "test"
+
+                async with httpx.AsyncClient() as client:
+                    response = await client.post(SERVICE_B_URL, json=payload)
+
+                response_data = response.json()
+
+                suggestion = response_data.get("continuation_hint")
+
 
                 # suggestion generation
                 self.detections[data.session_id] = True

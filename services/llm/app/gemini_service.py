@@ -34,6 +34,32 @@ CV Content:
         "total_questions": len(data)
     }
 
+def generate_stress_management_plan(stress_summary: dict) -> dict:
+    """Generate a personalized, long-term stress management plan based on speech stress data"""
+    client = genai.Client(api_key=settings.gemini_api_key)
+    
+    prompt = f"""Based on the following stress metrics collected during a user's speech session, generate a comprehensive, personalized, and long-term stress management plan.
+    Provide the response in Markdown format.
+
+Stress details:
+- Average Stress Level: {stress_summary.get('avg_stress', 'N/A')}
+- Maximum Stress Level: {stress_summary.get('max_stress', 'N/A')}
+- Number of High Stress Events: {stress_summary.get('high_stress_events', 'N/A')}
+- Session Duration (seconds): {stress_summary.get('duration_seconds', 'N/A')}
+
+Structure the plan with:
+1. An encouraging summary of their performance
+2. Immediate short-term techniques to manage stress
+3. A long-term stress management strategy
+4. Specific exercises matching their stress profile
+
+Keep the tone professional, supportive, and actionable. Do not echo back the exact scores, but use them to shape the advice."""
+
+    response = client.models.generate_content(model=settings.gemini_model, contents=prompt)
+    text = response.text.strip()
+    
+    return {
+        "plan": text
 
 def evaluate_interview_answers(questions_with_answers: list[dict]) -> dict:
     """

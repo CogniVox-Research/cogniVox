@@ -180,7 +180,7 @@ impl Game {
         }
     }
 
-    async fn update_stress(&mut self, data: &stress::StressResponse) {
+    fn update_stress(&mut self, data: &stress::StressResponse) {
         self.stress_data.max_stress = data.stress_score.max(self.stress_data.max_stress);
         self.stress_data.total_stress += data.stress_score;
         self.stress_data.total_events += 1;

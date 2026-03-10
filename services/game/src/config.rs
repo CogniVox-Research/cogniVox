@@ -24,5 +24,4 @@ pub struct LLMService {
     pub stress_management: String,
     pub speech_question: String,
     pub evaluate: String,
-    pub speech_continue: String,
 }

@@ -1,45 +1,54 @@
 """API routes for the LLM Service"""
 
 import traceback
+
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel, field_validator
-from app.gemini_service import generate_interview_questions, generate_speech_continuation, evaluate_interview_answers,  generate_stress_management_plan, generate_speech_questions
+
+from app.gemini_service import (
+    evaluate_interview_answers,
+    generate_interview_questions,
+    generate_speech_continuation,
+    generate_speech_questions,
+    generate_stress_management_plan,
+)
 
 router = APIRouter()
 
 
 class SpeechRequest(BaseModel):
     speech_content: str
-    
-    @field_validator('speech_content', mode='before')
+
+    @field_validator("speech_content", mode="before")
     def clean_speech_content(cls, v):
         """Clean and normalize speech content"""
         if isinstance(v, str):
             # Strip leading/trailing whitespace
             v = v.strip()
             # Handle common escape sequences
-            v = v.replace('\\n', '\n')
-            v = v.replace('\\t', '\t')
-            v = v.replace('\\r', '\r')
+            v = v.replace("\\n", "\n")
+            v = v.replace("\\t", "\t")
+            v = v.replace("\\r", "\r")
             return v
         return v
 
 
 class CVRequest(BaseModel):
     cv_content: str
-    
-    @field_validator('cv_content', mode='before')
+
+    @field_validator("cv_content", mode="before")
     def clean_cv_content(cls, v):
         """Clean and normalize CV content"""
         if isinstance(v, str):
             # Strip leading/trailing whitespace
             v = v.strip()
             # Handle common escape sequences
-            v = v.replace('\\n', '\n')
-            v = v.replace('\\t', '\t')
-            v = v.replace('\\r', '\r')
+            v = v.replace("\\n", "\n")
+            v = v.replace("\\t", "\t")
+            v = v.replace("\\r", "\r")
             return v
         return v
+
 
 class StressSummaryRequest(BaseModel):
     avg_stress: float
@@ -51,15 +60,15 @@ class StressSummaryRequest(BaseModel):
 class ContinuationRequest(BaseModel):
     full_speech: str
     delivered_so_far: str
-    
-    @field_validator('full_speech', 'delivered_so_far', mode='before')
+
+    @field_validator("full_speech", "delivered_so_far", mode="before")
     def clean_text(cls, v):
         """Clean and normalize text content"""
         if isinstance(v, str):
             v = v.strip()
-            v = v.replace('\\n', '\n')
-            v = v.replace('\\t', '\t')
-            v = v.replace('\\r', '\r')
+            v = v.replace("\\n", "\n")
+            v = v.replace("\\t", "\t")
+            v = v.replace("\\r", "\r")
             return v
         return v
 
@@ -72,6 +81,7 @@ async def generate_questions(request: CVRequest):
         return result
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
+
 
 @router.post("/generate-stress-management-plan")
 async def generate_stress_plan(request: StressSummaryRequest):
@@ -100,7 +110,7 @@ class EvaluationRequest(BaseModel):
 async def evaluate_answers(request: EvaluationRequest):
     """
     Evaluate user answers against expected sample answers.
-    
+
     Returns overall score (0-5) and per-question matching details.
     """
     try:
@@ -119,8 +129,7 @@ async def generate_continuation(request: ContinuationRequest):
     """Generate speech continuation hint to help speaker continue after getting stuck"""
     try:
         result = generate_speech_continuation(
-            request.full_speech,
-            request.delivered_so_far
+            request.full_speech, request.delivered_so_far
         )
         return result
     except Exception as e:

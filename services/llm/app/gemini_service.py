@@ -1,14 +1,16 @@
 """Gemini AI service module for generating interview questions and speech continuations"""
 
 import json
+
 import google.genai as genai
+
 from app.config import settings
 
 
 def generate_interview_questions(cv_content: str) -> dict:
     """Generate 5 interview questions and sample answers from CV content"""
     client = genai.Client(api_key=settings.gemini_api_key)
-    
+
     prompt = f"""Based on this CV, generate exactly 5 interview questions and sample answers.
 
 Return ONLY valid JSON array with this structure:
@@ -19,33 +21,35 @@ Return ONLY valid JSON array with this structure:
 
 CV Content:
 {cv_content}"""
-    
-    response = client.models.generate_content(model=settings.gemini_model, contents=prompt)
+
+    response = client.models.generate_content(
+        model=settings.gemini_model, contents=prompt
+    )
     text = response.text.strip()
-    
+
     # Remove markdown code blocks if present
     if text.startswith("```"):
-        text = "\n".join(line for line in text.split("\n") if not line.startswith("```"))
-    
+        text = "\n".join(
+            line for line in text.split("\n") if not line.startswith("```")
+        )
+
     data = json.loads(text)
-    
-    return {
-        "questions_and_answers": data,
-        "total_questions": len(data)
-    }
+
+    return {"questions_and_answers": data, "total_questions": len(data)}
+
 
 def generate_stress_management_plan(stress_summary: dict) -> dict:
     """Generate a personalized, long-term stress management plan based on speech stress data"""
     client = genai.Client(api_key=settings.gemini_api_key)
-    
+
     prompt = f"""Based on the following stress metrics collected during a user's speech session, generate a comprehensive, personalized, and long-term stress management plan.
     Provide the response in Markdown format.
 
 Stress details:
-- Average Stress Level: {stress_summary.get('avg_stress', 'N/A')}
-- Maximum Stress Level: {stress_summary.get('max_stress', 'N/A')}
-- Number of High Stress Events: {stress_summary.get('high_stress_events', 'N/A')}
-- Session Duration (seconds): {stress_summary.get('duration_seconds', 'N/A')}
+- Average Stress Level: {stress_summary.get("avg_stress", "N/A")}
+- Maximum Stress Level: {stress_summary.get("max_stress", "N/A")}
+- Number of High Stress Events: {stress_summary.get("high_stress_events", "N/A")}
+- Session Duration (seconds): {stress_summary.get("duration_seconds", "N/A")}
 
 Structure the plan with:
 1. An encouraging summary of their performance
@@ -55,22 +59,26 @@ Structure the plan with:
 
 Keep the tone professional, supportive, and actionable. Do not echo back the exact scores, but use them to shape the advice."""
 
-    response = client.models.generate_content(model=settings.gemini_model, contents=prompt)
+    response = client.models.generate_content(
+        model=settings.gemini_model, contents=prompt
+    )
     text = response.text.strip()
-    
+
     return {
-        "plan": text
+        "plan": text,
+    }
+
 
 def evaluate_interview_answers(questions_with_answers: list[dict]) -> dict:
     """
     Evaluate user answers against expected sample answers.
-    
+
     Args:
         questions_with_answers: Array of dicts with keys:
             - question: str
             - sample_answer: str
             - user_answer: str
-    
+
     Returns:
         dict with:
             - overall_score: int (0-5, count of matching answers)
@@ -80,7 +88,7 @@ def evaluate_interview_answers(questions_with_answers: list[dict]) -> dict:
                 - is_matching: int (1 or 0)
     """
     client = genai.Client(api_key=settings.gemini_api_key)
-    
+
     prompt = f"""You are an expert interview evaluator. Evaluate each user answer against the expected sample answer.
 
 For each question-answer pair, determine:
@@ -108,31 +116,37 @@ Return ONLY valid JSON with this exact structure:
 
 Questions and Answers to evaluate:
 {json.dumps(questions_with_answers, indent=2)}"""
-    
-    response = client.models.generate_content(model=settings.gemini_model, contents=prompt)
+
+    response = client.models.generate_content(
+        model=settings.gemini_model, contents=prompt
+    )
     text = response.text.strip()
-    
+
     # Remove markdown code blocks if present
     if text.startswith("```"):
-        text = "\n".join(line for line in text.split("\n") if not line.startswith("```"))
-    
+        text = "\n".join(
+            line for line in text.split("\n") if not line.startswith("```")
+        )
+
     data = json.loads(text)
     evaluations = data.get("evaluations", [])
-    
+
     # Build response with question context
     results = []
     overall_score = 0
-    
+
     for i, (qa, evaluation) in enumerate(zip(questions_with_answers, evaluations)):
         is_matching = evaluation.get("is_matching", 0)
         overall_score += is_matching
-        
-        results.append({
-            "question": qa["question"],
-            "matching_percentage": float(evaluation.get("matching_percentage", 0)),
-            "is_matching": int(is_matching),
-        })
-    
+
+        results.append(
+            {
+                "question": qa["question"],
+                "matching_percentage": float(evaluation.get("matching_percentage", 0)),
+                "is_matching": int(is_matching),
+            }
+        )
+
     return {
         "overall_score": overall_score,
         "results": results,
@@ -141,16 +155,16 @@ Questions and Answers to evaluate:
 
 def generate_speech_continuation(full_speech: str, delivered_so_far: str) -> dict:
     """Generate continuation hint for a speaker who got stuck during their speech
-    
+
     Args:
         full_speech: The complete prepared speech text
         delivered_so_far: The portion of speech that has been delivered so far
-        
+
     Returns:
         Dictionary with 'continuation_hint' containing the next segment to help speaker continue
     """
     client = genai.Client(api_key=settings.gemini_api_key)
-    
+
     prompt = f"""You are helping a speaker who got stuck. Provide a simple, direct hint of what comes next.
 
 Full Speech:
@@ -163,26 +177,27 @@ Provide a simple hint (1-2 short sentences max) of what comes next in the speech
 
 Return ONLY a JSON object:
 {{"continuation_hint": "..."}}"""
-    
-    response = client.models.generate_content(model=settings.gemini_model, contents=prompt)
+
+    response = client.models.generate_content(
+        model=settings.gemini_model, contents=prompt
+    )
     text = response.text.strip()
-    
+
     # Remove markdown code blocks if present
     if text.startswith("```"):
-        text = "\n".join(line for line in text.split("\n") if not line.startswith("```"))
-    
+        text = "\n".join(
+            line for line in text.split("\n") if not line.startswith("```")
+        )
+
     data = json.loads(text)
-    
-    return {
-        "continuation_hint": data.get("continuation_hint", ""),
-        "status": "success"
-    }
+
+    return {"continuation_hint": data.get("continuation_hint", ""), "status": "success"}
 
 
 def generate_speech_questions(speech_content: str) -> dict:
     """Generate 5 questions and sample answers from speech content"""
     client = genai.Client(api_key=settings.gemini_api_key)
-    
+
     prompt = f"""Based on this speech, generate exactly 5 questions and sample answers that evaluate understanding of the speech.
 
 Return ONLY valid JSON array with this structure:
@@ -193,17 +208,18 @@ Return ONLY valid JSON array with this structure:
 
 Speech Content:
 {speech_content}"""
-    
-    response = client.models.generate_content(model=settings.gemini_model, contents=prompt)
+
+    response = client.models.generate_content(
+        model=settings.gemini_model, contents=prompt
+    )
     text = response.text.strip()
-    
+
     # Remove markdown code blocks if present
     if text.startswith("```"):
-        text = "\n".join(line for line in text.split("\n") if not line.startswith("```"))
-    
+        text = "\n".join(
+            line for line in text.split("\n") if not line.startswith("```")
+        )
+
     data = json.loads(text)
-    
-    return {
-        "questions_and_answers": data,
-        "total_questions": len(data)
-    }
+
+    return {"questions_and_answers": data, "total_questions": len(data)}

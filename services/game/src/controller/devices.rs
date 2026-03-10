@@ -15,8 +15,8 @@ pub async fn vr_device(ws: WebSocket, state: &State<Arc<AppState>>) -> Channel<'
 
     let mut con = DeviceConnection::new();
     let channel = con.handle_websocket(ws);
+    let state = state.inner().clone();
 
-    let devices = state.vr.clone();
     let key = get_public_key();
 
     tokio::spawn(async move {
@@ -32,6 +32,18 @@ pub async fn vr_device(ws: WebSocket, state: &State<Arc<AppState>>) -> Channel<'
             info.auth.verify_with_key(&key).unwrap();
         let user_id = token.claims().subject.clone().unwrap();
 
+        let pending_devices = state.pending.lock().await;
+        for pending in pending_devices.values() {
+            if pending.user_id == user_id {
+                con.send(DeviceOutbound::Join {
+                    session_id: pending.session_id,
+                })
+                .await
+                .unwrap();
+                break;
+            }
+        }
+
         let device = Device {
             con,
             device_id,
@@ -39,8 +51,7 @@ pub async fn vr_device(ws: WebSocket, state: &State<Arc<AppState>>) -> Channel<'
             user_id,
         };
         log::info!("Device connected: {device:?}");
-
-        let mut vr = devices.lock().await;
+        let mut vr = state.vr.lock().await;
         vr.insert(device.user_id.clone(), device);
     });
 

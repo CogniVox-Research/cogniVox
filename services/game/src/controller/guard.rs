@@ -8,6 +8,7 @@ use crate::app::get_public_key;
 
 pub struct User {
     pub user_id: String,
+    pub username: String,
 }
 
 #[rocket::async_trait]
@@ -20,11 +21,15 @@ impl<'r> FromRequest<'r> for User {
             let token: jwt::Token<Header, RegisteredClaims, _> =
                 cookie.value().verify_with_key(&key).unwrap();
             let user_id = token.claims().subject.clone().unwrap();
-            rocket::outcome::Outcome::Success(User { user_id })
+            rocket::outcome::Outcome::Success(User {
+                user_id,
+                username: "Test User".to_owned(),
+            })
         } else {
             // FIXME: hardcoded user id
             rocket::outcome::Outcome::Success(User {
                 user_id: "1".to_owned(),
+                username: "Test User".to_owned(),
             })
             // rocket::outcome::Outcome::Forward(Status::Unauthorized)
         }

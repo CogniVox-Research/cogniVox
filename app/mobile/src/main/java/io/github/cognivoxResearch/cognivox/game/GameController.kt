@@ -176,6 +176,11 @@ class GameController(
                         onStop()
                     }
                 }
+
+                ServerInbound.AnswerEnd -> {
+                    if (overlayState.value is GameState.Question)
+                        onQuestionEnd()
+                }
             }
         }
 

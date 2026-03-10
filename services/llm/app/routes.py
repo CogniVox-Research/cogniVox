@@ -1,10 +1,33 @@
 """API routes for the LLM Service"""
 
+import traceback
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel, field_validator
-from app.gemini_service import generate_interview_questions, generate_speech_continuation, evaluate_interview_answers
+from app.gemini_service import (
+    generate_interview_questions, 
+    generate_speech_continuation, 
+    evaluate_interview_answers,
+    generate_speech_questions
+)
 
 router = APIRouter()
+
+
+class SpeechRequest(BaseModel):
+    speech_content: str
+    
+    @field_validator('speech_content', mode='before')
+    def clean_speech_content(cls, v):
+        """Clean and normalize speech content"""
+        if isinstance(v, str):
+            # Strip leading/trailing whitespace
+            v = v.strip()
+            # Handle common escape sequences
+            v = v.replace('\\n', '\n')
+            v = v.replace('\\t', '\t')
+            v = v.replace('\\r', '\r')
+            return v
+        return v
 
 
 class CVRequest(BaseModel):
@@ -88,6 +111,18 @@ async def generate_continuation(request: ContinuationRequest):
             request.full_speech,
             request.delivered_so_far
         )
+        return result
+    except Exception as e:
+        print(f"LLM service error: {e}")
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/generate-speech-questions")
+async def generate_speech_questions_route(request: SpeechRequest):
+    """Generate 5 questions from speech content"""
+    try:
+        result = generate_speech_questions(request.speech_content)
         return result
     except Exception as e:
         print(f"LLM service error: {e}")

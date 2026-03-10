@@ -66,7 +66,7 @@ enum class SceneType {
     fun getIdent(): String {
         return when (this) {
             Interview -> "interview"
-            BoardRoom -> "board_room"
+            BoardRoom -> "boardroom"
             Stage -> "stage"
         }
     }

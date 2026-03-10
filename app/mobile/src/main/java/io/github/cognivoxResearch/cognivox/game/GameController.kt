@@ -31,8 +31,8 @@ class GameController(
     private val sessionId: String,
     private val scope: LifecycleCoroutineScope,
     private val overlayState: MutableState<GameState>,
-    private val websocket: GameWebSocket,
-    private val tts: TextToSpeechManager,
+    private val websocket: GameWebSocket?,
+    private val tts: TextToSpeechManager?,
     private val onStop: () -> Unit,
 ) :
     GodotPlugin(godot) {
@@ -60,7 +60,7 @@ class GameController(
         }
     }
 
-    internal fun onSessionInit(settings: GameSettings) {
+    internal fun onSessionInit(settings: GameSettings, noVR: Boolean = false) {
         if (overlayState.value is GameState.Loading)
             overlayState.value =
                 (overlayState.value as GameState.Loading).copy(serverReady = true)
@@ -72,12 +72,13 @@ class GameController(
             settings.scene.getIdent(),
             settings.size.toString(),
             settings.difficulty.ordinal.toString(),
-            settings.distractions.toString()
+            settings.distractions.toString(),
+            noVR.toString()
         )
 
         this.settings = settings
 
-        websocket.send(
+        websocket?.send(
             ServerOutbound.Ready(
                 data = GameFeatures(true, AudioFormat.PCMF32)
             )
@@ -90,9 +91,8 @@ class GameController(
 
     internal fun onSpeechStart() {
         overlayState.value = GameState.Speech { onSpeechEnd() }
-        websocket.send(ServerOutbound.SpeechStart)
-        emitSignal(GameSignals.SCENE_START)
-        recorder = AudioRecorder { websocket.send(ServerOutbound.Audio(it.array())) }
+        websocket?.send(ServerOutbound.SpeechStart)
+        recorder = AudioRecorder { websocket?.send(ServerOutbound.Audio(it.array())) }
         recorder!!.startRecording()
         canSendHRV = true
     }
@@ -103,18 +103,20 @@ class GameController(
         scope.launch {
             recorder?.stopRecording()
             overlayState.value = GameState.QuestionWait
-            websocket.send(ServerOutbound.SpeechEnd)
+            websocket?.send(ServerOutbound.SpeechEnd)
         }
     }
 
     internal fun onQuestionStart(question: String) {
         overlayState.value = GameState.Question { onQuestionEnd() }
 
-        scope.launch {
-            tts.speakText(question)
+        emitSignal(GameSignals.DISABLE_DISTRACTIONS)
 
-            websocket.send(ServerOutbound.QuestionStart)
-            recorder = AudioRecorder { websocket.send(ServerOutbound.Audio(it.array())) }
+        scope.launch {
+            tts?.speakText(question)
+
+            websocket?.send(ServerOutbound.QuestionStart)
+            recorder = AudioRecorder { websocket?.send(ServerOutbound.Audio(it.array())) }
             recorder!!.startRecording()
             canSendHRV = true
         }
@@ -126,21 +128,26 @@ class GameController(
         scope.launch {
             recorder?.stopRecording()
             overlayState.value = GameState.QuestionWait
-            websocket.send(ServerOutbound.QuestionEnd)
+            websocket?.send(ServerOutbound.QuestionEnd)
         }
     }
 
     internal fun displayStress(suggestion: StressResponse) {
         if (suggestion.stressScore > 0.45) {
-            emitSignal(GameSignals.STRESS_SUGGESTION.name, suggestion.suggestion)
+            val text = suggestion.suggestion
+            val level = text.substringBefore(".").split(":")[1]
+            val message = text.substringAfter(".").trim()
+            emitSignal(
+                GameSignals.STRESS_SUGGESTION.name,
+                level,
+                message
+            )
         }
     }
 
     internal fun displayStuck(suggestion: String?) {
-        if (suggestion == null) {
-            emitSignal(GameSignals.SPEECH_STUCK)
-        } else {
-            emitSignal(GameSignals.STRESS_SUGGESTION, suggestion)
+        if (suggestion != null) {
+            emitSignal(GameSignals.STUCK_SUGGESTION, suggestion)
         }
     }
 
@@ -154,7 +161,7 @@ class GameController(
 
     fun onHRVReceived(input: FeatureInput) {
         if (canSendHRV) {
-            this.websocket.send(ServerOutbound.Stress(input))
+            this.websocket?.send(ServerOutbound.Stress(input))
         }
     }
 
@@ -198,7 +205,7 @@ class GameController(
                     Toast.LENGTH_LONG
                 ).show()
             }
-            websocket.disconnect()
+            websocket?.disconnect()
             onStop()
         }
     }

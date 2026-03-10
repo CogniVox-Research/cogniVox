@@ -14,6 +14,7 @@ import io.github.cognivoxResearch.cognivox.net.proto.GameFeatures
 import io.github.cognivoxResearch.cognivox.net.proto.GameSettings
 import io.github.cognivoxResearch.cognivox.net.proto.ServerInbound
 import io.github.cognivoxResearch.cognivox.net.proto.ServerOutbound
+import io.github.cognivoxResearch.cognivox.net.proto.StressResponse
 import io.github.cognivoxResearch.cognivox.net.ws.GameWebSocket
 import io.github.cognivoxResearch.cognivox.screen.game.GameScreen
 import io.github.cognivoxResearch.cognivox.screen.game.GameState
@@ -59,15 +60,10 @@ class GameController(
         }
     }
 
-    private fun onSessionInit(settings: GameSettings) {
+    internal fun onSessionInit(settings: GameSettings) {
         if (overlayState.value is GameState.Loading)
             overlayState.value =
                 (overlayState.value as GameState.Loading).copy(serverReady = true)
-
-        Log.i(
-            tag,
-            "${sessionId.javaClass} ${settings.scene.getIdent().javaClass} ${settings.size.javaClass} ${settings.difficulty.ordinal.javaClass}  ${settings.distractions.javaClass}"
-        )
 
 
         emitSignal(
@@ -92,7 +88,7 @@ class GameController(
         overlayState.value = GameState.WaitingSpeech { onSpeechStart() }
     }
 
-    private fun onSpeechStart() {
+    internal fun onSpeechStart() {
         overlayState.value = GameState.Speech { onSpeechEnd() }
         websocket.send(ServerOutbound.SpeechStart)
         emitSignal(GameSignals.SCENE_START)
@@ -101,7 +97,7 @@ class GameController(
         canSendHRV = true
     }
 
-    private fun onSpeechEnd() {
+    internal fun onSpeechEnd() {
         canSendHRV = false
 
         scope.launch {
@@ -111,7 +107,7 @@ class GameController(
         }
     }
 
-    private fun onQuestionStart(question: String) {
+    internal fun onQuestionStart(question: String) {
         overlayState.value = GameState.Question { onQuestionEnd() }
 
         scope.launch {
@@ -124,7 +120,7 @@ class GameController(
         }
     }
 
-    private fun onQuestionEnd() {
+    internal fun onQuestionEnd() {
         canSendHRV = false
 
         scope.launch {
@@ -134,11 +130,13 @@ class GameController(
         }
     }
 
-    private fun displayStress(suggestion: String) {
-        emitSignal(GameSignals.STRESS_SUGGESTION.name, suggestion)
+    internal fun displayStress(suggestion: StressResponse) {
+        if (suggestion.stressScore > 0.45) {
+            emitSignal(GameSignals.STRESS_SUGGESTION.name, suggestion.suggestion)
+        }
     }
 
-    private fun displayStuck(suggestion: String?) {
+    internal fun displayStuck(suggestion: String?) {
         if (suggestion == null) {
             emitSignal(GameSignals.SPEECH_STUCK)
         } else {
@@ -146,11 +144,11 @@ class GameController(
         }
     }
 
-    private fun hideStuck() {
+    internal fun hideStuck() {
         emitSignal(GameSignals.SPEECH_UNSTUCK)
     }
 
-    private fun onSessionEnd() {
+    internal fun onSessionEnd() {
         overlayState.value = GameState.SessionEnd { this.onStop() }
     }
 
@@ -166,7 +164,7 @@ class GameController(
                 ServerInbound.End -> onSessionEnd()
                 is ServerInbound.Init -> onSessionInit(message.data)
                 is ServerInbound.Question -> onQuestionStart(message.data)
-                is ServerInbound.Stress -> displayStress(message.data.suggestion)
+                is ServerInbound.Stress -> displayStress(message.data)
                 ServerInbound.Stuck -> displayStuck(null)
                 is ServerInbound.StuckSuggestion -> displayStuck(message.data)
                 ServerInbound.Unstuck -> hideStuck()

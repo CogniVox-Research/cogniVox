@@ -9,13 +9,18 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.mutableStateOf
+import androidx.lifecycle.lifecycleScope
 import io.github.cognivoxResearch.cognivox.API_HOST
 import io.github.cognivoxResearch.cognivox.MainActivity
 import io.github.cognivoxResearch.cognivox.PREF_TAG
 import io.github.cognivoxResearch.cognivox.R
 import io.github.cognivoxResearch.cognivox.net.ws.GameWebSocket
 import io.github.cognivoxResearch.cognivox.screen.game.GameState
+import io.github.cognivoxResearch.cognivox.util.TextToSpeechManager
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.withContext
 import org.godotengine.godot.Godot
 import org.godotengine.godot.GodotFragment
 import org.godotengine.godot.GodotHost
@@ -30,6 +35,8 @@ class GameActivity : AppCompatActivity(), GodotHost {
     lateinit var websocket: GameWebSocket
     lateinit var sessionId: String
 
+    lateinit var tts: TextToSpeechManager
+
     var hasStopped: Boolean = false
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -42,6 +49,14 @@ class GameActivity : AppCompatActivity(), GodotHost {
                     Toast.makeText(baseContext, "Permissions not granted", Toast.LENGTH_LONG).show()
                 }
                 finish()
+            }
+        }
+
+        tts = TextToSpeechManager(this.applicationContext)
+
+        lifecycleScope.launch {
+            withContext(Dispatchers.IO) {
+                tts.initialize()
             }
         }
 
@@ -97,7 +112,14 @@ class GameActivity : AppCompatActivity(), GodotHost {
 
     private fun initController(godot: Godot) {
         if (gameController == null) {
-            gameController = GameController(godot, sessionId, uiState, websocket, { stop() })
+            gameController = GameController(
+                godot,
+                sessionId,
+                lifecycleScope,
+                uiState,
+                websocket,
+                tts
+            ) { stop() }
             websocket.setListener(gameController!!.listener)
         }
     }

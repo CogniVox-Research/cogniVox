@@ -11,15 +11,12 @@ import java.util.Locale
 import java.util.concurrent.ConcurrentHashMap
 import kotlin.coroutines.resume
 
-/**
- * TextToSpeechManager - A suspend-based utility for text-to-speech operations in Android
- * Provides a coroutine-friendly interface for speaking text with proper lifecycle management
- */
 class TextToSpeechManager(private val context: Context) {
 
     private var textToSpeech: TextToSpeech? = null
     private var isInitialized = false
-    private val activeUtterances = ConcurrentHashMap<String, CancellableContinuation<Result<Unit>>>()
+    private val activeUtterances =
+        ConcurrentHashMap<String, CancellableContinuation<Result<Unit>>>()
 
     /**
      * Initialize TextToSpeech engine
@@ -34,7 +31,8 @@ class TextToSpeechManager(private val context: Context) {
                     val result = textToSpeech?.setLanguage(Locale.ENGLISH)
 
                     if (result == TextToSpeech.LANG_MISSING_DATA ||
-                        result == TextToSpeech.LANG_NOT_SUPPORTED) {
+                        result == TextToSpeech.LANG_NOT_SUPPORTED
+                    ) {
                         continuation.resume(
                             Result.failure(Exception("Language not supported"))
                         )
@@ -69,7 +67,10 @@ class TextToSpeechManager(private val context: Context) {
                 }
             }
 
-            @Deprecated("Deprecated in Java", ReplaceWith("onError(utteranceId, TextToSpeech.ERROR)"))
+            @Deprecated(
+                "Deprecated in Java",
+                ReplaceWith("onError(utteranceId, TextToSpeech.ERROR)")
+            )
             override fun onError(utteranceId: String) {
                 // Speech failed (deprecated onError)
                 activeUtterances.remove(utteranceId)?.let { continuation ->
@@ -150,7 +151,8 @@ class TextToSpeechManager(private val context: Context) {
             // Set language/locale
             val langResult = textToSpeech?.setLanguage(locale)
             if (langResult == TextToSpeech.LANG_MISSING_DATA ||
-                langResult == TextToSpeech.LANG_NOT_SUPPORTED) {
+                langResult == TextToSpeech.LANG_NOT_SUPPORTED
+            ) {
                 continuation.resume(
                     Result.failure(Exception("Language not supported: ${locale.language}"))
                 )

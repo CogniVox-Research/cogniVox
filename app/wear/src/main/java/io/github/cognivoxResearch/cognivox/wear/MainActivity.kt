@@ -52,20 +52,10 @@ fun WearApp() {
     val heartRate by WearDataRepository.heartRate.collectAsState()
     val isServiceRunning by WearDataRepository.serviceRunning.collectAsState()
 
-    val permissionsToRequest = mutableListOf(
-        Manifest.permission.BODY_SENSORS
-    ).apply {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            add(Manifest.permission.POST_NOTIFICATIONS)
-        }
-    }
-
     val launcher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.RequestMultiplePermissions()
-    ) { permissions ->
-        // Only BODY_SENSORS is critical for the app to function
-        val bodySensorsGranted = permissions[Manifest.permission.BODY_SENSORS] ?: false
-        hasPermissions = bodySensorsGranted
+        contract = ActivityResultContracts.RequestPermission()
+    ) { isGranted ->
+        hasPermissions = isGranted
     }
 
     LaunchedEffect(Unit) {
@@ -77,7 +67,7 @@ fun WearApp() {
         if (bodySensorsGranted) {
             hasPermissions = true
         } else {
-            launcher.launch(permissionsToRequest.toTypedArray())
+            launcher.launch(Manifest.permission.BODY_SENSORS)
         }
     }
 
@@ -89,7 +79,7 @@ fun WearApp() {
         if (!hasPermissions) {
             Text("Permissions required", fontSize = 14.sp)
             Button(onClick = {
-                launcher.launch(permissionsToRequest.toTypedArray())
+                launcher.launch(Manifest.permission.BODY_SENSORS)
             }) {
                 Text("Grant")
             }

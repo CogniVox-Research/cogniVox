@@ -42,6 +42,17 @@ class MainActivity : ComponentActivity(), DeviceWebSocket.Listener {
 
     val tag: String = this.javaClass.simpleName
 
+    private val requestPermissionLauncher = registerForActivityResult(
+        ActivityResultContracts.RequestPermission()
+    ) { isGranted ->
+        if (!isGranted) {
+            runOnUiThread {
+                Toast.makeText(baseContext, "Permissions not granted", Toast.LENGTH_LONG).show()
+            }
+            finish()
+        }
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
@@ -64,15 +75,8 @@ class MainActivity : ComponentActivity(), DeviceWebSocket.Listener {
 
         appState = mutableStateOf(initialState)
 
-        // request perms for microphone, wearables
-        registerForActivityResult(ActivityResultContracts.RequestPermission()) { isGranted ->
-            if (!isGranted) {
-                runOnUiThread {
-                    Toast.makeText(baseContext, "Permissions not granted", Toast.LENGTH_LONG).show()
-                }
-                finish()
-            }
-        }
+        // Request audio recording permission specifically
+        requestPermissionLauncher.launch(android.Manifest.permission.RECORD_AUDIO)
 
 
         setContent {

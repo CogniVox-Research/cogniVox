@@ -6,7 +6,6 @@ use rocket_ws::{Channel, WebSocket};
 
 use crate::{
     app::{AppState, PendingSession},
-    config::AppConfig,
     game::{
         self,
         proto::{

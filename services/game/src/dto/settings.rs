@@ -34,6 +34,12 @@ pub enum SceneType {
     Stage { size: i64 },
 }
 
+impl SceneType {
+    pub fn is_inteview(&self) -> bool {
+        return matches!(self, Self::Interview);
+    }
+}
+
 #[derive(Debug, Serialize, Deserialize, Clone, Copy)]
 #[serde(rename_all = "snake_case")]
 pub enum AudienceDifficulty {

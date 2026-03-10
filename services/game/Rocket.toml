@@ -1,10 +1,19 @@
 [default]
 address = "0.0.0.0"
 port=8004
-sds_service_url="http://localhost:8006/analyze-speech"
-transcript_analysis_url="http://localhost:8005"
 max_answer_silence=10
 min_answer_words=20
+
+[default.urls]
+transcript_analysis="http://localhost:8005"
+sds_service="http://localhost:8006/analyze-speech"
+
+[default.llm_urls]
+base="http://localhost:8013"
+interview_question="/generate-interview-questions"
+speech_question="/generate-speech-questions"
+stress_management="/generate-stress-management-plan"
+evaluate="/evaluate-answers"
 
 [default.file_store]
 type="s3"

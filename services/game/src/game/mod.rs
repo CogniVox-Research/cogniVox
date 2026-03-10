@@ -1,13 +1,16 @@
-use std::{sync::Arc, time::Duration};
+use std::{
+    cmp::max,
+    sync::Arc,
+    time::{Duration, Instant},
+};
 pub mod test_session;
 
 use crate::{
     app::{AppState, PendingSession},
-    config::AppConfig,
-    dto::{sds, settings::Settings, transcript},
+    dto::{self, llm, sds, settings::Settings, stress, transcript},
     error::{Error, Result},
-    game::proto::{Endpoints, MQSession, ServiceInbound, WebOutbound},
-    services::{SpeechScore, TranscriptAnalysis},
+    game::proto::{MQSession, ServiceInbound, WebOutbound},
+    services::{LLM, SpeechScore, TranscriptAnalysis},
 };
 pub mod proto;
 use common::dto::{
@@ -27,44 +30,44 @@ pub struct Game {
     game_settings: GameFeatures,
     expected_speech: String,
 
+    stress_data: dto::stress::OverallRequest,
+
     state: Arc<AppState>,
 }
 
 impl Game {
     async fn run(&mut self) -> Result<()> {
+        let start_time = Instant::now();
+
         log::info!("Waiting for speech to start");
         proto::wait_for!(self.game, GameInbound::SpeechStart)?;
         log::info!("Speech started");
 
         let speech_asr = self.speech_loop(true).await?;
-        // TODO: questions
-
-        let questions = vec!["Test question".to_owned()];
-
-        for question in questions.iter() {
-            self.game
-                .send(GameOutbound::Question(question.to_owned()))
-                .await?;
-            log::info!("Waiting for answer to start");
-            proto::wait_for!(self.game, GameInbound::QuestionStart)?;
-            let question_asr = self.speech_loop(false).await?;
-            // TODO: question processing
-        }
+        let answer_result = self.ask_questions().await?;
 
         let (sds_score, ta_result) = self
             .get_final_results(&speech_asr.full_text, &speech_asr.recording_file)
+            .await;
+
+        self.stress_data.duration_seconds = Instant::now().duration_since(start_time).as_secs_f64();
+        let stress_result = self
+            .state
+            .endpoints
+            .stress_plan(self.stress_data.clone())
             .await;
 
         self.web
             .send(WebOutbound::Results {
                 transcript_analysis: ta_result,
                 speech_score: sds_score,
+                answer_score: answer_result,
+                stress_result,
             })
             .await?;
 
         self.game.send(GameOutbound::End).await?;
 
-        sleep(Duration::from_secs(1)).await;
         Ok(())
     }
 
@@ -148,6 +151,7 @@ impl Game {
                             }
                         }
                         ServiceInbound::Stress(st) => {
+                            self.update_stress(&st);
                             self.web.send(WebOutbound::Stress(st.clone())).await?;
                             self.game.send(GameOutbound::Stress(st)).await?;
                         }
@@ -174,6 +178,47 @@ impl Game {
                 else => break Err(Error::SocketClose)
             };
         }
+    }
+
+    async fn update_stress(&mut self, data: &stress::StressResponse) {
+        self.stress_data.max_stress = data.stress_score.max(self.stress_data.max_stress);
+        self.stress_data.total_stress += data.stress_score;
+        self.stress_data.total_events += 1;
+        if data.stress_score > 0.6 {
+            self.stress_data.high_stress_events += 1;
+        }
+    }
+
+    async fn ask_questions(&mut self) -> Result<Option<llm::EvaluateResult>> {
+        if !self.settings.qa {
+            return Ok(None);
+        }
+
+        let questions = self
+            .state
+            .endpoints
+            .get_questions(self.settings.scene.is_inteview(), &self.expected_speech)
+            .await
+            .unwrap_or_default();
+
+        let mut answers = vec![];
+        for question in questions.iter() {
+            self.game
+                .send(GameOutbound::Question(question.question.to_owned()))
+                .await?;
+            log::info!("Waiting for answer to start");
+            proto::wait_for!(self.game, GameInbound::QuestionStart)?;
+            let question_asr = self.speech_loop(false).await?;
+            log::info!("Answer Ended");
+
+            answers.push(llm::AnswerEvaluateItem {
+                question: question.question.clone(),
+                sample_answer: question.sample_answer.clone(),
+                user_answer: question_asr.full_text.clone(),
+            });
+        }
+
+        Ok(self.state.endpoints.score_answers(answers).await)
     }
 
     async fn check_answer_end(&mut self, asr: &ASR) {
@@ -215,6 +260,7 @@ pub async fn start_game(
                 expected_speech: web.document,
                 game_settings,
                 state: app_state,
+                stress_data: stress::OverallRequest::default(),
             };
 
             game.run().await

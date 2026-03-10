@@ -94,8 +94,6 @@ impl AppState {
         rabbitmq.create_broadcast_exchange("stress").await?;
         rabbitmq.create_exchange("results").await?;
 
-        let request_client = reqwest::Client::new();
-
         let state = Self {
             pending: Default::default(),
             vr: Default::default(),
@@ -104,16 +102,7 @@ impl AppState {
                 .sender("start", Some("asr_start".to_owned()))
                 .await?,
 
-            endpoints: Arc::new(proto::Endpoints {
-                transcript: APIRequest::new(
-                    request_client.clone(),
-                    config.transcript_analysis_url.clone(),
-                ),
-                speech_score: APIRequest::new(
-                    request_client.clone(),
-                    config.sds_service_url.clone(),
-                ),
-            }),
+            endpoints: Arc::new(proto::Endpoints::from_config(&config.urls)),
             config,
         };
 

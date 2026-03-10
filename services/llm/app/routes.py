@@ -90,7 +90,6 @@ async def generate_stress_plan(request: StressSummaryRequest):
         result = generate_stress_management_plan(request.model_dump())
         return result
     except Exception as e:
-        raise HTTPException(status_code=400, detail=str(e))
         print(f"LLM service error: {e}")
         traceback.print_exc()
         raise HTTPException(status_code=500, detail=str(e))

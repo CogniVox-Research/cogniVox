@@ -16,11 +16,13 @@ def generate_stress_management_plan(stress_summary: dict) -> dict:
 def evaluate_interview_answers(questions_with_answers: list[dict]) -> dict:
     return {
         "overall_score": 46,
-        "results": {
-            "question": "Question 01",
-            "matching_percentage": 85.0,
-            "is_matching": 1,
-        },
+        "results": [
+            {
+                "question": "Question 01",
+                "matching_percentage": 85.0,
+                "is_matching": 1,
+            }
+        ],
     }
 
 

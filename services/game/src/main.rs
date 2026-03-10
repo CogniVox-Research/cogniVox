@@ -1,7 +1,7 @@
 #[macro_use]
 extern crate rocket;
 
-use std::vec;
+use std::{sync::Arc, vec};
 
 use common::file_store::Store;
 use rocket::{
@@ -12,7 +12,7 @@ use rocket::{
 use crate::app::AppState;
 
 mod app;
-mod config;
+pub mod config;
 mod controller;
 mod dto;
 mod error;
@@ -34,7 +34,7 @@ async fn rocket() -> _ {
 
     rocket
         .manage(store)
-        .manage(app_state)
+        .manage(Arc::new(app_state))
         .mount("/", routes![index,])
         .mount("/", controller::route_list())
         .mount(

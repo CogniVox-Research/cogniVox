@@ -7,6 +7,8 @@ import android.widget.Toast
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.platform.ComposeView
+import androidx.lifecycle.LifecycleCoroutineScope
+import io.github.cognivoxResearch.cognivox.net.dto.FeatureInput
 import io.github.cognivoxResearch.cognivox.net.proto.AudioFormat
 import io.github.cognivoxResearch.cognivox.net.proto.GameFeatures
 import io.github.cognivoxResearch.cognivox.net.proto.GameSettings
@@ -15,7 +17,9 @@ import io.github.cognivoxResearch.cognivox.net.proto.ServerOutbound
 import io.github.cognivoxResearch.cognivox.net.ws.GameWebSocket
 import io.github.cognivoxResearch.cognivox.screen.game.GameScreen
 import io.github.cognivoxResearch.cognivox.screen.game.GameState
-import kotlinx.coroutines.runBlocking
+import io.github.cognivoxResearch.cognivox.service.HRVReceiverService
+import io.github.cognivoxResearch.cognivox.util.TextToSpeechManager
+import kotlinx.coroutines.launch
 import okhttp3.Response
 import org.godotengine.godot.Godot
 import org.godotengine.godot.plugin.GodotPlugin
@@ -24,14 +28,22 @@ import org.godotengine.godot.plugin.GodotPlugin
 class GameController(
     godot: Godot,
     private val sessionId: String,
+    private val scope: LifecycleCoroutineScope,
     private val overlayState: MutableState<GameState>,
     private val websocket: GameWebSocket,
+    private val tts: TextToSpeechManager,
     private val onStop: () -> Unit,
 ) :
     GodotPlugin(godot) {
     val tag: String = this::class.java.simpleName
     lateinit var settings: GameSettings
     var recorder: AudioRecorder? = null
+
+    var canSendHRV = false
+
+    init {
+        Instance = this
+    }
 
 
     override fun getPluginName() = "GameController"
@@ -75,6 +87,8 @@ class GameController(
             )
         )
 
+        context.startService(android.content.Intent(context, HRVReceiverService::class.java))
+
         overlayState.value = GameState.WaitingSpeech { onSpeechStart() }
     }
 
@@ -84,33 +98,40 @@ class GameController(
         emitSignal(GameSignals.SCENE_START)
         recorder = AudioRecorder { websocket.send(ServerOutbound.Audio(it.array())) }
         recorder!!.startRecording()
-
-        // TODO: start HRV recording
+        canSendHRV = true
     }
 
     private fun onSpeechEnd() {
-        overlayState.value = GameState.QuestionWait
-        websocket.send(ServerOutbound.SpeechEnd)
+        canSendHRV = false
 
-        runBlocking {
+        scope.launch {
             recorder?.stopRecording()
+            overlayState.value = GameState.QuestionWait
+            websocket.send(ServerOutbound.SpeechEnd)
         }
-
-        // TODO: stop audio+HRV recording
     }
 
     private fun onQuestionStart(question: String) {
         overlayState.value = GameState.Question { onQuestionEnd() }
-        websocket.send(ServerOutbound.QuestionStart)
-        // TODO: play question
-        // TODO: start audio+HRV recording
+
+        scope.launch {
+            tts.speakText(question)
+
+            websocket.send(ServerOutbound.QuestionStart)
+            recorder = AudioRecorder { websocket.send(ServerOutbound.Audio(it.array())) }
+            recorder!!.startRecording()
+            canSendHRV = true
+        }
     }
 
     private fun onQuestionEnd() {
-        overlayState.value = GameState.QuestionWait
-        websocket.send(ServerOutbound.QuestionEnd)
+        canSendHRV = false
 
-        // TODO: stop audio+HRV recording
+        scope.launch {
+            recorder?.stopRecording()
+            overlayState.value = GameState.QuestionWait
+            websocket.send(ServerOutbound.QuestionEnd)
+        }
     }
 
     private fun displayStress(suggestion: String) {
@@ -133,6 +154,12 @@ class GameController(
         overlayState.value = GameState.SessionEnd { this.onStop() }
     }
 
+    fun onHRVReceived(input: FeatureInput) {
+        if (canSendHRV) {
+            this.websocket.send(ServerOutbound.Stress(input))
+        }
+    }
+
     internal val listener = object : GameWebSocket.Listener {
         override fun onMessage(message: ServerInbound) {
             when (message) {
@@ -148,6 +175,11 @@ class GameController(
                         Toast.makeText(context, message.data, Toast.LENGTH_LONG).show()
                         onStop()
                     }
+                }
+
+                ServerInbound.AnswerEnd -> {
+                    if (overlayState.value is GameState.Question)
+                        onQuestionEnd()
                 }
             }
         }
@@ -171,6 +203,12 @@ class GameController(
             websocket.disconnect()
             onStop()
         }
+    }
+
+    companion object {
+        var Instance: GameController? = null
+
+
     }
 
 }

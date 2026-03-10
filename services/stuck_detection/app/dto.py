@@ -1,5 +1,5 @@
 from datetime import datetime
-from typing import Literal
+from typing import Literal, Optional
 
 import pydantic
 
@@ -42,6 +42,7 @@ class ASRData(pydantic.BaseModel):
     lines: list[Text | Silence]
     full_text: str
     session_id: str
+    session_type: Optional[Literal["speech", "answer"]]
 
     current_silence: CurrentSilence | None
 

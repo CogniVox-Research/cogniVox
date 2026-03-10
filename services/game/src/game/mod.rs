@@ -3,18 +3,16 @@ pub mod test_session;
 
 use crate::{
     app::{AppState, PendingSession},
+    config::AppConfig,
     dto::{sds, settings::Settings, transcript},
     error::{Error, Result},
     game::proto::{Endpoints, MQSession, ServiceInbound, WebOutbound},
     services::{SpeechScore, TranscriptAnalysis},
 };
 pub mod proto;
-use common::{
-    dto::{
-        GameFeatures,
-        asr::{ASR, ASRContentComplete},
-    },
-    mq,
+use common::dto::{
+    ASRSessionType, GameFeatures,
+    asr::{ASR, ASRContentComplete},
 };
 use proto::{GameConnection, GameInbound, GameOutbound, WebConnection};
 use rocket::tokio::{self, select, time::sleep};
@@ -24,13 +22,12 @@ pub struct Game {
 
     game: GameConnection,
     web: WebConnection,
-    mq_connection: Arc<mq::Connection>,
-    enpoints: Arc<Endpoints>,
 
     settings: Settings,
     game_settings: GameFeatures,
     expected_speech: String,
-    asr_session_queue: common::mq::Sender<common::dto::ASRSessionCreate>,
+
+    state: Arc<AppState>,
 }
 
 impl Game {
@@ -77,11 +74,13 @@ impl Game {
         recording_file: &str,
     ) -> (Option<sds::Response>, Option<transcript::Response>) {
         let transcript_analysis = self
-            .enpoints
+            .state
+            .endpoints
             .transcript_analysis(speech_text, &self.expected_speech)
             .await;
         let speech_score = self
-            .enpoints
+            .state
+            .endpoints
             .get_speech_score(&self.settings, speech_text, recording_file)
             .await;
 
@@ -94,13 +93,18 @@ impl Game {
         } else {
             uuid::Uuid::new_v4()
         };
-        let mut speech_mq = MQSession::new(&self.mq_connection, asr_session_id).await?;
+        let mut speech_mq = MQSession::new(&self.state.mq_connection, asr_session_id).await?;
         log::info!("MQ initialized for speech");
 
         speech_mq
             .create_asr_session(
-                &self.asr_session_queue,
+                &self.state.asr_session_queue,
                 self.game_settings.audio_format.clone(),
+                if is_speech {
+                    ASRSessionType::Speech
+                } else {
+                    ASRSessionType::Answer
+                },
             )
             .await?;
 
@@ -135,6 +139,10 @@ impl Game {
                         ServiceInbound::ASR(mut asr) => {
                             asr.session_id = self.session_id.to_string();
                             self.web.send(WebOutbound::ASR(asr.clone())).await?;
+                            if !is_speech{
+                                self.check_answer_end(&asr).await;
+                            }
+
                             if let ASR::Complete(complete) = asr{
                                 break Ok(complete);
                             }
@@ -167,19 +175,29 @@ impl Game {
             };
         }
     }
+
+    async fn check_answer_end(&mut self, asr: &ASR) {
+        if let Some(ref silence) = asr.current_silence {
+            let duration = silence.timestamp.end - silence.timestamp.start;
+            let words: usize = asr.lines.iter().map(|l| l.num_tokens()).sum();
+            if words > self.state.config.min_answer_words
+                && duration > self.state.config.max_answer_silence
+            {
+                let _ = self.game.send(GameOutbound::AnswerEnd).await;
+            }
+        }
+    }
 }
 
 pub async fn start_game(
-    state: &AppState,
+    state: &Arc<AppState>,
     mut game: GameConnection,
     web: PendingSession,
 ) -> Result<()> {
     web.con.send(WebOutbound::GameConnected).await?;
     log::info!("Game connected successfully");
 
-    let enpoints = state.endpoints.clone();
-    let asr_session_queue = state.asr_session_queue.clone();
-    let mq_connection = state.mq_connection.clone();
+    let app_state = state.clone();
 
     tokio::spawn(async move {
         let result = async move {
@@ -194,11 +212,9 @@ pub async fn start_game(
                 game,
                 web: web.con,
                 settings: web.settings,
-                enpoints,
-                mq_connection,
                 expected_speech: web.document,
-                asr_session_queue,
                 game_settings,
+                state: app_state,
             };
 
             game.run().await

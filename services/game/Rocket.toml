@@ -3,6 +3,8 @@ address = "0.0.0.0"
 port=8004
 sds_service_url="http://localhost:8006/analyze-speech"
 transcript_analysis_url="http://localhost:8005"
+max_answer_silence=10
+min_answer_words=20
 
 [default.file_store]
 type="s3"

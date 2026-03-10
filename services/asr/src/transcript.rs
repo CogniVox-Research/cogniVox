@@ -1,5 +1,5 @@
 use common::{
-    dto::{self, AudioFormat},
+    dto::{self, ASRSessionType, AudioFormat},
     file_store::Store,
     mq::{Consumer, Sender},
 };
@@ -16,6 +16,7 @@ pub(crate) async fn run_transcription(
     mut input: Input,
     session_id: String,
     audio_format: AudioFormat,
+    session_type: ASRSessionType,
     transcriber: asr_rs::Transcriber,
     store: Store,
 ) -> error::Result<()> {
@@ -30,7 +31,11 @@ pub(crate) async fn run_transcription(
         let transcript = ts.transcribe_audio(samples).await?;
 
         input
-            .send_result(TranscriptionResult::new(&session_id, transcript))
+            .send_result(TranscriptionResult::new(
+                &session_id,
+                transcript,
+                session_type,
+            ))
             .await?;
     }
 
@@ -44,6 +49,7 @@ pub(crate) async fn run_transcription(
             &session_id,
             recording_file,
             transcript,
+            session_type,
         ))
         .await?;
 

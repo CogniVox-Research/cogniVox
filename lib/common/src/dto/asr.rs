@@ -38,6 +38,16 @@ pub enum Line {
     Silence(Silence),
 }
 
+impl Line {
+    pub fn num_tokens(&self) -> usize {
+        match self {
+            Line::Complete(segment) => segment.tokens.len(),
+            Line::Partial(segment) => segment.tokens.len(),
+            Line::Silence(_) => 0,
+        }
+    }
+}
+
 #[derive(Debug, Serialize, Deserialize, Clone)]
 #[serde(tag = "type", rename_all = "snake_case")]
 pub enum ASR {

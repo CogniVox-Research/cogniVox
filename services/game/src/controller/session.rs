@@ -1,9 +1,12 @@
+use std::sync::Arc;
+
 use common::file_store::Store;
 use rocket::{State, tokio};
 use rocket_ws::{Channel, WebSocket};
 
 use crate::{
     app::{AppState, PendingSession},
+    config::AppConfig,
     game::{
         self,
         proto::{
@@ -17,7 +20,7 @@ use crate::{
 #[rocket::get("/ws/web")]
 pub async fn web_session<'a, 'r>(
     ws: WebSocket,
-    state: &'a State<AppState>,
+    state: &'a State<Arc<AppState>>,
     store: &'a State<Store>,
     user: super::guard::User,
 ) -> Channel<'r> {
@@ -73,10 +76,10 @@ pub async fn web_session<'a, 'r>(
 }
 
 #[rocket::get("/ws/game/<session_id>")]
-pub async fn game_session<'a, 'r>(
+pub async fn game_session<'a, 'b, 'r>(
     ws: WebSocket,
     session_id: uuid::Uuid,
-    state: &'a State<AppState>,
+    state: &'a State<Arc<AppState>>,
 ) -> Channel<'r> {
     let mut con = GameConnection::new();
     let channel = con.handle_websocket(ws);

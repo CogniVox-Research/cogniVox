@@ -2,7 +2,7 @@
 
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel, field_validator
-from app.gemini_service import generate_interview_questions
+from app.gemini_service import generate_interview_questions, generate_stress_management_plan
 
 router = APIRouter()
 
@@ -23,12 +23,27 @@ class CVRequest(BaseModel):
             return v
         return v
 
+class StressSummaryRequest(BaseModel):
+    avg_stress: float
+    max_stress: float
+    high_stress_events: int
+    duration_seconds: float
+
 
 @router.post("/generate-interview-questions")
 async def generate_questions(request: CVRequest):
     """Generate 5 interview questions from CV content"""
     try:
         result = generate_interview_questions(request.cv_content)
+        return result
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+@router.post("/generate-stress-management-plan")
+async def generate_stress_plan(request: StressSummaryRequest):
+    """Generate a stress management plan from a stress metrics summary"""
+    try:
+        result = generate_stress_management_plan(request.model_dump())
         return result
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))

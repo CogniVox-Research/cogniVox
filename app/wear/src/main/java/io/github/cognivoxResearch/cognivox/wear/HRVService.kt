@@ -35,15 +35,18 @@ import kotlin.math.sqrt
 class HRVService : Service() {
 
     private lateinit var healthTrackingService: HealthTrackingService
-    private var healthTracker: HealthTracker? = null
+    private var hrTracker: HealthTracker? = null
+    private var ppgTracker: HealthTracker? = null
     
     private lateinit var sensorManager: SensorManager
     private var accSensor: Sensor? = null
     
     private val ibiWindow = ArrayDeque<Double>()
     private val accWindow = ArrayDeque<Double>()
+    private val bvpWindow = ArrayDeque<Double>()
     
     private val WINDOW_SIZE = 30 // Keep 30 IBIs for RMSSD
+    private val BVP_WINDOW_SIZE = 500 // Approx 20 seconds at 25Hz
     private var lastTransmissionTime = 0L
     private val connectionListener = object : ConnectionListener {
         override fun onConnectionSuccess() {
@@ -75,16 +78,29 @@ class HRVService : Service() {
         }
     }
 
-    private val trackerEventListener = object : HealthTracker.TrackerEventListener {
+    private val hrTrackerEventListener = object : HealthTracker.TrackerEventListener {
         override fun onDataReceived(dataPoints: List<DataPoint>) {
             for (dataPoint in dataPoints) {
-                processDataPoint(dataPoint)
+                processHrDataPoint(dataPoint)
             }
         }
 
         override fun onFlushCompleted() {}
         override fun onError(e: HealthTracker.TrackerError?) {
-            Log.e(TAG, "Tracker error: ${e}")
+            Log.e(TAG, "HR Tracker error: ${e}")
+        }
+    }
+
+    private val ppgTrackerEventListener = object : HealthTracker.TrackerEventListener {
+        override fun onDataReceived(dataPoints: List<DataPoint>) {
+            for (dataPoint in dataPoints) {
+                processPpgDataPoint(dataPoint)
+            }
+        }
+
+        override fun onFlushCompleted() {}
+        override fun onError(e: HealthTracker.TrackerError?) {
+            Log.e(TAG, "PPG Tracker error: ${e}")
         }
     }
     
@@ -142,17 +158,27 @@ class HRVService : Service() {
 
     private fun startTracking() {
         try {
-            // Revert to HEART_RATE_CONTINUOUS as requested
-            healthTracker = healthTrackingService.getHealthTracker(HealthTrackerType.HEART_RATE_CONTINUOUS)
-            healthTracker?.setEventListener(trackerEventListener)
+            // Heart Rate Continuous Tracker
+            hrTracker = healthTrackingService.getHealthTracker(HealthTrackerType.HEART_RATE_CONTINUOUS)
+            hrTracker?.setEventListener(hrTrackerEventListener)
             Log.d(TAG, "Heart Rate Continuous tracker started")
+
+            // PPG Green Tracker for BVP features
+            try {
+                ppgTracker = healthTrackingService.getHealthTracker(HealthTrackerType.PPG_GREEN)
+                ppgTracker?.setEventListener(ppgTrackerEventListener)
+                Log.d(TAG, "PPG Green tracker started for BVP data")
+            } catch (e: Exception) {
+                Log.e(TAG, "PPG Tracker not supported or error: ${e.message}")
+            }
+            
         } catch (e: Exception) {
             Log.e(TAG, "Tracker error: ${e.message}")
             showToast("Tracker Error: ${e.message}")
         }
     }
 
-    private fun processDataPoint(dataPoint: DataPoint) {
+    private fun processHrDataPoint(dataPoint: DataPoint) {
         // Extract Heart Rate
         try {
             val hr = dataPoint.getValue(ValueKey.HeartRateSet.HEART_RATE) as Int
@@ -177,12 +203,28 @@ class HRVService : Service() {
         }
     }
 
+    private fun processPpgDataPoint(dataPoint: DataPoint) {
+        try {
+            val ppgValue = dataPoint.getValue(ValueKey.PpgGreenSet.PPG_GREEN) as Int
+            addToBvpWindow(ppgValue.toDouble())
+        } catch (e: Exception) {
+            // Ignore if extraction fails
+        }
+    }
+
     private fun addToIbiWindow(value: Double) {
         if (ibiWindow.size >= WINDOW_SIZE) {
             ibiWindow.removeFirst()
         }
         ibiWindow.addLast(value)
         checkAndTransmit()
+    }
+    
+    private fun addToBvpWindow(value: Double) {
+        if (bvpWindow.size >= BVP_WINDOW_SIZE) {
+            bvpWindow.removeFirst()
+        }
+        bvpWindow.addLast(value)
     }
     
     private fun addToAccWindow(value: Double) {
@@ -222,19 +264,57 @@ class HRVService : Service() {
         val accStd = sqrt(accSum / accValues.size)
         val accMax = accValues.maxOrNull() ?: 0.0
 
-        Log.d(TAG, "Features: RMSSD($rmssd), ACC($accMean, $accStd, $accMax)")
-        transmitFeatures(rmssd, accMean, accStd, accMax)
+        // BVP Stats
+        val bvpValues = bvpWindow.toList()
+        var bvpMeanCalc = 0.0
+        var bvpStdCalc = rmssd
+        var bvpMinCalc: Double? = null
+        var bvpMaxCalc: Double? = null
+        var bvpRangeCalc: Double? = null
+        var bvpEnergyCalc: Double? = null
+
+        if (bvpValues.isNotEmpty()) {
+            bvpMeanCalc = bvpValues.average()
+
+            var bvpSumSq = 0.0
+            var bvpEnergySum = 0.0
+            for (num in bvpValues) {
+                bvpSumSq += (num - bvpMeanCalc).pow(2)
+                bvpEnergySum += num.pow(2)
+            }
+            
+            bvpStdCalc = sqrt(bvpSumSq / bvpValues.size)
+            bvpMinCalc = bvpValues.minOrNull()
+            bvpMaxCalc = bvpValues.maxOrNull()
+            
+            if (bvpMaxCalc != null && bvpMinCalc != null) {
+                bvpRangeCalc = bvpMaxCalc - bvpMinCalc
+            }
+            
+            bvpEnergyCalc = bvpEnergySum / bvpValues.size
+        }
+
+        Log.d(TAG, "Features: RMSSD($rmssd), ACC($accMean, $accStd, $accMax), BVP_MEAN($bvpMeanCalc)")
+        transmitFeatures(rmssd, accMean, accStd, accMax, bvpMeanCalc, bvpStdCalc, bvpMinCalc, bvpMaxCalc, bvpRangeCalc, bvpEnergyCalc)
         lastTransmissionTime = System.currentTimeMillis()
     }
 
-    private fun transmitFeatures(rmssd: Double, accMean: Double, accStd: Double, accMax: Double) {
+    private fun transmitFeatures(
+        rmssd: Double, accMean: Double, accStd: Double, accMax: Double, 
+        bvpMeanCalc: Double, bvpStdCalc: Double, bvpMinCalc: Double?, 
+        bvpMaxCalc: Double?, bvpRangeCalc: Double?, bvpEnergyCalc: Double?
+    ) {
         val dto = HSRVDto(
-            bvp_mean = 0.0,
-            bvp_std = rmssd,
+            bvp_mean = bvpMeanCalc,
+            bvp_std = bvpStdCalc,
+            bvp_min = bvpMinCalc ?: 0.0,
+            bvp_max = bvpMaxCalc ?: 0.0,
+            bvp_range = bvpRangeCalc ?: 0.0,
+            bvp_energy = bvpEnergyCalc ?: 0.0,
             acc_mean = accMean,
             acc_std = accStd,
             acc_max = accMax
-        );
+        )
 
         val data = Json.encodeToString(dto).encodeToByteArray()
 
@@ -270,7 +350,8 @@ class HRVService : Service() {
     override fun onDestroy() {
         super.onDestroy()
         WearDataRepository.setServiceRunning(false)
-        healthTracker?.unsetEventListener()
+        hrTracker?.unsetEventListener()
+        ppgTracker?.unsetEventListener()
         if (::healthTrackingService.isInitialized) {
             healthTrackingService.disconnectService()
         }

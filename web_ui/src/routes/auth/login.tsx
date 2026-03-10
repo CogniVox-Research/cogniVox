@@ -9,7 +9,7 @@ function RouteComponent() {
   const navigate = useNavigate();
 
   const handleSuccess = () => {
-    navigate({ to: "/" });
+    navigate({ to: "/app/session/play" });
   };
 
   return (

@@ -11,7 +11,7 @@ use crate::{
 pub mod proto;
 use common::{
     dto::{
-        GameFeatures,
+        ASRSessionType, GameFeatures,
         asr::{ASR, ASRContentComplete},
     },
     mq,
@@ -101,6 +101,11 @@ impl Game {
             .create_asr_session(
                 &self.asr_session_queue,
                 self.game_settings.audio_format.clone(),
+                if is_speech {
+                    ASRSessionType::Speech
+                } else {
+                    ASRSessionType::Answer
+                },
             )
             .await?;
 

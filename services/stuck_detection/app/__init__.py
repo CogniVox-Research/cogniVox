@@ -23,6 +23,8 @@ async def read_queue(conn: AbstractChannel):
         async for data in queue_reader:
             print(data)
             data = data.data
+            if data.session_type and data.session_type == "answer":
+                continue
 
             detection = await detector.detect_stuck(data)
             if detection is None:

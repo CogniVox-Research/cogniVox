@@ -1,4 +1,7 @@
-use common::dto::asr::{self, ASRContent, ASRContentComplete};
+use common::dto::{
+    ASRSessionType,
+    asr::{self, ASRContent, ASRContentComplete},
+};
 use serde::Serialize;
 
 #[derive(Debug, Serialize)]
@@ -8,26 +11,35 @@ pub struct TranscriptionResult {
 }
 
 impl TranscriptionResult {
-    pub fn new(session_id: &str, data: asr_rs::Transcription) -> Self {
+    pub fn new(
+        session_id: &str,
+        data: asr_rs::Transcription,
+        session_type: ASRSessionType,
+    ) -> Self {
         TranscriptionResult {
             dto: asr::ASR::Partial(ASRContent {
                 full_text: data.full_text.clone(),
                 session_id: session_id.to_owned(),
-
+                session_type,
                 current_silence: data.current_silence.clone().map(convert_silence),
                 lines: convert_lines(data.into_lines()),
             }),
         }
     }
 
-    pub fn new_complete(session_id: &str, recording: String, data: asr_rs::Transcription) -> Self {
+    pub fn new_complete(
+        session_id: &str,
+        recording: String,
+        data: asr_rs::Transcription,
+        session_type: ASRSessionType,
+    ) -> Self {
         TranscriptionResult {
             dto: asr::ASR::Complete(ASRContentComplete {
                 recording_file: recording,
                 content: ASRContent {
                     full_text: data.full_text.clone(),
                     session_id: session_id.to_owned(),
-
+                    session_type,
                     current_silence: data.current_silence.clone().map(convert_silence),
                     lines: convert_lines(data.into_lines()),
                 },

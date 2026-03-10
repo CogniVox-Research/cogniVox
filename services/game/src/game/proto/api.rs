@@ -2,7 +2,10 @@ use std::{marker::PhantomData, time::Duration};
 
 use serde::{Serialize, de::DeserializeOwned};
 
-use crate::{config, dto, error};
+use crate::{
+    config, dto,
+    error::{self, Error},
+};
 
 #[derive(Debug)]
 pub struct Endpoints {
@@ -67,6 +70,15 @@ impl<In: Serialize, Out: DeserializeOwned> APIRequest<In, Out> {
             .json(&data)
             .send()
             .await?;
-        Ok(body.json().await?)
+
+        let content = body.bytes().await?;
+        let decoded = serde_json::de::from_slice(&content);
+        if decoded.is_err() {
+            log::error!(
+                "Failed to parse body: {}",
+                String::from_utf8_lossy(&content).into_owned()
+            );
+        }
+        Ok(decoded.map_err(Error::Deserialize)?)
     }
 }

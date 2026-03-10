@@ -1,0 +1,10 @@
+services:
+  llm_service:
+    restart: "unless-stopped"
+    build:
+      context: ../
+      dockerfile: ./services/llm/Dockerfile
+    ports:
+      - "8013:8013"
+    env_file:
+      - ../services/llm/.env

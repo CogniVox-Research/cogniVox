@@ -29,6 +29,7 @@ pub enum GameOutbound {
     Stuck,
     Unstuck,
     StuckSuggestion(String),
+    AnswerEnd,
     Question(String),
     End,
     Error(String),

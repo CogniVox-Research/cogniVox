@@ -1,3 +1,5 @@
+use std::sync::Arc;
+
 use jwt::{Header, RegisteredClaims, VerifyWithKey};
 use rocket::{State, serde::json::Json, tokio};
 use rocket_ws::{Channel, WebSocket};
@@ -8,7 +10,7 @@ use crate::{
 };
 
 #[rocket::get("/ws/device")]
-pub async fn vr_device(ws: WebSocket, state: &State<AppState>) -> Channel<'_> {
+pub async fn vr_device(ws: WebSocket, state: &State<Arc<AppState>>) -> Channel<'_> {
     let device_id = uuid::Uuid::now_v7();
 
     let mut con = DeviceConnection::new();
@@ -47,7 +49,7 @@ pub async fn vr_device(ws: WebSocket, state: &State<AppState>) -> Channel<'_> {
 
 #[rocket::get("/devices")]
 pub async fn get_devices(
-    state: &State<AppState>,
+    state: &State<Arc<AppState>>,
     user: super::guard::User,
 ) -> Json<Vec<(String, uuid::Uuid)>> {
     let devices = state.vr.lock().await;

@@ -196,20 +196,20 @@ def predict_stress(input: FeatureInput):
         raise HTTPException(status_code=500, detail=f"Prediction error: {e}")
 
     suggestion = generate_suggestion(label, score)
-    ai_feedback = generate_ai_biometric_feedback(
-        model_used=model_name,
-        label=int(label),
-        stress_score=float(score),
-        suggestion=suggestion,
-        features=feat_dict,
-    )
+    # ai_feedback = generate_ai_biometric_feedback(
+    #     model_used=model_name,
+    #     label=int(label),
+    #     stress_score=float(score),
+    #     suggestion=suggestion,
+    #     features=feat_dict,
+    # )
 
     return {
         "model_used": model_name,
         "label": int(label),
         "stress_score": score,
         "suggestion": suggestion,
-        "feedback": ai_feedback,
+        "feedback": "ai_feedback",
     }
 
 

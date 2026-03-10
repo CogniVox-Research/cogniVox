@@ -33,6 +33,7 @@ pub struct AppState {
     pub asr_session_queue: mq::Sender<ASRSessionCreate>,
 
     pub endpoints: Arc<proto::Endpoints>,
+    pub config: AppConfig,
 }
 
 pub struct Device {
@@ -85,15 +86,13 @@ impl Debug for PendingSession {
 
 impl AppState {
     pub async fn create(config: AppConfig) -> Result<Self> {
-        let rabbitmq = common::mq::Connection::for_config(config.rabbitmq).await?;
+        let rabbitmq = common::mq::Connection::for_config(config.rabbitmq.clone()).await?;
 
         rabbitmq.create_exchange("asr_start").await?;
         rabbitmq.create_exchange("audio").await?;
         rabbitmq.create_topic_exchange("asr").await?;
         rabbitmq.create_broadcast_exchange("stress").await?;
         rabbitmq.create_exchange("results").await?;
-
-        let request_client = reqwest::Client::new();
 
         let state = Self {
             pending: Default::default(),
@@ -103,10 +102,8 @@ impl AppState {
                 .sender("start", Some("asr_start".to_owned()))
                 .await?,
 
-            endpoints: Arc::new(proto::Endpoints {
-                transcript: APIRequest::new(request_client.clone(), config.transcript_analysis_url),
-                speech_score: APIRequest::new(request_client.clone(), config.sds_service_url),
-            }),
+            endpoints: Arc::new(proto::Endpoints::from_config(&config.urls)),
+            config,
         };
 
         // cleanup disconnected connections.

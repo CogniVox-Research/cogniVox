@@ -11,14 +11,14 @@ app = FastAPI(
 def custom_openapi():
     if app.openapi_schema:
         return app.openapi_schema
-    
+
     openapi_schema = get_openapi(
         title="LLM Service",
         version="0.1.0",
         description="Interview Question Generator using Gemini AI",
         routes=app.routes,
     )
-    
+
     app.openapi_schema = openapi_schema
     return app.openapi_schema
 

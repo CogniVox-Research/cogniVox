@@ -1,5 +1,6 @@
 'use client';
 
+import { useState, useEffect } from 'react';
 import { motion, type Variants } from 'framer-motion';
 import {
     LineChart,
@@ -14,7 +15,8 @@ import {
     Legend,
     ResponsiveContainer,
 } from 'recharts';
-import { Heart, Brain, AlertTriangle, Activity, TrendingUp, BarChart3 } from 'lucide-react';
+import { Heart, Brain, AlertTriangle, Activity, TrendingUp, BarChart3, Sparkles, Loader2 } from 'lucide-react';
+import ReactMarkdown from 'react-markdown';
 import type { FinishedState } from '@/lib/session';
 
 interface BiometricsTabProps {
@@ -22,6 +24,10 @@ interface BiometricsTabProps {
 }
 
 const BiometricsTab = ({ state }: BiometricsTabProps) => {
+    const [stressPlan, setStressPlan] = useState<string | null>(null);
+    const [isLoadingPlan, setIsLoadingPlan] = useState<boolean>(false);
+    const [planError, setPlanError] = useState<string | null>(null);
+
     const containerVariants: Variants = {
         hidden: { opacity: 0 },
         visible: {
@@ -83,6 +89,61 @@ const BiometricsTab = ({ state }: BiometricsTabProps) => {
         ? (stressChartData.reduce((sum, d) => sum + d.stress, 0) / stressChartData.length).toFixed(0)
         : 0;
 
+    const maxStress = stressChartData.length > 0
+        ? Math.max(...stressChartData.map(d => d.stress))
+        : 0;
+
+    const highStressEvents = stressChartData.filter(d => d.stress > 66).length;
+
+    // Approximation for duration_seconds based on the start and end of heart_rate/stress arrays
+    const durationSeconds = state.stress.length > 1
+        ? (state.stress[state.stress.length - 1].timestamp.getTime() - state.stress[0].timestamp.getTime()) / 1000
+        : 0;
+
+    useEffect(() => {
+        // Fetch the Gemini stress management plan if the session has enough data
+        const fetchStressPlan = async () => {
+            if (stressChartData.length === 0) return;
+
+            setIsLoadingPlan(true);
+            setPlanError(null);
+
+            try {
+                const response = await fetch('http://localhost:8000/api/v1/generate-stress-management-plan', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        avg_stress: Number(avgStress),
+                        max_stress: maxStress,
+                        high_stress_events: highStressEvents,
+                        duration_seconds: durationSeconds
+                    }),
+                });
+
+                if (!response.ok) {
+                    throw new Error('Failed to generate stress management plan');
+                }
+
+                const data = await response.json();
+                if (data && data.plan) {
+                    setStressPlan(data.plan);
+                } else {
+                    throw new Error('Invalid response format');
+                }
+            } catch (error) {
+                console.error('Error generating stress plan:', error);
+                setPlanError('Could not generate AI stress management plan at this time.');
+            } finally {
+                setIsLoadingPlan(false);
+            }
+        };
+
+        fetchStressPlan();
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []);
+
     const stuckEvents = state.stuck.filter(s => s.data.type === 'stuck' || s.data.type === 'stuck_suggestion').length;
     const recoveredEvents = state.stuck.filter(s => s.data.type === 'unstuck').length;
 
@@ -140,6 +201,57 @@ const BiometricsTab = ({ state }: BiometricsTabProps) => {
             initial="hidden"
             animate="visible"
         >
+            {/* AI Stress Management Plan */}
+            <motion.div variants={itemVariants} className="bg-linear-to-r from-indigo-50 to-purple-50 rounded-2xl p-8 border border-indigo-100 shadow-sm relative overflow-hidden">
+                <div className="absolute top-0 right-0 p-8 opacity-10">
+                    <Sparkles className="w-32 h-32 text-indigo-600" />
+                </div>
+
+                <div className="relative z-10">
+                    <div className="flex items-center gap-3 mb-6">
+                        <div className="bg-indigo-600 p-2.5 rounded-xl shadow-md">
+                            <Sparkles className="w-6 h-6 text-white" />
+                        </div>
+                        <div>
+                            <h3 className="text-xl font-bold text-slate-900 leading-tight">Gemini AI Stress Management</h3>
+                            <p className="text-sm font-medium text-indigo-600">Personalized Long-term Plan</p>
+                        </div>
+                    </div>
+
+                    {isLoadingPlan ? (
+                        <div className="flex flex-col items-center justify-center py-12">
+                            <motion.div
+                                animate={{ rotate: 360 }}
+                                transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
+                            >
+                                <Loader2 className="w-8 h-8 text-indigo-500 mb-4" />
+                            </motion.div>
+                            <p className="text-sm font-medium text-slate-600 animate-pulse">Analyzing stress biomarkers & generating techniques...</p>
+                        </div>
+                    ) : planError ? (
+                        <div className="bg-red-50 text-red-700 p-4 rounded-xl border border-red-100 text-sm">
+                            {planError}
+                        </div>
+                    ) : stressPlan ? (
+                        <div className="prose prose-indigo prose-sm sm:prose-base max-w-none text-slate-700
+                            prose-headings:text-indigo-950 prose-headings:font-bold
+                            prose-h1:text-xl prose-h2:text-lg prose-h3:text-base
+                            prose-a:text-indigo-600 prose-a:no-underline hover:prose-a:underline
+                            prose-strong:text-indigo-900
+                            prose-ul:list-disc prose-ul:pl-5
+                            prose-ol:list-decimal prose-ol:pl-5
+                            prose-li:marker:text-indigo-400
+                            bg-white/60 backdrop-blur-xs p-6 rounded-xl border border-white shadow-inner">
+                            <ReactMarkdown>{stressPlan}</ReactMarkdown>
+                        </div>
+                    ) : (
+                        <div className="text-sm text-slate-500 italic py-4">
+                            Insufficient session data to generate a stress plan.
+                        </div>
+                    )}
+                </div>
+            </motion.div>
+
             {/* Health Metrics Overview */}
             <motion.div variants={itemVariants} className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                 {healthIndicators.map((indicator, idx) => {
@@ -325,8 +437,8 @@ const BiometricsTab = ({ state }: BiometricsTabProps) => {
                             <motion.div
                                 key={idx}
                                 className={`p-3 rounded-lg border-l-4 ${event.data.type === 'stuck' || event.data.type === 'stuck_suggestion'
-                                        ? 'bg-red-50 border-l-red-500'
-                                        : 'bg-green-50 border-l-green-500'
+                                    ? 'bg-red-50 border-l-red-500'
+                                    : 'bg-green-50 border-l-green-500'
                                     }`}
                                 initial={{ opacity: 0, x: -10 }}
                                 animate={{ opacity: 1, x: 0 }}

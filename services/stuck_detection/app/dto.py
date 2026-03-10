@@ -1,16 +1,15 @@
 from datetime import datetime
-from typing import Literal
+from typing import Literal, Optional
 
 import pydantic
 
 
-class UnstuckDetection(pydantic.BaseModel):
-    stuck_id: str
+class UnstuckDetection(pydantic.BaseModel): ...
 
 
 class StuckDetection(pydantic.BaseModel):
     reason: Literal["silence", "repetition"]
-    suggestions: list[str] | None = None
+    suggestion: str | None = None
 
 
 class Timestamp(pydantic.BaseModel):
@@ -42,6 +41,7 @@ class ASRData(pydantic.BaseModel):
     lines: list[Text | Silence]
     full_text: str
     session_id: str
+    session_type: Optional[Literal["speech", "answer"]]
 
     current_silence: CurrentSilence | None
 

@@ -32,6 +32,8 @@ pub enum WebOutbound {
     Results {
         transcript_analysis: Option<dto::transcript::Response>,
         speech_score: Option<dto::sds::Response>,
+        answer_score: Option<dto::llm::EvaluateResult>,
+        stress_result: Option<dto::stress::OverallResponse>,
     },
 }
 

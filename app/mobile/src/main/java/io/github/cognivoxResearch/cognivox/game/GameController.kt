@@ -7,6 +7,7 @@ import android.widget.Toast
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.platform.ComposeView
+import androidx.lifecycle.LifecycleCoroutineScope
 import io.github.cognivoxResearch.cognivox.net.dto.FeatureInput
 import io.github.cognivoxResearch.cognivox.net.proto.AudioFormat
 import io.github.cognivoxResearch.cognivox.net.proto.GameFeatures
@@ -17,7 +18,8 @@ import io.github.cognivoxResearch.cognivox.net.ws.GameWebSocket
 import io.github.cognivoxResearch.cognivox.screen.game.GameScreen
 import io.github.cognivoxResearch.cognivox.screen.game.GameState
 import io.github.cognivoxResearch.cognivox.service.HRVReceiverService
-import kotlinx.coroutines.runBlocking
+import io.github.cognivoxResearch.cognivox.util.TextToSpeechManager
+import kotlinx.coroutines.launch
 import okhttp3.Response
 import org.godotengine.godot.Godot
 import org.godotengine.godot.plugin.GodotPlugin
@@ -26,8 +28,10 @@ import org.godotengine.godot.plugin.GodotPlugin
 class GameController(
     godot: Godot,
     private val sessionId: String,
+    private val scope: LifecycleCoroutineScope,
     private val overlayState: MutableState<GameState>,
-    val websocket: GameWebSocket,
+    private val websocket: GameWebSocket,
+    private val tts: TextToSpeechManager,
     private val onStop: () -> Unit,
 ) :
     GodotPlugin(godot) {
@@ -98,33 +102,35 @@ class GameController(
     }
 
     private fun onSpeechEnd() {
-        overlayState.value = GameState.QuestionWait
         canSendHRV = false
 
-        websocket.send(ServerOutbound.SpeechEnd)
-
-        runBlocking {
+        scope.launch {
             recorder?.stopRecording()
+            overlayState.value = GameState.QuestionWait
+            websocket.send(ServerOutbound.SpeechEnd)
         }
     }
 
     private fun onQuestionStart(question: String) {
         overlayState.value = GameState.Question { onQuestionEnd() }
-        websocket.send(ServerOutbound.QuestionStart)
-        // TODO: play question
 
-        recorder = AudioRecorder { websocket.send(ServerOutbound.Audio(it.array())) }
-        recorder!!.startRecording()
-        canSendHRV = true
+        scope.launch {
+            tts.speakText(question)
+
+            websocket.send(ServerOutbound.QuestionStart)
+            recorder = AudioRecorder { websocket.send(ServerOutbound.Audio(it.array())) }
+            recorder!!.startRecording()
+            canSendHRV = true
+        }
     }
 
     private fun onQuestionEnd() {
-        overlayState.value = GameState.QuestionWait
-
         canSendHRV = false
-        websocket.send(ServerOutbound.QuestionEnd)
-        runBlocking {
+
+        scope.launch {
             recorder?.stopRecording()
+            overlayState.value = GameState.QuestionWait
+            websocket.send(ServerOutbound.QuestionEnd)
         }
     }
 
@@ -169,6 +175,11 @@ class GameController(
                         Toast.makeText(context, message.data, Toast.LENGTH_LONG).show()
                         onStop()
                     }
+                }
+
+                ServerInbound.AnswerEnd -> {
+                    if (overlayState.value is GameState.Question)
+                        onQuestionEnd()
                 }
             }
         }

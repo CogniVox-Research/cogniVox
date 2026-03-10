@@ -1,8 +1,19 @@
 [default]
 address = "0.0.0.0"
 port=8004
-sds_service_url="http://localhost:8006/analyze-speech"
-transcript_analysis_url="http://localhost:8005"
+max_answer_silence=10
+min_answer_words=20
+
+[default.urls]
+transcript_analysis="http://localhost:8005"
+sds_service="http://localhost:8006/analyze-speech"
+
+[default.urls.llm]
+base="http://localhost:8013/api/v1"
+interview_question="generate-interview-questions"
+speech_question="generate-speech-questions"
+stress_management="generate-stress-management-plan"
+evaluate="evaluate-answers"
 
 [default.file_store]
 type="s3"
@@ -15,9 +26,9 @@ secret_access_key="admin_secret_key"
 connection_name="game"
 address="amqp://appuser:apppass@127.0.0.1"
 
-[release]
-sds_service_url="http://sds_service:8006/analyze-speech"
-transcript_analysis_url="http://transcript_analysis_service:8005"
+[release.urls]
+transcript_analysis="http://transcript_analysis_service:8005"
+sds_service="http://sds_service:8006/analyze-speech"
 
 [release.file_store]
 type="s3"
@@ -28,3 +39,6 @@ secret_access_key="admin_secret_key"
 
 [release.rabbitmq]
 address="amqp://appuser:apppass@rabbitmq"
+
+[release.urls.llm]
+base="http://llm_service:8013/api/v1"

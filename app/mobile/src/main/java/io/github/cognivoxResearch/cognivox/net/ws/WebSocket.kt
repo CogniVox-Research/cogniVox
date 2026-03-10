@@ -2,9 +2,10 @@ package io.github.cognivoxResearch.cognivox.net.ws
 
 import android.util.Log
 import io.github.cognivoxResearch.cognivox.RETRY_DELAY
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import okhttp3.OkHttpClient
 import okhttp3.Request
@@ -15,6 +16,7 @@ import okio.ByteString
 
 
 abstract class WebSocket<In, Out>(
+    private val scope: CoroutineScope,
     private var url: String,
     private val deserializer: Message.From<In>,
     private val client: OkHttpClient = getWebsocketClient(),
@@ -85,7 +87,7 @@ abstract class WebSocket<In, Out>(
             onDisconnect(t, response)
             isClosed = false
 
-            runBlocking {
+            scope.launch {
                 reconnectWithDelay()
             }
         }
@@ -114,14 +116,16 @@ abstract class WebSocket<In, Out>(
      * Connects to the server.
      * This does nothing if called after disconnect(), use reconnect() instead.
      */
-    suspend fun connect() {
+    fun connect() {
         if (websocket != null) return
         if (isClosed) return
 
-        withContext(Dispatchers.IO) {
-            Log.d(tag, "Connecting to $url")
-            val request = Request.Builder().url(url).build()
-            websocket = client.newWebSocket(request, listener)
+        scope.launch {
+            withContext(Dispatchers.IO) {
+                Log.d(tag, "Connecting to $url")
+                val request = Request.Builder().url(url).build()
+                websocket = client.newWebSocket(request, listener)
+            }
         }
     }
 
@@ -158,7 +162,7 @@ abstract class WebSocket<In, Out>(
      * Reconnects to the socket.
      * If a connection already exists, it is closed.
      */
-    suspend fun reconnect() {
+    fun reconnect() {
         disconnect()
 
         isClosed = false

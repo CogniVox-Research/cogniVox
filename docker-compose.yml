@@ -10,3 +10,4 @@ include:
   - docker/stuck_detection.yml
   - docker/transcript_analysis.yml
   - docker/gateway.yml
+  - docker/llm.yml

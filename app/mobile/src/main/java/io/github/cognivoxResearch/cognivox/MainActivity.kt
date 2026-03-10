@@ -21,14 +21,13 @@ import androidx.lifecycle.lifecycleScope
 import io.github.cognivoxResearch.cognivox.game.GameActivity
 import io.github.cognivoxResearch.cognivox.net.api.AuthApi
 import io.github.cognivoxResearch.cognivox.net.dto.LoginRequest
+import io.github.cognivoxResearch.cognivox.net.isTokenExpired
 import io.github.cognivoxResearch.cognivox.net.proto.DeviceInbound
 import io.github.cognivoxResearch.cognivox.net.ws.DeviceWebSocket
 import io.github.cognivoxResearch.cognivox.screen.AppState
 import io.github.cognivoxResearch.cognivox.screen.home.HomeScreen
 import io.github.cognivoxResearch.cognivox.screen.login.LoginScreen
-import io.github.cognivoxResearch.cognivox.net.isTokenExpired
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.runBlocking
 import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
 import java.util.UUID
@@ -99,7 +98,7 @@ class MainActivity : ComponentActivity(), DeviceWebSocket.Listener {
 
         // Only connect if already authenticated
         if (appState.value !is AppState.Login) {
-            runBlocking { connect() }
+            connect()
         }
     }
 
@@ -110,9 +109,7 @@ class MainActivity : ComponentActivity(), DeviceWebSocket.Listener {
 
     override fun onStart() {
         super.onStart()
-        runBlocking {
-            websocket?.reconnect()
-        }
+        websocket?.reconnect()
     }
 
 
@@ -139,10 +136,11 @@ class MainActivity : ComponentActivity(), DeviceWebSocket.Listener {
     /**
      * Connects to the device websocket (for receiving session start notifications)
      */
-    private suspend fun connect() {
+    private fun connect() {
         // Only connect if already authenticated
         if (appState.value !is AppState.Login) {
-            websocket = DeviceWebSocket(getDeviceURL(hostname), deviceName, auth, this)
+            websocket =
+                DeviceWebSocket(lifecycleScope, getDeviceURL(hostname), deviceName, auth, this)
             websocket!!.connect()
         }
     }
@@ -162,7 +160,7 @@ class MainActivity : ComponentActivity(), DeviceWebSocket.Listener {
             appState.value = AppState.Login(hostname)
         } else {
             appState.value = AppState.Connecting(hostname, "")
-            runBlocking { connect() }
+            connect()
         }
     }
 

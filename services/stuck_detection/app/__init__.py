@@ -1,5 +1,6 @@
 import asyncio
 import json
+import traceback
 from contextlib import asynccontextmanager
 
 import aio_pika
@@ -8,7 +9,7 @@ from shared import rabbitmq
 
 from .config import config
 from .detector import detector
-from .dto import MQData, UnstuckDetection
+from .dto import ASRData, MQData, UnstuckDetection
 
 __all__ = ["app", "config"]
 
@@ -21,12 +22,18 @@ async def read_queue(conn: AbstractChannel):
 
     async def _task():
         async for data in queue_reader:
-            print(data)
             data = data.data
+            asyncio.create_task(handle_message(data))
+
+    async def handle_message(data: ASRData):
+        try:
+            if data.session_type and data.session_type == "answer":
+                return
 
             detection = await detector.detect_stuck(data)
             if detection is None:
-                continue
+                return
+
             print(detection)
 
             if isinstance(detection, UnstuckDetection):
@@ -34,20 +41,23 @@ async def read_queue(conn: AbstractChannel):
                     "type": "unstuck",
                 }
 
-            elif not detection.suggestions:
+            elif not detection.suggestion:
                 msg = {
                     "type": "stuck",
                 }
             else:
                 msg = {
                     "type": "stuck_suggestion",
-                    "data": "sample suggestion",
+                    "data": detection.suggestion,
                 }
             await output.publish(
                 aio_pika.Message(body=json.dumps(msg).encode()),
                 routing_key=data.session_id,
                 mandatory=False,
             )
+        except Exception as e:
+            print(e)
+            traceback.print_exc()
 
     return asyncio.create_task(_task())
 

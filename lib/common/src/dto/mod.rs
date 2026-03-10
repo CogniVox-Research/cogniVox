@@ -15,10 +15,18 @@ pub struct GameFeatures {
     pub audio_format: AudioFormat,
 }
 
+#[derive(Debug, Serialize, Deserialize, Clone, Copy)]
+#[serde(rename_all = "lowercase")]
+pub enum ASRSessionType {
+    Speech,
+    Answer,
+}
+
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct ASRSessionCreate {
     pub session_id: uuid::Uuid,
     pub audio_format: AudioFormat,
+    pub session_type: ASRSessionType,
 }
 
 #[derive(Debug, Serialize, Deserialize)]

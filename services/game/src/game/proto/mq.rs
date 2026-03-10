@@ -1,5 +1,5 @@
 use common::{
-    dto::{ASRSessionCreate, AudioFormat},
+    dto::{ASRSessionCreate, ASRSessionType, AudioFormat},
     mq::{self, Message, Sender},
 };
 
@@ -58,11 +58,13 @@ impl MQSession {
         &self,
         session_queue: &Sender<ASRSessionCreate>,
         audio_format: AudioFormat,
+        session_type: ASRSessionType,
     ) -> Result<()> {
         session_queue
             .send(ASRSessionCreate {
                 session_id: self.session_id,
                 audio_format,
+                session_type,
             })
             .await?;
 

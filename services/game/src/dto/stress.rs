@@ -27,9 +27,27 @@ pub struct StressRequest {
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct StressResponse {
-    model_used: String,
-    label: i64,
-    stress_score: f64,
-    suggestion: String,
-    feedback: String,
+    pub model_used: String,
+    pub label: i64,
+    pub stress_score: f64,
+    pub suggestion: String,
+    pub feedback: String,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone, Default)]
+pub struct OverallRequest {
+    pub avg_stress: f64,
+    pub max_stress: f64,
+    pub high_stress_events: usize,
+    pub duration_seconds: f64,
+
+    #[serde(skip)]
+    pub total_events: usize,
+    #[serde(skip)]
+    pub total_stress: f64,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct OverallResponse {
+    pub plan: String,
 }

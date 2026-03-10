@@ -209,15 +209,27 @@ export default class Session {
     });
 
     socket.subscribe<FinalResult>("results", (results) => {
-      if (this.state.state !== "running") throw Error("Invalid state change");
-      this.update({
-        state: "finished",
-        ...results,
-        asr: this.state.asr,
-        stress: this.state.stress,
-        heart_rate: this.state.heart_rate,
-        stuck: this.state.stuck,
-      });
+      if (this.state.state === "running") {
+        this.update({
+          state: "finished",
+          ...results,
+          asr: this.state.asr,
+          stress: this.state.stress,
+          heart_rate: this.state.heart_rate,
+          stuck: this.state.stuck,
+        });
+      } else if (this.state.state === "question") {
+        this.update({
+          state: "finished",
+          ...results,
+          asr: this.state.speech.asr,
+          stress: this.state.stress,
+          heart_rate: this.state.heart_rate,
+          stuck: this.state.stuck,
+        });
+      } else {
+        throw Error("Invalid state change");
+      }
     });
 
     socket.send("ready");

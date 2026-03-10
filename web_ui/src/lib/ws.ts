@@ -102,9 +102,8 @@ export default class WS {
         this.messageListener(data);
       }
     } catch (e) {
-      //@ts-expect-error error has toString
-      this.error = e.toString();
-      console.error("Failed to parse message: {e}");
+      this._handleError(e);
+      console.error(`Failed to parse message: ${e}`);
     }
   }
 }

@@ -72,9 +72,8 @@ class AudioRecorder(val listener: (samples: ByteBuffer) -> Unit) {
     }
 
     suspend fun stopRecording() {
-        audioRecord.stop()
-        recordJob.join()
         audioRecord.release()
+        recordJob.join()
     }
 
 

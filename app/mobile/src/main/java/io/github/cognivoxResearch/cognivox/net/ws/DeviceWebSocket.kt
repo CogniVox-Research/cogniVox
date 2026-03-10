@@ -2,15 +2,18 @@ package io.github.cognivoxResearch.cognivox.net.ws
 
 import io.github.cognivoxResearch.cognivox.net.proto.DeviceInbound
 import io.github.cognivoxResearch.cognivox.net.proto.DeviceOutbound
+import kotlinx.coroutines.CoroutineScope
 import okhttp3.Response
 
 class DeviceWebSocket(
+    scope: CoroutineScope,
     url: String,
     private val deviceName: String,
     private val auth: String,
     private val listener: Listener
 ) :
     WebSocket<DeviceInbound, DeviceOutbound>(
+        scope,
         url,
         DeviceInbound.Companion,
         canRetry = true,

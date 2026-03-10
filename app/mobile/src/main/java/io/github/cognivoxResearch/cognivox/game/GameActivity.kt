@@ -19,7 +19,6 @@ import io.github.cognivoxResearch.cognivox.screen.game.GameState
 import io.github.cognivoxResearch.cognivox.util.TextToSpeechManager
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withContext
 import org.godotengine.godot.Godot
 import org.godotengine.godot.GodotFragment
@@ -63,7 +62,7 @@ class GameActivity : AppCompatActivity(), GodotHost {
         sessionId = intent.getStringExtra("session")!!
         val prefs = getSharedPreferences(PREF_TAG, MODE_PRIVATE)
         val hostname = prefs.getString("host", API_HOST)!!
-        websocket = GameWebSocket(hostname, sessionId)
+        websocket = GameWebSocket(lifecycleScope, hostname, sessionId)
 
         setContentView(R.layout.game_layout)
 
@@ -75,9 +74,7 @@ class GameActivity : AppCompatActivity(), GodotHost {
             .commitNowAllowingStateLoss()
         initController(godot!!)
 
-        runBlocking {
-            websocket.connect()
-        }
+        websocket.connect()
     }
 
     override fun onResume() {

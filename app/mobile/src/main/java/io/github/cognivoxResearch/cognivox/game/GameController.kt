@@ -20,7 +20,6 @@ import io.github.cognivoxResearch.cognivox.screen.game.GameState
 import io.github.cognivoxResearch.cognivox.service.HRVReceiverService
 import io.github.cognivoxResearch.cognivox.util.TextToSpeechManager
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.runBlocking
 import okhttp3.Response
 import org.godotengine.godot.Godot
 import org.godotengine.godot.plugin.GodotPlugin
@@ -103,12 +102,11 @@ class GameController(
     }
 
     private fun onSpeechEnd() {
-        overlayState.value = GameState.QuestionWait
         canSendHRV = false
 
-
-        runBlocking {
+        scope.launch {
             recorder?.stopRecording()
+            overlayState.value = GameState.QuestionWait
             websocket.send(ServerOutbound.SpeechEnd)
         }
     }
@@ -127,12 +125,12 @@ class GameController(
     }
 
     private fun onQuestionEnd() {
-        overlayState.value = GameState.QuestionWait
-
         canSendHRV = false
-        websocket.send(ServerOutbound.QuestionEnd)
-        runBlocking {
+
+        scope.launch {
             recorder?.stopRecording()
+            overlayState.value = GameState.QuestionWait
+            websocket.send(ServerOutbound.QuestionEnd)
         }
     }
 

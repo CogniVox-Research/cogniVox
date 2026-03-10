@@ -23,11 +23,6 @@ pub struct Question {
 }
 
 #[derive(Debug, Serialize, Deserialize)]
-pub struct Continue {
-    pub continuation_hint: String,
-}
-
-#[derive(Debug, Serialize, Deserialize)]
 pub struct AnswerEvaluateItem {
     pub question: String,
     pub sample_answer: String,
@@ -42,7 +37,7 @@ pub struct AnswerEvaluate {
 #[derive(Debug, Serialize, Deserialize)]
 pub struct EvaluateResult {
     pub overall_score: f64,
-    pub results: Vec<AnswerEvaluateItem>,
+    pub results: Vec<EvaluateResultItem>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]

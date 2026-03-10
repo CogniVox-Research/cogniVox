@@ -1,13 +1,15 @@
-use std::{
-    cmp::max,
-    sync::Arc,
-    time::{Duration, Instant},
-};
+use std::{sync::Arc, time::Instant};
 pub mod test_session;
 
 use crate::{
     app::{AppState, PendingSession},
-    dto::{self, llm, sds, settings::Settings, stress, transcript},
+    dto::{
+        self,
+        llm::{self, Question},
+        sds,
+        settings::Settings,
+        stress, transcript,
+    },
     error::{Error, Result},
     game::proto::{MQSession, ServiceInbound, WebOutbound},
     services::{LLM, SpeechScore, TranscriptAnalysis},
@@ -18,7 +20,7 @@ use common::dto::{
     asr::{ASR, ASRContentComplete},
 };
 use proto::{GameConnection, GameInbound, GameOutbound, WebConnection};
-use rocket::tokio::{self, select, time::sleep};
+use rocket::tokio::{self, select};
 
 pub struct Game {
     session_id: uuid::Uuid,
@@ -31,6 +33,7 @@ pub struct Game {
     expected_speech: String,
 
     stress_data: dto::stress::OverallRequest,
+    questions: Option<Vec<llm::Question>>,
 
     state: Arc<AppState>,
 }
@@ -44,7 +47,12 @@ impl Game {
         log::info!("Speech started");
 
         let speech_asr = self.speech_loop(true).await?;
-        let answer_result = self.ask_questions().await?;
+
+        let answer_result = if let Some(questions) = self.questions.take() {
+            self.ask_questions(questions).await?
+        } else {
+            None
+        };
 
         let (sds_score, ta_result) = self
             .get_final_results(&speech_asr.full_text, &speech_asr.recording_file)
@@ -141,9 +149,11 @@ impl Game {
                     match message {
                         ServiceInbound::ASR(mut asr) => {
                             asr.session_id = self.session_id.to_string();
-                            self.web.send(WebOutbound::ASR(asr.clone())).await?;
                             if !is_speech{
                                 self.check_answer_end(&asr).await;
+                                self.web.send(WebOutbound::QuestionASR(asr.clone())).await?;
+                            }else{
+                                self.web.send(WebOutbound::ASR(asr.clone())).await?;
                             }
 
                             if let ASR::Complete(complete) = asr{
@@ -189,27 +199,26 @@ impl Game {
         }
     }
 
-    async fn ask_questions(&mut self) -> Result<Option<llm::EvaluateResult>> {
-        if !self.settings.qa {
-            return Ok(None);
-        }
-
-        let questions = self
-            .state
-            .endpoints
-            .get_questions(self.settings.scene.is_inteview(), &self.expected_speech)
-            .await
-            .unwrap_or_default();
+    async fn ask_questions(
+        &mut self,
+        questions: Vec<Question>,
+    ) -> Result<Option<llm::EvaluateResult>> {
+        self.web.send(WebOutbound::QuestionsBegin).await?;
 
         let mut answers = vec![];
-        for question in questions.iter() {
+        for question in questions {
+            self.web
+                .send(WebOutbound::Question(question.question.to_owned()))
+                .await?;
             self.game
                 .send(GameOutbound::Question(question.question.to_owned()))
                 .await?;
+
             log::info!("Waiting for answer to start");
             proto::wait_for!(self.game, GameInbound::QuestionStart)?;
             let question_asr = self.speech_loop(false).await?;
             log::info!("Answer Ended");
+            self.web.send(WebOutbound::QuestionEnd).await?;
 
             answers.push(llm::AnswerEvaluateItem {
                 question: question.question.clone(),
@@ -256,6 +265,7 @@ pub async fn start_game(
                 session_id: web.session_id,
                 game,
                 web: web.con,
+                questions: web.questions,
                 settings: web.settings,
                 expected_speech: web.document,
                 game_settings,

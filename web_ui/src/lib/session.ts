@@ -10,6 +10,8 @@ import type {
   HeartRate,
   Stuck,
   ASRRaw,
+  AnsweringResult,
+  StressPlan,
 } from "./types";
 import WS from "./ws";
 import { produce } from "immer";
@@ -33,6 +35,26 @@ export type RunningState = {
   stuck: Timestamped<Stuck>[];
 };
 
+export type QuestionState = {
+  state: "question";
+  questions: { asr: ASR; question: string }[];
+  stress: Timestamped<StressResponse>[];
+  heart_rate: Timestamped<HeartRate>[];
+  stuck: Timestamped<Stuck>[];
+  speech: {
+    asr: ASR;
+  };
+} & (
+  | {
+      current_question: string;
+      current_asr: ASR;
+    }
+  | {
+      current_question: null;
+      current_asr: null;
+    }
+);
+
 export type FinishedState = {
   state: "finished";
   transcript_analysis?: TranscriptResponse;
@@ -41,13 +63,25 @@ export type FinishedState = {
   stress: Timestamped<StressResponse>[];
   heart_rate: Timestamped<HeartRate>[];
   stuck: Timestamped<Stuck>[];
+  answer_score: AnsweringResult;
+  stress_result: StressPlan;
 };
 
 export type SessionState =
   | WaitingState
   | ErrorState
   | RunningState
-  | FinishedState;
+  | FinishedState
+  | QuestionState;
+
+const emptyASR = (): ASR => {
+  return {
+    current_silence: null,
+    full_text: "",
+    segments: [],
+    type: "partial",
+  };
+};
 
 export default class Session {
   readonly options: OptionsConfig;
@@ -128,15 +162,49 @@ export default class Session {
     socket.subscribe("game_connected", () => {
       this.update({
         state: "running",
-        asr: {
-          current_silence: null,
-          full_text: "",
-          segments: [],
-          type: "partial",
-        },
+        asr: emptyASR(),
         stress: [],
         heart_rate: [],
         stuck: [],
+      });
+    });
+
+    socket.subscribe("questions_begin", () => {
+      if (this.state.state !== "running") throw Error("Invalid state change");
+      this.update({
+        state: "question",
+        current_asr: null,
+        current_question: null,
+        heart_rate: this.state.heart_rate,
+        questions: [],
+        stress: this.state.stress,
+        stuck: this.state.stuck,
+        speech: { asr: this.state.asr },
+      });
+    });
+
+    socket.subscribe<string>("question", (question) => {
+      this.update((s) => {
+        if (s.state !== "question") return;
+        s.current_question = question;
+        s.current_asr = emptyASR();
+      });
+    });
+
+    socket.subscribe<ASR>("question_a_s_r", (asr) => {
+      this.update((s) => {
+        if (s.state !== "question" || !s.current_question) return;
+        s.current_asr = asr;
+      });
+    });
+
+    socket.subscribe("question_end", () => {
+      this.update((s) => {
+        if (s.state !== "question" || !s.current_question) return;
+        s.questions.push({
+          asr: s.current_asr,
+          question: s.current_question,
+        });
       });
     });
 

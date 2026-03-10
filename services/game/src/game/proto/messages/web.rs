@@ -29,6 +29,12 @@ pub enum WebOutbound {
     Stuck,
     Unstuck,
     StuckSuggestion(String),
+
+    QuestionsBegin,
+    Question(String),
+    QuestionASR(common::dto::asr::ASR),
+    QuestionEnd,
+
     Results {
         transcript_analysis: Option<dto::transcript::Response>,
         speech_score: Option<dto::sds::Response>,

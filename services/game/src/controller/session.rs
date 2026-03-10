@@ -13,7 +13,7 @@ use crate::{
             WebOutbound,
         },
     },
-    services::documents::fetch_document,
+    services::{LLM, documents::fetch_document},
 };
 
 #[rocket::get("/ws/web")]
@@ -28,8 +28,7 @@ pub async fn web_session<'a, 'r>(
     let mut con = WebConnection::new();
     let channel = con.handle_websocket(ws);
 
-    let devices = state.vr.clone();
-    let pending = state.pending.clone();
+    let state = state.inner().clone();
     let store = store.inner().clone();
 
     log::info!("Web Connected {session_id}");
@@ -47,9 +46,21 @@ pub async fn web_session<'a, 'r>(
             .await
             .unwrap();
 
+        let questions = if settings.scene.is_inteview() || settings.qa {
+            log::info!("Generating questions");
+            let questions = state
+                .endpoints
+                .get_questions(settings.scene.is_inteview(), &expected_speech)
+                .await;
+            log::info!("Generated questions: {:?}", questions);
+            questions
+        } else {
+            None
+        };
+
         proto::wait_for!(con, WebInbound::Ready).unwrap();
 
-        if let Some(device) = devices.lock().await.get(&user.user_id) {
+        if let Some(device) = state.vr.lock().await.get(&user.user_id) {
             device
                 .con
                 .send(DeviceOutbound::Join { session_id })
@@ -59,7 +70,7 @@ pub async fn web_session<'a, 'r>(
             con.send(WebOutbound::Pair { session_id }).await.unwrap();
         }
 
-        pending.lock().await.insert(
+        state.pending.lock().await.insert(
             session_id,
             PendingSession {
                 con,
@@ -67,6 +78,7 @@ pub async fn web_session<'a, 'r>(
                 document: expected_speech,
                 user_id: user.user_id,
                 settings,
+                questions,
             },
         );
     });

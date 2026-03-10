@@ -1,5 +1,6 @@
 import ErrorPage from "@/features/session/components/error";
 import FinishedPage from "@/features/session/components/finished";
+import QuestionPage from "@/features/session/components/questions";
 import RunningPage from "@/features/session/components/running";
 import WaitingPage from "@/features/session/components/waiting";
 import useSessionData from "@/hooks/use-session-data";
@@ -27,6 +28,8 @@ function RouteComponent() {
       return <ErrorPage state={state} />;
     case "running":
       return <RunningPage state={state} />;
+    case "question":
+      return <QuestionPage state={state} />;
     case "finished":
       return <FinishedPage state={state} />;
   }

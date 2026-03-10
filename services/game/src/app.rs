@@ -2,7 +2,7 @@ use crate::{
     config::AppConfig,
     dto::settings::Settings,
     error::Result,
-    game::proto::{self, APIRequest, Connection, DeviceConnection, WebConnection},
+    game::proto::{self, Connection, DeviceConnection, WebConnection},
 };
 use common::{dto::ASRSessionCreate, mq};
 use jwt::PKeyWithDigest;
@@ -65,6 +65,7 @@ pub struct PendingSession {
     pub user_id: String,
     pub settings: Settings,
     pub document: String,
+    pub questions: Option<Vec<crate::dto::llm::Question>>,
 }
 
 impl Connection for PendingSession {

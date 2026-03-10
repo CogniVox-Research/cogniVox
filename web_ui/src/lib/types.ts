@@ -46,6 +46,19 @@ export type Silence = {
   timestamp: Timestamp;
 };
 
+export type AnsweringResult = {
+  overall_score: number;
+  results: {
+    question: string;
+    matching_percentage: number;
+    is_matching: boolean;
+  }[];
+};
+
+export type StressPlan = {
+  plan: string;
+};
+
 export type ResultType = "partial" | "complete";
 
 export type ASR = {
@@ -121,6 +134,8 @@ export type HeartRate = {
 export type FinalResult = {
   transcript_analysis: TranscriptResponse;
   speech_score: SDSResponse;
+  answer_score: AnsweringResult;
+  stress_result: StressPlan;
 };
 
 /** ======================= Transcript ================ */

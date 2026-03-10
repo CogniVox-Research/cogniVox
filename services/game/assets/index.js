@@ -68,6 +68,20 @@ const ACTIONS = [
     state: 5,
   },
   {
+    name: "Audio (With Pauses)",
+    mode: "game",
+
+    type: "audio",
+    data: {
+      name: "micro-machines",
+      chunk_size: 1000,
+      chunks: 30,
+      pauses: true,
+    },
+
+    state: 5,
+  },
+  {
     name: "Audio(Short)",
     mode: "game",
 
@@ -113,6 +127,35 @@ const ACTIONS = [
     type: "speech_end",
 
     state: 5,
+    new_state: true,
+  },
+  {
+    name: "Question Start",
+    mode: "game",
+    type: "question_start",
+
+    state: 7,
+    new_state: true,
+  },
+  {
+    name: "Answer (Short)",
+    mode: "game",
+
+    type: "audio",
+    data: {
+      name: "micro-machines",
+      chunk_size: 1000,
+      chunks: 3,
+    },
+
+    state: 8,
+  },
+  {
+    name: "Question End",
+    mode: "game",
+    type: "question_end",
+
+    state: 8,
     new_state: true,
   },
 ];
@@ -197,16 +240,23 @@ class App {
 
     if (message.type === "audio") {
       let idx = 0;
+      let files = [];
+      for (let i = 0; i < message.data.chunks; i++) {
+        const url = `./audio/${message.data.name}/chunk_${i.toString().padStart(3, "0")}.webm`;
+        files.push(url);
+        if (i % 4 == 0 && message.data.pauses) {
+          files.push(`./audio/silence/chunk_000.webm`);
+          files.push(`./audio/silence/chunk_000.webm`);
+        }
+      }
 
       const play_chunk = () => {
-        fetch(
-          `./audio/${message.data.name}/chunk_${idx.toString().padStart(3, "0")}.webm`,
-        ).then((data) => {
+        fetch(files[idx]).then((data) => {
           data.blob().then((data) => socket.send(data));
         });
         idx += 1;
 
-        if (idx < message.data.chunks) {
+        if (idx < files.length) {
           setTimeout(play_chunk, 1000);
         }
       };
@@ -229,6 +279,8 @@ class App {
   handle_message(mode, message) {
     if (!this.web_only && mode === "web" && message.type === "pair") {
       this.connect("game", message.data.session_id);
+    } else if (mode === "game" && message.type === "question") {
+      this.state = 7;
     } else if (message.type === "a_s_r") {
       message.data.lines = undefined;
       message.data.session_id = undefined;

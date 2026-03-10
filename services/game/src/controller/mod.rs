@@ -1,4 +1,5 @@
 mod devices;
+mod guard;
 mod session;
 
 pub fn route_list() -> Vec<rocket::Route> {

@@ -23,6 +23,12 @@ pub struct RecordAudio<P: PipelineStep> {
     original_path: std::path::PathBuf,
 }
 
+impl<P: PipelineStep> RecordAudio<P> {
+    pub fn recording_file(&self) -> String {
+        format!("{}/converted.wav", self.prefix)
+    }
+}
+
 impl<P: PipelineStep> Debug for RecordAudio<P> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("RecordAudio")

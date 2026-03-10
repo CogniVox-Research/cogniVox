@@ -4,7 +4,7 @@ from contextlib import asynccontextmanager
 
 import aio_pika
 from aio_pika.abc import AbstractChannel
-from shared import rabbitmq, rpc
+from shared import rabbitmq
 
 from .config import config
 from .detector import detector
@@ -15,19 +15,13 @@ __all__ = ["app", "config"]
 from fastapi import FastAPI
 
 
-class LLMService(rpc.RPCInterface):
-    async def get_continue_for(self, session_id: str, current_text: str): ...
-
-
-llm_server: LLMService = None  # pyright: ignore[reportAssignmentType]
-
-
 async def read_queue(conn: AbstractChannel):
     queue_reader = await rabbitmq.read_queue(conn, None, MQData, "asr", "#")
     output = await conn.get_exchange("results")
 
     async def _task():
         async for data in queue_reader:
+            print(data)
             data = data.data
 
             detection = await detector.detect_stuck(data)
@@ -62,11 +56,9 @@ async def read_queue(conn: AbstractChannel):
 async def lifespan(app: FastAPI):
     global llm_server
     async with rabbitmq.connect(config.rabbitmq_url) as con:
-        async with rpc.RPCClient(con) as client:
-            llm_server = client.get_server("llm-server", LLMService)
-            task = await read_queue(con)
-            yield
-            task.cancel()
+        task = await read_queue(con)
+        yield
+        task.cancel()
 
 
 app = FastAPI(lifespan=lifespan)

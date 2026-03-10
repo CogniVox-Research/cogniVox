@@ -1,3 +1,5 @@
+import type { SpeechSegment } from "./asr_util";
+
 export type SessionMessage = { session_id: string };
 
 export type AudienceDifficulty = "easy" | "medium" | "hard";
@@ -46,6 +48,21 @@ export type Silence = {
 
 export type ResultType = "partial" | "complete";
 
+export type ASR = {
+  type: ResultType;
+  segments: SpeechSegment[];
+  full_text: string;
+  current_silence: Silence | null;
+};
+
+export type ASRRaw = {
+  type: ResultType;
+  session_id: string;
+  lines: Line[];
+  full_text: string;
+  current_silence: Silence | null;
+};
+
 export type Line =
   | ({
       type: "complete";
@@ -57,14 +74,6 @@ export type Line =
       type: "silence";
       timestamp: Timestamp;
     };
-
-export type ASR = {
-  type: ResultType;
-  session_id: string;
-  lines: Line[];
-  full_text: string;
-  current_silence: Silence | null;
-};
 
 export type Timestamped<T> = {
   data: T;
@@ -82,6 +91,7 @@ export type StressResponse = {
   label: number;
   stress_score: number;
   suggestion: string;
+  feedback: string;
 };
 
 export type HeartRate = {
@@ -129,7 +139,7 @@ export type Similarity = {
   key_points_speech: string[];
   alignment: Alignment[];
   order_analysis: OrderAnalysis;
-  redundant_speech_segments: string[];
+  redundant_speech_segments: [string, string, number][];
   sentence_count_transcript: number;
   sentence_count_speech: number;
 };
@@ -160,9 +170,12 @@ export type Grammar = {
 /**========================= SDS =============== */
 
 export type SDSResponse = {
+  speech_type: string;
+  speech_type_number: string;
   metrics: Metrics;
   scores: Scores;
   feedback: Feedback;
+  delivery: Delivery;
 };
 
 export type Metrics = {
@@ -191,4 +204,28 @@ export type Feedback = {
   pauses: string;
   pitch: string;
   loudness: string;
+  context_summary: string;
+};
+
+export type Delivery = {
+  delivery_score: number;
+  delivery_score_label: string;
+  weighted_breakdown: WeightedBreakdown;
+  weights_used: WeightsUsed;
+};
+
+export type WeightedBreakdown = {
+  clarity: number;
+  pace: number;
+  pauses: number;
+  pitch: number;
+  loudness: number;
+};
+
+export type WeightsUsed = {
+  clarity: number;
+  pace: number;
+  pauses: number;
+  pitch: number;
+  loudness: number;
 };

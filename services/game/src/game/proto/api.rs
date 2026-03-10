@@ -1,4 +1,4 @@
-use std::marker::PhantomData;
+use std::{marker::PhantomData, time::Duration};
 
 use serde::{Serialize, de::DeserializeOwned};
 
@@ -29,7 +29,13 @@ impl<In: Serialize, Out: DeserializeOwned> APIRequest<In, Out> {
     }
 
     pub async fn send(&self, data: In) -> error::Result<Out> {
-        let body = self.client.post(&self.url).json(&data).send().await?;
+        let body = self
+            .client
+            .post(&self.url)
+            .timeout(Duration::from_secs(120))
+            .json(&data)
+            .send()
+            .await?;
         Ok(body.json().await?)
     }
 }

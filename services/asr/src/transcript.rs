@@ -34,11 +34,17 @@ pub(crate) async fn run_transcription(
             .await?;
     }
 
+    let recording_file = audio_pipeline.recording_file();
+
     let final_sample = audio_pipeline.finish().await?;
     let transcript = ts.finish_transcribing(final_sample).await?;
 
     input
-        .send_result(TranscriptionResult::new(&session_id, transcript))
+        .send_result(TranscriptionResult::new_complete(
+            &session_id,
+            recording_file,
+            transcript,
+        ))
         .await?;
 
     Ok(())

@@ -24,11 +24,12 @@ use std::{
     sync::{Arc, LazyLock},
     time::Duration,
 };
+
 pub struct AppState {
     pub pending: Arc<Mutex<HashMap<uuid::Uuid, PendingSession>>>,
     pub vr: Arc<Mutex<HashMap<String, Device>>>,
 
-    pub mq_connection: mq::Connection,
+    pub mq_connection: Arc<mq::Connection>,
     pub asr_session_queue: mq::Sender<ASRSessionCreate>,
 
     pub endpoints: Arc<proto::Endpoints>,
@@ -97,7 +98,7 @@ impl AppState {
         let state = Self {
             pending: Default::default(),
             vr: Default::default(),
-            mq_connection: rabbitmq.clone(),
+            mq_connection: Arc::new(rabbitmq.clone()),
             asr_session_queue: rabbitmq
                 .sender("start", Some("asr_start".to_owned()))
                 .await?,

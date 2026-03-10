@@ -179,8 +179,11 @@ const SpeechDeliveryTab = ({ state }: SpeechDeliveryTabProps) => {
                     </div>
                 </motion.div>
                         {/* AI feedback */}
-                <div>
-                    {feedback.context_summary}
+                <div className="bg-linear-to-br from-blue-50 to-indigo-50 rounded-lg p-4 border-2 border-blue-200 shadow-sm">
+                    <p className="text-xs font-bold text-blue-700 uppercase tracking-wider mb-2">💡 Context Summary</p>
+                    <p className="text-sm text-slate-800 leading-relaxed">
+                        {feedback.context_summary}
+                    </p>
                 </div>
 
                 {/* Raw Metrics */}

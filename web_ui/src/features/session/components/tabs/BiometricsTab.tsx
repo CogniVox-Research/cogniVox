@@ -213,7 +213,7 @@ const BiometricsTab = ({ state }: BiometricsTabProps) => {
                             <Sparkles className="w-6 h-6 text-white" />
                         </div>
                         <div>
-                            <h3 className="text-xl font-bold text-slate-900 leading-tight">Gemini AI Stress Management</h3>
+                            <h3 className="text-xl font-bold text-slate-900 leading-tight">Stress Management</h3>
                             <p className="text-sm font-medium text-indigo-600">Personalized Long-term Plan</p>
                         </div>
                     </div>

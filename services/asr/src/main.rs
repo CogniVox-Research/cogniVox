@@ -6,7 +6,7 @@ use common::{
     file_store::Store,
     util::fail::Fail,
 };
-use rocket::{State, response::content::RawHtml, tokio};
+use rocket::{State, fairing::AdHoc, response::content::RawHtml, tokio};
 use rocket_ws::{Channel, WebSocket};
 
 mod asr;
@@ -54,7 +54,7 @@ fn stream_audio(
 
 #[launch]
 fn rocket() -> _ {
-    let rocket = rocket::build();
+    let mut rocket = rocket::build();
     let cfg: config::Config = rocket.figment().extract().fail("Failed to load config");
     let store = Store::from_config(&cfg.recording_store).fail("Failed to setup store");
     let transcriber = asr_rs::Transcriber::new(cfg.asr).fail("Failed to initalize ASR");
@@ -64,13 +64,19 @@ fn rocket() -> _ {
         .expect("Models should download successfully");
 
     if let Some(mq_config) = cfg.rabbitmq {
-        log::info!("Started rabbit mq listener");
+        log::info!("Started rabbitMQ listener");
 
-        tokio::spawn(mq::start_mq_listener(
-            mq_config,
-            store.clone(),
-            transcriber.clone(),
-        ));
+        let transcriber = transcriber.clone();
+        let store = store.clone();
+        rocket = rocket.attach(AdHoc::on_liftoff("MQ Listener", move |_| {
+            Box::pin(async move {
+                tokio::spawn(mq::start_mq_listener(
+                    mq_config,
+                    store.clone(),
+                    transcriber.clone(),
+                ));
+            })
+        }));
     } else {
         log::info!("MQ config not found. Skipping mq listener");
     }

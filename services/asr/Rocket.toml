@@ -1,6 +1,7 @@
 [default]
 address = "0.0.0.0"
 port=8001
+log_level="normal"
 
 [default.asr]
 backend="whisper"
@@ -17,6 +18,7 @@ path="../storage"
 
 [release.rabbitmq]
 address="amqp://appuser:apppass@rabbitmq"
+connection_name="asr"
 
 [release.recording_store]
 type="s3"

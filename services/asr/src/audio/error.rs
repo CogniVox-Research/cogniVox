@@ -33,10 +33,6 @@ pub enum AudioError {
     #[error("Interlaced audio is not supported")]
     Interlaced,
 
-    #[cfg(feature = "ffmpeg")]
-    #[error("Error while processing audio: {0}")]
-    FFmpeg(#[from] ez_ffmpeg::error::Error),
-
     #[error("{0}")]
     Custom(String),
 }

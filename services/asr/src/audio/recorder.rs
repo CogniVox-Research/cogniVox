@@ -29,6 +29,7 @@ impl<P: PipelineStep> RecordAudio<P> {
     }
 }
 
+#[allow(clippy::missing_fields_in_debug)]
 impl<P: PipelineStep> Debug for RecordAudio<P> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("RecordAudio")
@@ -56,7 +57,7 @@ impl<P: PipelineStep> RecordAudio<P> {
             converted_out,
             hound::WavSpec {
                 channels: 1,
-                sample_rate: TARGET_SAMPLE_RATE as u32,
+                sample_rate: TARGET_SAMPLE_RATE,
                 bits_per_sample: 32,
                 sample_format: hound::SampleFormat::Float,
             },
@@ -88,7 +89,7 @@ impl<P: PipelineStep> PipelineStep for RecordAudio<P> {
                 .map_err(AudioError::Hound)?;
         }
 
-        return Ok(output);
+        Ok(output)
     }
 
     async fn finish(self) -> Result<Option<Vec<f32>>> {

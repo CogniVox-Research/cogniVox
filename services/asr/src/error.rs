@@ -11,7 +11,7 @@ pub enum Error {
     ASR(#[from] asr_rs::Error),
 
     #[error("Websocket returned an error: {0}")]
-    WS(#[from] rocket_ws::result::Error),
+    WS(#[from] Box<rocket_ws::result::Error>),
 
     #[error("Failed to serialize: {0}")]
     Serialize(#[from] serde_json::Error),
@@ -24,4 +24,9 @@ pub enum Error {
 
     #[error("RabbitMQ error: {0}")]
     MQ(#[from] mq::MQError),
+}
+impl From<rocket_ws::result::Error> for Error {
+    fn from(value: rocket_ws::result::Error) -> Self {
+        Self::WS(Box::new(value))
+    }
 }

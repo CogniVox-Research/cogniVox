@@ -14,9 +14,6 @@ silence_threshold=2
 type="local"
 path="../storage"
 
-[default.rabbitmq]
-connection_name="game"
-address="amqp://appuser:apppass@127.0.0.1"
 
 [release.rabbitmq]
 address="amqp://appuser:apppass@rabbitmq"

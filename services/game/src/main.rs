@@ -1,3 +1,6 @@
+#![warn(clippy::all)]
+#![deny(clippy::unwrap_used)]
+
 #[macro_use]
 extern crate rocket;
 

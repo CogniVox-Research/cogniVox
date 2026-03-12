@@ -1,0 +1,115 @@
+use std::fmt::Debug;
+
+use once_cell::sync::OnceCell;
+use opus::Decoder as OpusDecoder;
+use rubato::{FftFixedIn, Resampler};
+use webm_iterable::{
+    WebmIterator,
+    matroska_spec::{MatroskaSpec, SimpleBlock},
+};
+
+use crate::audio::{AudioError, PipelineStep, TARGET_SAMPLE_RATE, decoder::WebmHeader};
+
+pub struct WebmAudioDecoder {
+    inner: Box<OnceCell<WebmAudioDecoderInner>>,
+}
+
+struct WebmAudioDecoderInner {
+    opus_decoder: OpusDecoder,
+    resampler: FftFixedIn<f32>,
+    channels: usize,
+    decoder_buf: Vec<f32>,
+}
+
+impl Debug for WebmAudioDecoder {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("WebmAudioDecoder").finish()
+    }
+}
+
+impl WebmAudioDecoder {
+    pub fn new() -> Self {
+        Self {
+            inner: Box::new(OnceCell::new()),
+        }
+    }
+}
+
+impl PipelineStep for WebmAudioDecoder {
+    fn process_audio(&mut self, input: Vec<u8>) -> crate::error::Result<Vec<f32>> {
+        self.inner.get_or_try_init(|| {
+            let header = super::get_webm_header(&input)?;
+            WebmAudioDecoderInner::new(&header)
+        })?;
+
+        let inner = self.inner.get_mut().expect("should init");
+
+        Ok(inner.decode_webm_chunk(&input)?)
+    }
+
+    async fn finish(self) -> crate::error::Result<Option<Vec<f32>>> {
+        Ok(None)
+    }
+}
+
+impl WebmAudioDecoderInner {
+    pub fn new(header: &WebmHeader) -> Result<Self, AudioError> {
+        let opus_decoder = OpusDecoder::new(header.sample_rate as u32, header.channels)?;
+
+        let resampler = FftFixedIn::<f32>::new(
+            header.sample_rate,
+            TARGET_SAMPLE_RATE as usize,
+            header.chunk_size,
+            2,
+            1,
+        )?;
+
+        Ok(Self {
+            opus_decoder,
+            resampler,
+            channels: header.channels as usize,
+            decoder_buf: vec![
+                0f32;
+                header.sample_rate / (header.n_chunks - 1) * header.channels as usize
+            ],
+        })
+    }
+
+    pub fn decode_webm_chunk(&mut self, data: &[u8]) -> Result<Vec<f32>, AudioError> {
+        let mut samples_out = Vec::new();
+        let reader = WebmIterator::new(data, &[]);
+
+        for tag in reader {
+            if let MatroskaSpec::SimpleBlock(block) = tag? {
+                let simple_block: SimpleBlock = (&block).try_into()?;
+                if simple_block.lacing.is_some() {
+                    return Err(AudioError::Interlaced);
+                }
+
+                let packet = simple_block.raw_frame_data();
+
+                let frame_size =
+                    self.opus_decoder
+                        .decode_float(packet, &mut self.decoder_buf, false)?;
+
+                let decoded = &self.decoder_buf[..frame_size * self.channels];
+
+                // De-interleave to mono if stereo
+                let mono: Vec<f32> = if self.channels == 2 {
+                    decoded
+                        .chunks_exact(2)
+                        .map(|c| (c[0] + c[1]) * 0.5)
+                        .collect()
+                } else {
+                    decoded.to_vec()
+                };
+
+                let input = vec![mono];
+                let resampled = self.resampler.process(&input, None)?;
+                samples_out.extend(&resampled[0]);
+            }
+        }
+
+        Ok(samples_out)
+    }
+}

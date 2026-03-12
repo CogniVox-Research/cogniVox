@@ -7,21 +7,22 @@ use webm_iterable::{
 use crate::audio::{AudioError, TARGET_SAMPLE_RATE};
 
 #[derive(Debug)]
-pub struct Header {
+pub struct WebmHeader {
     pub channels: Channels,
     pub sample_rate: usize,
     pub chunk_size: usize,
     pub n_chunks: usize,
 }
 
-pub fn get_header(data: &[u8]) -> Result<Header, AudioError> {
-    let mut reader = WebmIterator::new(data, &[]);
+#[allow(clippy::cast_sign_loss, reason = "checked before cast")]
+pub fn get_webm_header(data: &[u8]) -> Result<WebmHeader, AudioError> {
+    let reader = WebmIterator::new(data, &[]);
     let mut channels = None;
     let mut sample_rate = 0;
     let mut chunk_size = 0;
     let mut n_chunks = 0;
 
-    while let Some(tag) = reader.next() {
+    for tag in reader {
         let tag = tag?;
         match &tag {
             MatroskaSpec::Channels(v) => {
@@ -43,7 +44,7 @@ pub fn get_header(data: &[u8]) -> Result<Header, AudioError> {
             }
             MatroskaSpec::CodecName(n) => {
                 log::debug!(target:"opus_decode", "Codec {n}");
-                if n.to_ascii_lowercase() != "opus" {
+                if !n.eq_ignore_ascii_case("opus") {
                     return Err(AudioError::Custom(format!("Unsupported codec: {n}")));
                 }
             }
@@ -55,7 +56,7 @@ pub fn get_header(data: &[u8]) -> Result<Header, AudioError> {
                 let mut decode_buf = vec![0f32; TARGET_SAMPLE_RATE as usize * 40];
 
                 let simple_block: SimpleBlock = (packet).try_into()?;
-                if !simple_block.lacing.is_none() {
+                if simple_block.lacing.is_some() {
                     return Err(AudioError::Interlaced);
                 }
 
@@ -63,15 +64,14 @@ pub fn get_header(data: &[u8]) -> Result<Header, AudioError> {
 
                 let mut opus_decoder =
                     opus::Decoder::new(sample_rate as u32, channels.expect("checked above"))?;
-                let frame_size = opus_decoder.decode_float(&packet, &mut decode_buf, false)?;
+                let frame_size = opus_decoder.decode_float(packet, &mut decode_buf, false)?;
 
                 if chunk_size == 0 {
-                    chunk_size = frame_size
-                } else {
-                    if chunk_size != frame_size {
-                        return Err(AudioError::Custom("Frames have variying sizes".to_owned()));
-                    }
+                    chunk_size = frame_size;
+                } else if chunk_size != frame_size {
+                    return Err(AudioError::Custom("Frames have variying sizes".to_owned()));
                 }
+
                 n_chunks += 1;
             }
             _ => {
@@ -87,8 +87,8 @@ pub fn get_header(data: &[u8]) -> Result<Header, AudioError> {
         && chunk_size != 0
         && n_chunks != 0
     {
-        Ok(Header {
-            channels: channels,
+        Ok(WebmHeader {
+            channels,
             sample_rate,
             chunk_size,
             n_chunks,

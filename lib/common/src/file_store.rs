@@ -115,14 +115,14 @@ impl Store {
         self.upload_from_reader(path, file, Some(size)).await
     }
 
-    pub async fn upload_from_reader<T: AsyncRead>(
+    pub async fn upload_from_reader<T>(
         &self,
         path: &str,
         mut reader: T,
         size: Option<u64>,
     ) -> Result<(), StoreError>
     where
-        T: Unpin,
+        T: AsyncRead + Unpin,
     {
         let mut data = Vec::with_capacity(size.unwrap_or(1000) as usize);
         reader.read_to_end(&mut data).await?;

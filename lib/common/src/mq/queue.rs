@@ -19,7 +19,7 @@ pub struct Message<T> {
 impl<T> Message<T> {
     pub async fn get(self) -> Result<T> {
         self.acker.ack(BasicAckOptions::default()).await?;
-        return Ok(self.data);
+        Ok(self.data)
     }
 }
 
@@ -40,9 +40,11 @@ where
     T: DeserializeOwned + Sized,
 {
     pub(crate) async fn create(con: Connection, queue_name: Option<String>) -> Result<Consumer<T>> {
-        let mut options = QueueDeclareOptions::default();
-        options.auto_delete = queue_name.is_none();
-        options.exclusive = queue_name.is_none();
+        let options = QueueDeclareOptions {
+            auto_delete: queue_name.is_none(),
+            exclusive: queue_name.is_none(),
+            ..Default::default()
+        };
 
         let queue = con
             .channel

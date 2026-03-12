@@ -1,3 +1,5 @@
+#![allow(clippy::cast_possible_truncation)]
+
 use common::{
     dto::{ASRSessionType, AudioFormat},
     file_store::Store,

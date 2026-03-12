@@ -15,6 +15,10 @@ pub struct WebmHeader {
 }
 
 #[allow(clippy::cast_sign_loss, reason = "checked before cast")]
+#[allow(
+    clippy::cast_possible_truncation,
+    reason = "sample rate and channel number will always fit in 32bit"
+)]
 pub fn get_webm_header(data: &[u8]) -> Result<WebmHeader, AudioError> {
     let reader = WebmIterator::new(data, &[]);
     let mut channels = None;

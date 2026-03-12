@@ -53,6 +53,10 @@ impl PipelineStep for WebmAudioDecoder {
 }
 
 impl WebmAudioDecoderInner {
+    #[allow(
+        clippy::cast_possible_truncation,
+        reason = "sample_rate will always fit in 32bit"
+    )]
     pub fn new(header: &WebmHeader) -> Result<Self, AudioError> {
         let opus_decoder = OpusDecoder::new(header.sample_rate as u32, header.channels)?;
 

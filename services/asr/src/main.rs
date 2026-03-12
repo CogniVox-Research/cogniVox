@@ -1,6 +1,5 @@
 #![warn(clippy::pedantic)]
 #![deny(clippy::unwrap_used)]
-#![allow(clippy::cast_possible_truncation)]
 
 use common::{
     dto::{ASRSessionType, AudioFormat},

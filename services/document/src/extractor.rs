@@ -15,18 +15,18 @@ pub async fn extract_text(
         None => return Err(Custom(Status::BadRequest, Json("Missing MIME type".into()))),
     };
 
-    let text = match extract_content(&file, &mime_type).await {
+    let text = match extract_content(file, &mime_type).await {
         Ok(Some(text)) => text,
         Ok(None) => {
             return Err(Custom(
                 Status::BadRequest,
-                Json(format!("Unsupported file type (got {})", mime_type)),
+                Json(format!("Unsupported file type (got {mime_type})")),
             ));
         }
         Err(err) => {
             return Err(Custom(
                 Status::InternalServerError,
-                Json(format!("Failed to parse document: {}", err)),
+                Json(format!("Failed to parse document: {err}")),
             ));
         }
     };
@@ -51,6 +51,7 @@ async fn extract_content(
     }
 }
 
+#[allow(clippy::cast_possible_truncation, reason = "File size limit is 50MB")]
 async fn extract_from_pdf(file: &TempFile<'_>) -> Result<String, Box<dyn std::error::Error>> {
     let doc = if let Some(path) = file.path() {
         lopdf::Document::load(path)?
@@ -63,11 +64,8 @@ async fn extract_from_pdf(file: &TempFile<'_>) -> Result<String, Box<dyn std::er
 
     let mut text = String::new();
 
-    for (page_no, _) in doc.get_pages().iter() {
-        let page_content = doc
-            .extract_text(&vec![*page_no])?
-            .to_owned()
-            .replace("\n", "");
+    for page_no in doc.get_pages().keys() {
+        let page_content = doc.extract_text(&[*page_no])?.clone().replace('\n', "");
         text.push_str(&page_content);
     }
 

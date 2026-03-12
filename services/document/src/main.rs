@@ -1,8 +1,12 @@
+#![warn(clippy::pedantic)]
+#![deny(clippy::unwrap_used)]
 #[macro_use]
 extern crate rocket;
 
 use common::file_store::Store;
+use common::util::fail::Fail;
 use rocket::form::Form;
+use rocket::http::Status;
 use rocket::response::content::RawHtml;
 use rocket::response::status::Custom;
 use rocket::serde::json::Json;
@@ -14,9 +18,10 @@ mod extractor;
 mod upload;
 
 #[rocket::get("/")]
-async fn index() -> RawHtml<&'static str> {
+fn index() -> RawHtml<&'static str> {
     RawHtml(include_str!("../assets/index.html"))
 }
+
 #[rocket::post("/parse", data = "<file>")]
 async fn parse_file(
     file: Form<TempFile<'_>>,
@@ -38,7 +43,7 @@ async fn upload_file(
     let (mime_type, text) = extractor::extract_text(&file).await?;
 
     let dir = format!("{session_id}/documents");
-    let extension = mime_type.extension().map(|v| v.as_str()).unwrap_or("bin");
+    let extension = mime_type.extension().map_or("bin", |v| v.as_str());
 
     let content = dto::FileToken {
         document_id: session_id,
@@ -47,19 +52,25 @@ async fn upload_file(
         original_path: format!("{dir}/original.{extension}"),
     };
 
-    upload::upload_to_store(store, &file, &content, text)
-        .await
-        .unwrap();
-
-    Ok(Json(content))
+    let result = upload::upload_to_store(store, &file, &content, text).await;
+    match result {
+        Ok(()) => Ok(Json(content)),
+        Err(e) => {
+            log::error!("Failed to upload file: {e}");
+            Err(Custom(
+                Status::InternalServerError,
+                Json("Failed to upload file".to_owned()),
+            ))
+        }
+    }
 }
 
 #[rocket::launch]
 fn rocket() -> _ {
     let rocket = rocket::build();
     let figment = rocket.figment();
-    let config: config::AppConfig = figment.extract().expect("Config should load");
-    let store = Store::from_config(&config.file_store).expect("Store should should create");
+    let config: config::AppConfig = figment.extract().fail("Failed to load config");
+    let store = Store::from_config(&config.file_store).fail("Failed to create store");
 
     rocket
         .manage(config)

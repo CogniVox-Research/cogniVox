@@ -1,10 +1,9 @@
 use std::time::Duration;
 
-use crate::mq::{Consumer, Sender, error::Result};
+use crate::mq::{MQError, Sender, builder, error::Result};
 use async_rs::Runtime;
 use lapin::{
-    BasicProperties, Channel, ConnectionProperties, ExchangeKind, options::BasicPublishOptions,
-    types::FieldTable,
+    BasicProperties, Channel, ConnectionProperties, options::BasicPublishOptions, types::FieldTable,
 };
 use serde::{Deserialize, Serialize, de::DeserializeOwned};
 use tokio::time::sleep;
@@ -20,21 +19,35 @@ pub struct Connection {
     pub channel: Channel,
 }
 
+pub type ExchageType = lapin::ExchangeKind;
+
 impl Connection {
-    pub async fn for_config(cfg: Config) -> Result<Connection> {
+    /// Creates an mq connection from the given config.
+    /// If the connection fails due to an network errors,
+    ///  this function automatically retries connecting.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the connection failed.
+    pub async fn from_config(cfg: Config) -> Result<Connection> {
+        let mut timeout = 1;
         loop {
             let result = Self::for_config_inner(&cfg).await;
             match result {
                 Ok(v) => return Ok(v),
+                Err(err) if err.is_io_error() => {
+                    log::error!("MQ connection failed: {err}. Retrying in {timeout} seconds");
+                    sleep(Duration::from_secs(timeout)).await;
+                    timeout = (timeout * 2).max(10);
+                }
                 Err(err) => {
-                    log::error!("Failed to connect to rabbitmq: {err}");
-                    sleep(Duration::from_secs(10)).await;
+                    return Err(MQError::Queue(err));
                 }
             }
         }
     }
 
-    async fn for_config_inner(cfg: &Config) -> Result<Connection> {
+    async fn for_config_inner(cfg: &Config) -> std::result::Result<Connection, lapin::Error> {
         let runtime = Runtime::tokio_current();
 
         let config = ConnectionProperties::default()
@@ -50,23 +63,13 @@ impl Connection {
         Ok(Connection { channel })
     }
 
-    pub async fn create_exchange(&self, exchange_name: &str) -> Result<()> {
-        self._create_exchange(exchange_name, ExchangeKind::Direct)
-            .await
-    }
-
-    pub async fn create_topic_exchange(&self, exchange_name: &str) -> Result<()> {
-        self._create_exchange(exchange_name, ExchangeKind::Topic)
-            .await
-    }
-
-    pub async fn create_broadcast_exchange(&self, exchange_name: &str) -> Result<()> {
-        self._create_exchange(exchange_name, ExchangeKind::Fanout)
-            .await
-    }
-
-    /// Creates a new exchange for message.
-    async fn _create_exchange(&self, exchange_name: &str, type_of: ExchangeKind) -> Result<()> {
+    /// Creates a new exchange in the broker.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if creating the exchage failed.
+    ///
+    pub async fn declare_exchange(&self, type_of: ExchageType, exchange_name: &str) -> Result<()> {
         self.channel
             .exchange_declare(
                 exchange_name.into(),
@@ -79,25 +82,23 @@ impl Connection {
     }
 
     /// Creates a sender that sends messages on the given exchange.
-    /// If exchange_name is None, the default exchange is used.
-    pub async fn sender<T: Serialize>(
+    /// If `exchange_name` is None, the default exchange is used.
+    #[must_use]
+    pub fn sender<T: Serialize>(
         &self,
         routing_key: &str,
         exchange_name: Option<String>,
-    ) -> Result<Sender<T>> {
+    ) -> Sender<T> {
         Sender::create(
             self.to_owned(),
             exchange_name.unwrap_or_default(),
             routing_key.to_owned(),
         )
-        .await
     }
 
-    pub async fn recieve<T: DeserializeOwned>(
-        &self,
-        queue_name: Option<String>,
-    ) -> Result<Consumer<T>> {
-        Consumer::create(self.to_owned(), queue_name).await
+    #[must_use]
+    pub fn consumer<T: DeserializeOwned>(&self) -> builder::ConsumerBuilder<T> {
+        builder::ConsumerBuilder::new(self.clone())
     }
 
     pub(crate) async fn send_message(

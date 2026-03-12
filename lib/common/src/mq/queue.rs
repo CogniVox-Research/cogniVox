@@ -10,6 +10,8 @@ use lapin::{
 };
 use serde::de::DeserializeOwned;
 
+/// A Wrapper around a message that should be acked.
+/// This is used so that `Consumer::recv` can be cancel safe.
 #[derive(Debug)]
 pub struct Message<T> {
     data: T,
@@ -17,6 +19,11 @@ pub struct Message<T> {
 }
 
 impl<T> Message<T> {
+    /// Gets the message and sends an ack to the broker.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the ack failed
     pub async fn get(self) -> Result<T> {
         self.acker.ack(BasicAckOptions::default()).await?;
         Ok(self.data)
@@ -29,8 +36,8 @@ where
     T: DeserializeOwned + Sized,
 {
     con: Connection,
-    consumer: lapin::Consumer,
     queue_name: String,
+    inner: lapin::Consumer,
 
     _msg_type: PhantomData<T>,
 }
@@ -57,7 +64,7 @@ where
 
         let queue_name = queue.name().to_string();
 
-        let name = format!("{}_consumer", queue_name);
+        let name = format!("{queue_name}_consumer");
         let consumer = con
             .channel
             .basic_consume(
@@ -69,7 +76,7 @@ where
             .await?;
 
         Ok(Consumer {
-            consumer,
+            inner: consumer,
             con,
             queue_name,
             _msg_type: PhantomData,
@@ -78,7 +85,7 @@ where
 
     /// Receive a single message.
     pub async fn recv(&mut self) -> Option<Result<Message<T>>> {
-        let delivery = self.consumer.next().await;
+        let delivery = self.inner.next().await;
 
         match delivery {
             None => None,
@@ -93,6 +100,17 @@ where
         }
     }
 
+    pub async fn recv_ack(&mut self) -> Option<Result<T>> {
+        let result = self.recv().await;
+        match result {
+            Some(Ok(msg)) => Some(msg.get().await),
+            Some(Err(e)) => Some(Err(e)),
+            None => None,
+        }
+    }
+
+    #[deprecated = "use ConsumerBuilder::on_exchange"]
+    #[allow(clippy::missing_errors_doc)]
     pub async fn bind_exchange(self, exhange: String, route_key: String) -> Result<Self> {
         self.con
             .channel

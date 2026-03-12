@@ -28,7 +28,7 @@ where
 
     fn log_err(self, msg: &str) {
         if let Err(e) = self {
-            log::error!("{msg}: {e}")
+            log::error!("{msg}: {e}");
         }
     }
 }

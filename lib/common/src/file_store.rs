@@ -52,6 +52,10 @@ pub enum Store {
 }
 
 impl Store {
+    /// Creates a new store for the given config
+    ///
+    /// # Errors
+    /// Returns an error if creating/connecting to the store failed
     pub fn from_config(cfg: &StoreConfig) -> Result<Store, StoreError> {
         let store = match cfg {
             StoreConfig::InMemory => {
@@ -78,7 +82,7 @@ impl Store {
                     .with_secret_access_key(secret_access_key)
                     .with_bucket_name(bucket)
                     .build()
-                    .unwrap();
+                    .map_err(StoreError::Create)?;
 
                 Store::S3(Arc::new(s3))
             }
@@ -87,10 +91,24 @@ impl Store {
         Ok(store)
     }
 
+    /// Reads the contents at the given path as a string.
+    ///
+    /// # Errors
+    ///
+    /// Returns an `StoreError::NotFound` error if the path does not exists.
+    /// Retuns an `StoreError::Read` if an error occured while reading the data.
+    /// Returns `StoreError::NotUtf8` if the data is not a valid utf-8 string
     pub async fn read_str(&self, path: &str) -> Result<String, StoreError> {
         Ok(String::from_utf8(self.read(path).await?)?)
     }
 
+    /// Reads the contents at the given path as a bytes.
+    ///
+    /// # Errors
+    ///
+    /// Returns an `StoreError::NotFound` error if the path does not exists.
+    /// Retuns an `StoreError::Read` if an error occured while reading the data.
+    /// Returns `StoreError::NotUtf8` if the data is not a valid utf-8 string
     pub async fn read(&self, path: &str) -> Result<Vec<u8>, StoreError> {
         let path = Path::from(path);
 
@@ -107,6 +125,10 @@ impl Store {
         Ok(bytes.to_vec())
     }
 
+    /// Uplods the file at the given path
+    ///
+    /// # Errors
+    /// Returns an `StoreError::Upload` error if the upload fails.
     pub async fn upload_file(&self, path: &str, file_path: PathBuf) -> Result<(), StoreError> {
         let file = fs::File::open(file_path).await?;
         let metadata = file.metadata().await?;
@@ -115,6 +137,14 @@ impl Store {
         self.upload_from_reader(path, file, Some(size)).await
     }
 
+    /// Uplods the content in the given reader.
+    ///
+    /// # Errors
+    /// Returns an `StoreError::Upload` error if the upload fails.
+    #[allow(
+        clippy::cast_possible_truncation,
+        reason = "read_to_end will panic if the size exceeds 4GB on 32bit platforms"
+    )]
     pub async fn upload_from_reader<T>(
         &self,
         path: &str,
@@ -124,7 +154,8 @@ impl Store {
     where
         T: AsyncRead + Unpin,
     {
-        let mut data = Vec::with_capacity(size.unwrap_or(1000) as usize);
+        let size = size.unwrap_or(1000);
+        let mut data = Vec::with_capacity(size as usize);
         reader.read_to_end(&mut data).await?;
 
         // TODO: use multipart for large files
@@ -132,6 +163,10 @@ impl Store {
         self.upload(path, data).await
     }
 
+    /// Uplods the given bytes.
+    ///
+    /// # Errors
+    /// Returns an `StoreError::Upload` error if the upload fails.
     pub async fn upload(&self, path: &str, data: Vec<u8>) -> Result<(), StoreError> {
         let upload_path = object_store::path::Path::from(path);
 
@@ -150,7 +185,6 @@ impl Store {
 impl Deref for Store {
     type Target = dyn object_store::ObjectStore;
 
-    #[inline(always)]
     fn deref(&self) -> &Self::Target {
         match self {
             Store::InMemory(in_memory) => in_memory,

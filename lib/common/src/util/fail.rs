@@ -19,8 +19,8 @@ where
         match self {
             Ok(data) => data,
             Err(err) => {
-                println!("{msg}");
-                println!("Error: {err}");
+                log::error!("{msg}");
+                log::error!("Error: {err}");
                 exit(1)
             }
         }

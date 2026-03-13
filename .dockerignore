@@ -28,3 +28,4 @@ services/stuck_detection/audio
 
 services/transcript_analysis/config.toml
 services/transcript_analysis/audio
+services/transcript_analysis/models

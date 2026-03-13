@@ -14,7 +14,6 @@ sealed class DeviceOutbound : Message.To<DeviceOutbound> {
     @SerialName("connect")
     data class Connect(
         @SerialName("device_name") val deviceName: String,
-        val auth: String
     ) : DeviceOutbound()
 
     override fun toMessage(): Message {

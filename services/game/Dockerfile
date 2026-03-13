@@ -23,6 +23,7 @@ RUN    --mount=type=cache,target=/build \
 
 FROM debian:trixie-slim
 WORKDIR /app
+RUN apt-get update && apt-get install -y ca-certificates  && rm -rf /var/lib/apt/lists && rm -rf /var/cache
 COPY --from=builder /game_service /app
 COPY services/game/assets assets
 EXPOSE 8004

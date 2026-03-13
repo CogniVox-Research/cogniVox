@@ -10,7 +10,7 @@ ENV SERIVCE_NAME=services/biometric
 WORKDIR /app/$SERIVCE_NAME
 COPY $SERIVCE_NAME/poetry.lock ./poetry.lock
 COPY $SERIVCE_NAME/pyproject.toml ./pyproject.toml
-RUN --mount=type=cache,target=/root/.cache/pypoetry\
+RUN --mount=type=cache,target=/root/.cache/pypoetry \
     poetry install --no-interaction --no-ansi
 COPY $SERIVCE_NAME/ .
 EXPOSE 8011

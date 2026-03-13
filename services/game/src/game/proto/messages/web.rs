@@ -16,16 +16,12 @@ pub enum WebInbound {
 #[derive(Debug, Serialize)]
 #[serde(tag = "type", content = "data", rename_all = "snake_case")]
 pub enum WebOutbound {
-    ASR(common::dto::asr::ASR),
+    Asr(common::dto::asr::ASR),
     Stress(dto::stress::StressResponse),
-    Pair {
-        session_id: uuid::Uuid,
-    },
-    Session {
-        session_id: uuid::Uuid,
-    },
+    Pair { session_id: uuid::Uuid },
+    Session { session_id: uuid::Uuid },
     GameConnected,
-    HeartRate(dto::stress::StressRequest),
+    HeartRate(Box<dto::stress::StressRequest>),
     Stuck,
     Unstuck,
     StuckSuggestion(String),
@@ -35,12 +31,15 @@ pub enum WebOutbound {
     QuestionASR(common::dto::asr::ASR),
     QuestionEnd,
 
-    Results {
-        transcript_analysis: Option<dto::transcript::Response>,
-        speech_score: Option<dto::sds::Response>,
-        answer_score: Option<dto::llm::EvaluateResult>,
-        stress_result: Option<dto::stress::OverallResponse>,
-    },
+    Results(Box<SessionResult>),
+}
+
+#[derive(Debug, Serialize)]
+pub struct SessionResult {
+    pub transcript_analysis: Option<dto::transcript::Response>,
+    pub speech_score: Option<dto::sds::Response>,
+    pub answer_score: Option<dto::llm::EvaluateResult>,
+    pub stress_result: Option<dto::stress::OverallResponse>,
 }
 
 impl super::Inbound for WebInbound {

@@ -13,7 +13,7 @@ use crate::{
             WebOutbound,
         },
     },
-    services::{LLM, documents::fetch_document},
+    services::{Llm, documents::fetch_document},
 };
 
 #[rocket::get("/ws/web")]
@@ -121,7 +121,7 @@ pub async fn test_game_session<'r>(ws: WebSocket) -> Channel<'r> {
     let mut con = GameConnection::new();
     let channel = con.handle_websocket(ws);
 
-    game::test_session::start_test_session(con).await.unwrap();
+    game::test_session::start_test_session(con).await;
 
     channel
 }

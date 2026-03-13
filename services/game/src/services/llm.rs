@@ -7,14 +7,14 @@ use crate::{
 };
 
 #[async_trait]
-pub trait LLM {
+pub trait Llm {
     async fn get_questions(&self, is_interview: bool, text: &str) -> Option<Vec<llm::Question>>;
     async fn score_answers(&self, qa: Vec<llm::AnswerEvaluateItem>) -> Option<llm::EvaluateResult>;
     async fn stress_plan(&self, stress: stress::OverallRequest) -> Option<stress::OverallResponse>;
 }
 
 #[async_trait]
-impl LLM for Endpoints {
+impl Llm for Endpoints {
     async fn get_questions(&self, is_interview: bool, text: &str) -> Option<Vec<llm::Question>> {
         let result = if is_interview {
             self.interview_question

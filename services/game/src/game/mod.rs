@@ -11,8 +11,8 @@ use crate::{
         stress, transcript,
     },
     error::{Error, Result},
-    game::proto::{MQSession, ServiceInbound, WebOutbound},
-    services::{LLM, SpeechScore, TranscriptAnalysis},
+    game::proto::{MQSession, ServiceInbound, SessionResult, WebOutbound},
+    services::{Llm, SpeechScore, TranscriptAnalysis},
 };
 pub mod proto;
 use common::dto::{
@@ -66,12 +66,12 @@ impl Game {
             .await;
 
         self.web
-            .send(WebOutbound::Results {
+            .send(WebOutbound::Results(Box::new(SessionResult {
                 transcript_analysis: ta_result,
                 speech_score: sds_score,
                 answer_score: answer_result,
                 stress_result,
-            })
+            })))
             .await?;
 
         self.game.send(GameOutbound::End).await?;
@@ -147,13 +147,13 @@ impl Game {
                     log::debug!("Got message {:?}", message);
 
                     match message {
-                        ServiceInbound::ASR(mut asr) => {
+                        ServiceInbound::Asr(mut asr) => {
                             asr.session_id = self.session_id.to_string();
                             if !is_speech{
                                 self.check_answer_end(&asr).await;
                                 self.web.send(WebOutbound::QuestionASR(asr.clone())).await?;
                             }else{
-                                self.web.send(WebOutbound::ASR(asr.clone())).await?;
+                                self.web.send(WebOutbound::Asr(asr.clone())).await?;
                             }
 
                             if let ASR::Complete(complete) = asr{

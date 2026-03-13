@@ -21,6 +21,7 @@ mod dto;
 mod error;
 mod game;
 mod services;
+mod util;
 
 #[rocket::get("/")]
 async fn index() -> Redirect {

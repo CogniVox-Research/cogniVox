@@ -3,7 +3,6 @@ use serde::{Deserialize, Serialize};
 #[derive(Debug, Serialize, Deserialize)]
 pub struct DeviceInfo {
     pub device_name: String,
-    pub auth: String,
 }
 
 #[derive(Debug, Serialize, Deserialize)]

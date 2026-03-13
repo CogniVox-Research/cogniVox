@@ -41,4 +41,7 @@ pub enum Error {
 
     #[error("Auth token error: {0}")]
     Auth(#[from] jwt::Error),
+
+    #[error("Missing user id in token")]
+    NoUserId,
 }

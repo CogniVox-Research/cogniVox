@@ -1,7 +1,7 @@
 use std::sync::Arc;
 
 use common::file_store::Store;
-use rocket::{State, tokio};
+use rocket::State;
 use rocket_ws::{Channel, WebSocket};
 
 use crate::{
@@ -14,6 +14,7 @@ use crate::{
         },
     },
     services::{Llm, documents::fetch_document},
+    util,
 };
 
 #[rocket::get("/ws/web")]
@@ -33,18 +34,16 @@ pub async fn web_session<'a, 'r>(
 
     log::info!("Web Connected {session_id}");
 
-    tokio::spawn(async move {
-        con.send(WebOutbound::Session { session_id }).await.unwrap();
+    util::websocket_task(async move {
+        con.send(WebOutbound::Session { session_id }).await?;
 
-        let settings = proto::recv_message!(con, WebInbound::Start).unwrap();
+        let settings = proto::recv_message!(con, WebInbound::Start)?;
 
         // TODO: validate document and settings.
         log::info!("Got game settings {settings:?}");
 
         log::info!("Got document {}", settings.document_id);
-        let expected_speech = fetch_document(&store, session_id, &settings.document_id)
-            .await
-            .unwrap();
+        let expected_speech = fetch_document(&store, session_id, &settings.document_id).await?;
 
         let questions = if settings.scene.is_inteview() || settings.qa {
             log::info!("Generating questions");
@@ -58,16 +57,12 @@ pub async fn web_session<'a, 'r>(
             None
         };
 
-        proto::wait_for!(con, WebInbound::Ready).unwrap();
+        proto::wait_for!(con, WebInbound::Ready)?;
 
         if let Some(device) = state.vr.lock().await.get(&user.user_id) {
-            device
-                .con
-                .send(DeviceOutbound::Join { session_id })
-                .await
-                .unwrap();
+            device.con.send(DeviceOutbound::Join { session_id }).await?;
         } else {
-            con.send(WebOutbound::Pair { session_id }).await.unwrap();
+            con.send(WebOutbound::Pair { session_id }).await?;
         }
 
         state.pending.lock().await.insert(
@@ -81,16 +76,18 @@ pub async fn web_session<'a, 'r>(
                 questions,
             },
         );
+
+        Ok(())
     });
 
     channel
 }
 
 #[rocket::get("/ws/game/<session_id>")]
-pub async fn game_session<'a, 'b, 'r>(
+pub async fn game_session<'r>(
     ws: WebSocket,
     session_id: uuid::Uuid,
-    state: &'a State<Arc<AppState>>,
+    state: &'_ State<Arc<AppState>>,
 ) -> Channel<'r> {
     let mut con = GameConnection::new();
     let channel = con.handle_websocket(ws);

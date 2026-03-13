@@ -1,13 +1,7 @@
 services:
   game_service:
+    image: ghcr.io/cognivox-research/game_service:v0.0.1
     restart: "unless-stopped"
-    build:
-      context: ../
-      dockerfile: ./services/game/Dockerfile
-    develop:
-      watch:
-        - action: rebuild
-          path: ../services/game/src
     ports:
       - "8004:8004"
     volumes:

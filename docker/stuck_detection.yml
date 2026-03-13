@@ -1,9 +1,7 @@
 services:
   stuck_detection_service:
+    image: ghcr.io/cognivox-research/stuck_detection_service:v0.0.1
     restart: "unless-stopped"
-    build:
-      context: ../
-      dockerfile: ./services/stuck_detection/Dockerfile
     ports:
       - "8012:8012"
     volumes:

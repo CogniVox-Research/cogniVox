@@ -1,6 +1,9 @@
 include:
   - docker/rabbitmq.yml
   - docker/seaweedfs.yml
+  - docker/gateway.yml
+
+  # to run local version change path to docker/dev/<name>
   - docker/asr.yml
   - docker/auth.yml
   - docker/biometric.yml
@@ -9,5 +12,4 @@ include:
   - docker/sds.yml
   - docker/stuck_detection.yml
   - docker/transcript_analysis.yml
-  - docker/gateway.yml
   - docker/llm.yml

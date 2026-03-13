@@ -1,0 +1,11 @@
+services:
+  stuck_detection_service:
+    restart: "unless-stopped"
+    build:
+      context: ../../
+      dockerfile: ../services/stuck_detection/Dockerfile
+    ports:
+      - "8012:8012"
+    volumes:
+      - ../config/stuck_detection.toml:/app/services/stuck_detection/config.toml:ro
+      - ../../services/stuck_detection/models:/app/models

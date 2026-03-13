@@ -1,0 +1,12 @@
+services:
+  asr_service:
+    # runtime: nvidia
+    restart: "unless-stopped"
+    ports:
+      - "8001:8001"
+    build:
+      context: ../../
+      dockerfile: ../services/asr/Dockerfile
+    volumes:
+      - ../../services/asr/models:/app/models
+      - ../../services/asr/Rocket.toml:/app/Rocket.toml:ro

@@ -1,9 +1,7 @@
 services:
   sds_service:
+    image: ghcr.io/cognivox-research/sds_service:v0.0.1
     restart: "unless-stopped"
-    build:
-      context: ../
-      dockerfile: ./services/sds/Dockerfile
     ports:
       - "8006:8006"
     volumes:

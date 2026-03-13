@@ -1,12 +1,10 @@
 services:
   asr_service:
+    image: ghcr.io/cognivox-research/asr_service_cuda:v0.0.1
     runtime: nvidia
     restart: "unless-stopped"
     ports:
       - "8001:8001"
-    build:
-      context: ../
-      dockerfile: ./services/asr/cuda.Dockerfile
     volumes:
       - ../services/asr/models:/app/models
       - ../services/asr/Rocket.toml:/app/Rocket.toml:ro

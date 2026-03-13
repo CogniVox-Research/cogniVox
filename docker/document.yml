@@ -1,9 +1,7 @@
 services:
   document_service:
+    image: ghcr.io/cognivox-research/document_service:v0.0.1
     restart: "unless-stopped"
-    build:
-      context: ../
-      dockerfile: ./services/document/Dockerfile
     ports:
       - "8003:8003"
     volumes:

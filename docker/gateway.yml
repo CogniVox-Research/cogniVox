@@ -4,5 +4,5 @@ services:
     ports:
       - "7000:80"
     build:
-      context: ../services/gateway/
-      dockerfile: Dockerfile
+      context: ../
+      dockerfile: ./services/gateway/Dockerfile

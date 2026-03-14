@@ -9,3 +9,4 @@ services:
     volumes:
       - ../../services/auth/config.toml:/app/services/auth/config.toml:ro
       - ../../services/auth/keys:/app/services/auth/keys:ro
+      - ../../services/auth/auth.db:/app/services/auth/auth.db:z

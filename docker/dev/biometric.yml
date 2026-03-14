@@ -3,7 +3,7 @@ services:
     restart: "unless-stopped"
     build:
       context: ../../
-      dockerfile: ../services/biometric/Dockerfile
+      dockerfile: ./services/biometric/Dockerfile
     ports:
       - "8011:8011"
     volumes:

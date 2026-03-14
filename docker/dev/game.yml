@@ -3,7 +3,7 @@ services:
     restart: "unless-stopped"
     build:
       context: ../../
-      dockerfile: ../services/game/Dockerfile
+      dockerfile: ./services/game/Dockerfile
     develop:
       watch:
         - action: rebuild

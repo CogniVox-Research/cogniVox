@@ -3,7 +3,7 @@ services:
     restart: "unless-stopped"
     build:
       context: ../../
-      dockerfile: ../services/stuck_detection/Dockerfile
+      dockerfile: ./services/stuck_detection/Dockerfile
     ports:
       - "8012:8012"
     volumes:

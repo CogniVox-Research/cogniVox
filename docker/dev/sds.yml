@@ -3,7 +3,7 @@ services:
     restart: "unless-stopped"
     build:
       context: ../../
-      dockerfile: ../services/sds/Dockerfile
+      dockerfile: ./services/sds/Dockerfile
     ports:
       - "8006:8006"
     volumes:

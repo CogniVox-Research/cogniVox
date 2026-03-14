@@ -6,4 +6,4 @@ services:
       - "8001:8001"
     volumes:
       - ../services/asr/models:/app/models
-      - ../services/asr/Rocket.toml:/app/Rocket.toml:ro
+      - ../services/asr/Rocket.toml:/app/Rocket.toml:z

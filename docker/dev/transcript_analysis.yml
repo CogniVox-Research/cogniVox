@@ -3,7 +3,7 @@ services:
     restart: "unless-stopped"
     build:
       context: ../../
-      dockerfile: ../services/transcript_analysis/Dockerfile
+      dockerfile: ./services/transcript_analysis/Dockerfile
     ports:
       - "8005:8005"
     volumes:

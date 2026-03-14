@@ -3,7 +3,7 @@ services:
     restart: "unless-stopped"
     build:
       context: ../../
-      dockerfile: ../services/auth/Dockerfile
+      dockerfile: ./services/auth/Dockerfile
     ports:
       - "8010:8010"
     volumes:

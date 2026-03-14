@@ -3,7 +3,7 @@ services:
     restart: "unless-stopped"
     build:
       context: ../../
-      dockerfile: ../services/llm/Dockerfile
+      dockerfile: ./services/llm/Dockerfile
     ports:
       - "8013:8013"
     env_file:

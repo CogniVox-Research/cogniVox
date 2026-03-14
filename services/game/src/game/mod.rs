@@ -147,13 +147,13 @@ impl Game {
                     log::debug!("Got message {:?}", message);
 
                     match message {
-                        ServiceInbound::Asr(mut asr) => {
+                        ServiceInbound::ASR(mut asr) => {
                             asr.session_id = self.session_id.to_string();
                             if !is_speech{
                                 self.check_answer_end(&asr).await;
                                 self.web.send(WebOutbound::QuestionASR(asr.clone())).await?;
                             }else{
-                                self.web.send(WebOutbound::Asr(asr.clone())).await?;
+                                self.web.send(WebOutbound::ASR(asr.clone())).await?;
                             }
 
                             if let ASR::Complete(complete) = asr{

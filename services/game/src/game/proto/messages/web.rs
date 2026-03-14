@@ -16,7 +16,7 @@ pub enum WebInbound {
 #[derive(Debug, Serialize)]
 #[serde(tag = "type", content = "data", rename_all = "snake_case")]
 pub enum WebOutbound {
-    Asr(common::dto::asr::ASR),
+    ASR(common::dto::asr::ASR),
     Stress(dto::stress::StressResponse),
     Pair { session_id: uuid::Uuid },
     Session { session_id: uuid::Uuid },

@@ -44,5 +44,5 @@ pub struct EvaluateResult {
 pub struct EvaluateResultItem {
     pub question: String,
     pub matching_percentage: f64,
-    pub is_matching: bool,
+    pub is_matching: usize,
 }

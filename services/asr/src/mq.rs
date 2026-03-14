@@ -42,6 +42,7 @@ pub async fn start_mq_listener(cfg: mq::Config, store: Store, asr: Transcriber) 
 impl MQListener {
     async fn start(&mut self) {
         while let Some(data) = self.consumer.recv_ack().await {
+            log::info!("Got new session {data:?}");
             self.create_session(data)
                 .await
                 .log_err("Failed to create asr session");

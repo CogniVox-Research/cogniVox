@@ -8,7 +8,7 @@ backend="whisper"
 model="Tiny"
 vad="Silero"
 model_dir="./models"
-segment_buffer=4
+segment_buffer=2
 silence_threshold=2
 
 [default.recording_store]

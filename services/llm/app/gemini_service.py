@@ -198,7 +198,8 @@ def generate_speech_questions(speech_content: str) -> dict:
     """Generate 5 questions and sample answers from speech content"""
     client = genai.Client(api_key=settings.gemini_api_key)
 
-    prompt = f"""Based on this speech, generate exactly 5 questions and sample answers that evaluate understanding of the speech. Ask the questions as an audience member.
+    prompt = f"""Based on this speech, generate exactly 5 questions and sample answers that evaluate understanding of the speech.
+    Ask the questions as an audience member. Generate simple questions that have less than around 15 words.
 
 Return ONLY valid JSON array with this structure:
 [

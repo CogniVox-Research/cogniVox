@@ -1,14 +1,92 @@
+import abc
 import asyncio
+import json
 import logging
 import typing
+from asyncio.tasks import Task
 from contextlib import asynccontextmanager
-from logging import Logger
+from dataclasses import dataclass
+from traceback import print_exc
 from warnings import deprecated
 
+import aio_pika
 import pydantic
 from aio_pika import connect_robust
 from aio_pika.abc import AbstractChannel, AbstractIncomingMessage
 from aiormq import AMQPConnectionError, ChannelNotFoundEntity
+
+
+@dataclass
+class Message:
+    data: typing.Any
+    routing_key: str
+
+
+class QueueListener[M: pydantic.BaseModel](abc.ABC):
+    def __init__(
+        self,
+        rabbitmq_url: str,
+        queue_name: str | None,
+        message_type: typing.Type[M],
+        exchange: str = "",
+        routing_key: str | None = None,
+        response_exchange: str = "",
+    ):
+        self.__rabbitmq_url = rabbitmq_url
+        self.__queue_name = queue_name
+        self.__exchange = exchange
+        self.__routing_key = routing_key
+        self.__msg_clazz = message_type
+        self.__response_exchange = response_exchange
+        self.__instance: Task[None] | None = None
+
+    @abc.abstractmethod
+    async def handle_message(self, message: M) -> Message | None:
+        pass
+
+    async def _run(self):
+        async with connect(self.__rabbitmq_url) as channel:
+            queue_reader = await read_queue(
+                channel,
+                queue_name=self.__queue_name,
+                msg_type=self.__msg_clazz,
+                exchange=self.__exchange,
+                routing_key=None,
+            )
+            response_exchange = await channel.get_exchange(self.__response_exchange)
+
+            async for message in queue_reader:
+
+                async def _handle_message():
+                    try:
+                        response = await self.handle_message(message)
+                    except Exception as e:
+                        print(f"Failed to respond to {message}")
+                        print(e)
+                        print_exc()
+                        return
+
+                    if response is None:
+                        return
+
+                    response_json = json.dumps(response.data).encode()
+
+                    await response_exchange.publish(
+                        aio_pika.Message(body=response_json),
+                        routing_key=response.routing_key,
+                    )
+
+                asyncio.create_task(_handle_message())
+
+    def __enter__(self):
+        if self.__instance is not None:
+            raise RuntimeError("Started multiple times")
+        self.__instance = asyncio.create_task(self._run())
+
+    def __exit__(self, *args, **kwargs):
+        assert self.__instance is not None
+
+        self.__instance.cancel()
 
 
 @asynccontextmanager

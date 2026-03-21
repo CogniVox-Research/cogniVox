@@ -1,74 +1,58 @@
-import asyncio
-import json
-import traceback
 from contextlib import asynccontextmanager
 
-import aio_pika
-from aio_pika.abc import AbstractChannel
 from shared import rabbitmq
 
 from .config import config
 from .detector import detector
-from .dto import ASRData, MQData, UnstuckDetection
+from .dto import ASRData, UnstuckDetection
 
 __all__ = ["app", "config"]
 
 from fastapi import FastAPI
 
 
-async def read_queue(conn: AbstractChannel):
-    queue_reader = await rabbitmq.read_queue(conn, None, MQData, "asr", "#")
-    output = await conn.get_exchange("results")
+class ASRListener(rabbitmq.QueueListener[ASRData]):
+    def __init__(self, rabbitmq_url: str):
+        super().__init__(
+            rabbitmq_url,
+            None,
+            ASRData,
+            exchange="stress",
+            response_exchange="results",
+        )
 
-    async def _task():
-        async for data in queue_reader:
-            data = data.data
-            asyncio.create_task(handle_message(data))
+    async def handle_message(self, message: ASRData) -> rabbitmq.Message | None:
+        if message.session_type and message.session_type == "answer":
+            return
 
-    async def handle_message(data: ASRData):
-        try:
-            if data.session_type and data.session_type == "answer":
-                return
+        detection = await detector.detect_stuck(message)
+        if detection is None:
+            return
 
-            detection = await detector.detect_stuck(data)
-            if detection is None:
-                return
+        print(detection)
 
-            print(detection)
+        if isinstance(detection, UnstuckDetection):
+            msg = {
+                "type": "unstuck",
+            }
 
-            if isinstance(detection, UnstuckDetection):
-                msg = {
-                    "type": "unstuck",
-                }
+        elif not detection.suggestion:
+            msg = {
+                "type": "stuck",
+            }
+        else:
+            msg = {
+                "type": "stuck_suggestion",
+                "data": detection.suggestion,
+            }
 
-            elif not detection.suggestion:
-                msg = {
-                    "type": "stuck",
-                }
-            else:
-                msg = {
-                    "type": "stuck_suggestion",
-                    "data": detection.suggestion,
-                }
-            await output.publish(
-                aio_pika.Message(body=json.dumps(msg).encode()),
-                routing_key=data.session_id,
-                mandatory=False,
-            )
-        except Exception as e:
-            print(e)
-            traceback.print_exc()
-
-    return asyncio.create_task(_task())
+        return rabbitmq.Message(data=msg, routing_key=message.session_id)
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    global llm_server
-    async with rabbitmq.connect(config.rabbitmq_url) as con:
-        task = await read_queue(con)
+    with ASRListener(config.rabbitmq_url):
         yield
-        task.cancel()
 
 
 app = FastAPI(lifespan=lifespan)

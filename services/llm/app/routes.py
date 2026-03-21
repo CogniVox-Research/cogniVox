@@ -77,6 +77,11 @@ class ContinuationRequest(BaseModel):
         return v
 
 
+@router.get("/health")
+async def health():
+    return "OK"
+
+
 @router.post("/generate-interview-questions")
 async def generate_questions(request: CVRequest):
     """Generate 5 interview questions from CV content"""

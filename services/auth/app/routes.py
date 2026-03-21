@@ -118,3 +118,8 @@ def login(body: LoginRequest, db: Annotated[Session, Depends(get_db)]) -> TokenR
 def public_key() -> PublicKeyResponse:
     """Return the RSA public key so other services can verify tokens locally."""
     return PublicKeyResponse(public_key=config.public_key)
+
+
+@router.get("/health")
+def health_check() -> str:
+    return "OK"

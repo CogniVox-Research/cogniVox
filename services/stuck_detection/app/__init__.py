@@ -58,6 +58,6 @@ async def lifespan(app: FastAPI):
 app = FastAPI(lifespan=lifespan)
 
 
-@app.get("/")
-async def main():
-    return "Running"
+@app.get("/health")
+async def health():
+    return "OK"

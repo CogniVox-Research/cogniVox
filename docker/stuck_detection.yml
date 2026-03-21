@@ -1,9 +1,18 @@
 services:
   stuck_detection_service:
-    image: ghcr.io/cognivox-research/stuck_detection_service:v0.0.1
+    image: ghcr.io/cognivox-research/stuck_detection_service:latest
     restart: "unless-stopped"
     ports:
       - "8012:8012"
+
+    build:
+      context: ../
+      dockerfile: ./services/stuck_detection/Dockerfile
+
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+
     volumes:
       - ./config/stuck_detection.toml:/app/services/stuck_detection/config.toml:ro
-      - ../services/stuck_detection/models:/app/models
+      - ../services/stuck_detection/models:/app/services/stuck_detection/models

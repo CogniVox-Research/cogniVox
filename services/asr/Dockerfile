@@ -22,7 +22,12 @@ RUN    --mount=type=cache,target=/build \
     cp /build/release/asr_service /asr_service
 
 FROM debian:trixie-slim
+RUN apt-get update && apt-get install -y --no-install-recommends curl ca-certificates\
+    && rm -rf /var/lib/apt/lists/* \
+    && rm -rf /var/cache/apt/
 WORKDIR /app
 COPY --from=builder /asr_service /app/asr_service
+HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=10 \
+  CMD  curl -f http://localhost:8001/health || exit 1
 EXPOSE 8001
 CMD ["/app/asr_service"]

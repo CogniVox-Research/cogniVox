@@ -60,6 +60,11 @@ def root():
     return {"status": "Speech Delivery Scoring API is running"}
 
 
+@app.get("/health")
+async def health():
+    return "OK"
+
+
 # ---------------------------------------------------
 # MAIN ENDPOINT
 # ---------------------------------------------------
@@ -113,7 +118,9 @@ async def get_score_speech(file_path, speech_type):
         delivery = compute_delivery_score(scores, speech_type=speech_type)
 
         # 5️⃣ Generate feedback (with AI-powered context summary)
-        feedback = generate_feedback(scores, speech_type=speech_type, delivery_data=delivery)
+        feedback = generate_feedback(
+            scores, speech_type=speech_type, delivery_data=delivery
+        )
 
         return {
             "speech_type": speech_type.name,

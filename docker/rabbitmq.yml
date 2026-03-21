@@ -5,6 +5,14 @@ services:
     ports:
       - "5672:5672"
       - "15672:15672"
+
+    healthcheck:
+      # https://www.rabbitmq.com/docs/monitoring#stage-3
+      test: rabbitmq-diagnostics --quiet check_running && rabbitmq-diagnostics --quiet check_local_alarms
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
     environment:
       RABBITMQ_DEFAULT_USER: appuser
       RABBITMQ_DEFAULT_PASS: apppass

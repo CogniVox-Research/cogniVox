@@ -24,6 +24,11 @@ fn index() -> RawHtml<&'static str> {
     RawHtml(include_str!("../assets/index.html"))
 }
 
+#[get("/health")]
+fn health() -> &'static str {
+    "OK"
+}
+
 #[get("/audio/<session_id>")]
 fn stream_audio(
     ws: WebSocket,
@@ -84,5 +89,5 @@ fn rocket() -> _ {
     rocket
         .manage(transcriber)
         .manage(store)
-        .mount("/", routes![index, stream_audio])
+        .mount("/", routes![index, stream_audio, health])
 }

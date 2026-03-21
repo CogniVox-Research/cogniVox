@@ -13,5 +13,6 @@ RUN --mount=type=cache,target=/root/.cache/pypoetry \
     poetry install --no-interaction --no-ansi
 COPY $SERIVCE_NAME/ .
 EXPOSE 8010
-
+HEALTHCHECK --interval=30s --timeout=3s --retries=3 \
+    CMD python3 -c "import urllib.request; exit(0 if urllib.request.urlopen('http://localhost:8010/health').getcode() == 200 else 1)" || exit 1
 CMD ["poetry", "run", "fastapi", "run", "--port", "8010"]

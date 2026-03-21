@@ -120,6 +120,11 @@ def predict_stress_from_features_dict(model, feature_cols, feat_dict, threshold=
     return label, float(proba)
 
 
+@app.get("health")
+def health():
+    return "OK"
+
+
 def generate_suggestion(label, stress_score):
     # Use stress_score for more granular feedback
 

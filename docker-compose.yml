@@ -3,8 +3,7 @@ include:
   - docker/seaweedfs.yml
   - docker/gateway.yml
 
-  # to run local version change path to docker/dev/<name>
-  - docker/asr-cuda.yml
+  - docker/asr.yml
   - docker/auth.yml
   - docker/biometric.yml
   - docker/document.yml

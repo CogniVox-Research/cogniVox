@@ -1,9 +1,22 @@
 services:
   game_service:
-    image: ghcr.io/cognivox-research/game_service:v0.0.1
+    image: ghcr.io/cognivox-research/game_service:latest
     restart: "unless-stopped"
     ports:
       - "8004:8004"
+
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+      seaweedfs:
+        condition: service_healthy
+      asr_service:
+        condition: service_healthy
+
+    build:
+      context: ../
+      dockerfile: ./services/game/Dockerfile
+
     volumes:
       - ../services/game/Rocket.toml:/app/Rocket.toml:ro
       - ../services/auth/keys/public.pem:/app/public.pem:ro

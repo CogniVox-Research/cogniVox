@@ -21,7 +21,12 @@ RUN    --mount=type=cache,target=/build \
 
 
 FROM debian:trixie-slim
+RUN apt-get update && apt-get install -y --no-install-recommends curl ca-certificates\
+    && rm -rf /var/lib/apt/lists/* \
+    && rm -rf /var/cache/apt/
 WORKDIR /app
 COPY --from=builder /document_service /app
 EXPOSE 8003
+HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
+  CMD curl -f http://localhost:8003/health || exit 1
 CMD ["/app/document_service"]

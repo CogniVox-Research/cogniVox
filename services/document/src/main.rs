@@ -22,6 +22,11 @@ fn index() -> RawHtml<&'static str> {
     RawHtml(include_str!("../assets/index.html"))
 }
 
+#[rocket::get("/health")]
+fn health() -> &'static str {
+    "OK"
+}
+
 #[rocket::post("/parse", data = "<file>")]
 async fn parse_file(
     file: Form<TempFile<'_>>,
@@ -75,5 +80,5 @@ fn rocket() -> _ {
     rocket
         .manage(config)
         .manage(store)
-        .mount("/", routes![index, upload_file, parse_file])
+        .mount("/", routes![index, upload_file, parse_file, health])
 }

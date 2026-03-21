@@ -1,6 +1,6 @@
 services:
   asr_service:
-    image: ghcr.io/cognivox-research/asr_service:latest
+    image: ghcr.io/cognivox-research/asr_service:v0.0.2
     restart: "unless-stopped"
     ports:
       - "8001:8001"

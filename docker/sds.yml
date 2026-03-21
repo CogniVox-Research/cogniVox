@@ -1,6 +1,6 @@
 services:
   sds_service:
-    image: ghcr.io/cognivox-research/sds_service:latest
+    image: ghcr.io/cognivox-research/sds_service:v0.0.2
     restart: "unless-stopped"
     build:
       context: ../

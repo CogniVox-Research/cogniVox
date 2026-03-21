@@ -1,6 +1,6 @@
 services:
   asr_service:
-    image: ghcr.io/cognivox-research/asr_service_cuda:latest
+    image: ghcr.io/cognivox-research/asr_service_cuda:v0.0.2
     runtime: nvidia
     restart: "unless-stopped"
     ports:

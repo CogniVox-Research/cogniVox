@@ -1,6 +1,6 @@
 services:
   document_service:
-    image: ghcr.io/cognivox-research/document_service:latest
+    image: ghcr.io/cognivox-research/document_service:v0.0.2
     restart: "unless-stopped"
     build:
       context: ..

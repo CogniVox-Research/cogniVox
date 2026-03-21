@@ -2,7 +2,7 @@ use asr_rs::Transcriber;
 use common::{
     dto::{ASRSessionCreate, MQMessage},
     file_store::Store,
-    mq::{self, Consumer, MQError},
+    mq::{self, Consumer, ExchageType, MQError},
     util::fail::Fail,
 };
 use rocket::tokio;
@@ -20,6 +20,11 @@ pub async fn start_mq_listener(cfg: mq::Config, store: Store, asr: Transcriber) 
     let connection = mq::Connection::from_config(cfg)
         .await
         .fail("Failed to connect to message queue");
+
+    connection
+        .declare_exchange(ExchageType::Direct, "asr_start")
+        .await
+        .fail("Failed to create asr_start mq");
 
     let consumer = connection
         .consumer::<ASRSessionCreate>()

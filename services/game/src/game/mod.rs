@@ -114,7 +114,9 @@ impl Game {
                 if is_speech {
                     ASRSessionType::Speech
                 } else {
-                    ASRSessionType::Answer
+                    ASRSessionType::Answer {
+                        main_id: self.session_id,
+                    }
                 },
             )
             .await?;

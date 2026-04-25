@@ -10,9 +10,13 @@ class FeatureCalculator(
     private val ibiWindow = ArrayDeque<Double>()
     private val accWindow = ArrayDeque<Double>()
     private val bvpWindow = ArrayDeque<Double>()
+    private val edaWindow = ArrayDeque<Double>()
+    private val tempWindow = ArrayDeque<Double>()
     
     private val WINDOW_SIZE = 30 // Keep 30 IBIs for RMSSD
     private val BVP_WINDOW_SIZE = 500 // Approx 20 seconds at 25Hz
+    private val EDA_WINDOW_SIZE = 60 // Approx 60 seconds at 1Hz
+    private val TEMP_WINDOW_SIZE = 60 // Approx 60 seconds
     private var lastTransmissionTime = 0L
 
     fun addIbiData(value: Double) {
@@ -28,6 +32,20 @@ class FeatureCalculator(
             bvpWindow.removeFirst()
         }
         bvpWindow.addLast(value)
+    }
+    
+    fun addEdaData(value: Double) {
+        if (edaWindow.size >= EDA_WINDOW_SIZE) {
+            edaWindow.removeFirst()
+        }
+        edaWindow.addLast(value)
+    }
+
+    fun addTempData(value: Double) {
+        if (tempWindow.size >= TEMP_WINDOW_SIZE) {
+            tempWindow.removeFirst()
+        }
+        tempWindow.addLast(value)
     }
     
     fun addAccData(value: Double) {
@@ -97,7 +115,35 @@ class FeatureCalculator(
             bvpEnergyCalc = bvpEnergySum / bvpValues.size
         }
 
-        Log.d(TAG, "Features: RMSSD($rmssd), ACC($accMean, $accStd, $accMax), BVP_MEAN($bvpMeanCalc)")
+        // EDA Stats
+        val edaValues = edaWindow.toList()
+        var edaMeanCalc: Double? = null
+        var edaStdCalc: Double? = null
+        var edaMinCalc: Double? = null
+        var edaMaxCalc: Double? = null
+
+        if (edaValues.isNotEmpty()) {
+            edaMeanCalc = edaValues.average()
+            var edaSumSq = 0.0
+            for (num in edaValues) edaSumSq += (num - edaMeanCalc).pow(2)
+            edaStdCalc = sqrt(edaSumSq / edaValues.size)
+            edaMinCalc = edaValues.minOrNull()
+            edaMaxCalc = edaValues.maxOrNull()
+        }
+
+        // Temp Stats
+        val tempValues = tempWindow.toList()
+        var tempMeanCalc: Double? = null
+        var tempStdCalc: Double? = null
+
+        if (tempValues.isNotEmpty()) {
+            tempMeanCalc = tempValues.average()
+            var tempSumSq = 0.0
+            for (num in tempValues) tempSumSq += (num - tempMeanCalc).pow(2)
+            tempStdCalc = sqrt(tempSumSq / tempValues.size)
+        }
+
+        Log.d(TAG, "Features: RMSSD($rmssd), ACC($accMean, $accStd, $accMax), BVP_MEAN($bvpMeanCalc), EDA_MEAN($edaMeanCalc), TEMP_MEAN($tempMeanCalc)")
         
         val dto = HSRVDto(
             bvp_mean = bvpMeanCalc,
@@ -108,7 +154,13 @@ class FeatureCalculator(
             bvp_energy = bvpEnergyCalc ?: 0.0,
             acc_mean = accMean,
             acc_std = accStd,
-            acc_max = accMax
+            acc_max = accMax,
+            eda_mean = edaMeanCalc,
+            eda_std = edaStdCalc,
+            eda_min = edaMinCalc,
+            eda_max = edaMaxCalc,
+            temp_mean = tempMeanCalc,
+            temp_std = tempStdCalc
         )
         
         onFeaturesCalculated(dto)

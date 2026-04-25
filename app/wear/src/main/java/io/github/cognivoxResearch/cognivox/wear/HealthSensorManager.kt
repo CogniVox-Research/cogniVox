@@ -14,12 +14,16 @@ class HealthSensorManager(
     private val context: Context,
     private val onIbiData: (Double) -> Unit,
     private val onPpgData: (Double) -> Unit,
+    private val onEdaData: (Double) -> Unit,
+    private val onTempData: (Double) -> Unit,
     private val onConnected: () -> Unit,
     private val onError: (String) -> Unit
 ) {
     private lateinit var healthTrackingService: HealthTrackingService
     private var hrTracker: HealthTracker? = null
     private var ppgTracker: HealthTracker? = null
+    private var edaTracker: HealthTracker? = null
+    private var tempTracker: HealthTracker? = null
 
     private val connectionListener = object : ConnectionListener {
         override fun onConnectionSuccess() {
@@ -64,6 +68,32 @@ class HealthSensorManager(
         }
     }
 
+    private val edaTrackerEventListener = object : HealthTracker.TrackerEventListener {
+        override fun onDataReceived(dataPoints: List<DataPoint>) {
+            for (dataPoint in dataPoints) {
+                processEdaDataPoint(dataPoint)
+            }
+        }
+
+        override fun onFlushCompleted() {}
+        override fun onError(e: HealthTracker.TrackerError?) {
+            Log.e(TAG, "EDA Tracker error: $e")
+        }
+    }
+
+    private val tempTrackerEventListener = object : HealthTracker.TrackerEventListener {
+        override fun onDataReceived(dataPoints: List<DataPoint>) {
+            for (dataPoint in dataPoints) {
+                processTempDataPoint(dataPoint)
+            }
+        }
+
+        override fun onFlushCompleted() {}
+        override fun onError(e: HealthTracker.TrackerError?) {
+            Log.e(TAG, "Skin Temperature Tracker error: $e")
+        }
+    }
+
     fun connect() {
         healthTrackingService = HealthTrackingService(connectionListener, context)
         healthTrackingService.connectService()
@@ -72,6 +102,8 @@ class HealthSensorManager(
     fun disconnect() {
         hrTracker?.unsetEventListener()
         ppgTracker?.unsetEventListener()
+        edaTracker?.unsetEventListener()
+        tempTracker?.unsetEventListener()
         if (::healthTrackingService.isInitialized) {
             healthTrackingService.disconnectService()
         }
@@ -91,6 +123,24 @@ class HealthSensorManager(
                 Log.d(TAG, "PPG Green tracker started for BVP data")
             } catch (e: Exception) {
                 Log.e(TAG, "PPG Tracker not supported or error: ${e.message}")
+            }
+            
+            // EDA Tracker
+            try {
+                edaTracker = healthTrackingService.getHealthTracker(HealthTrackerType.EDA_CONTINUOUS)
+                edaTracker?.setEventListener(edaTrackerEventListener)
+                Log.d(TAG, "EDA tracker started")
+            } catch (e: Exception) {
+                Log.e(TAG, "EDA Tracker not supported or error: ${e.message}")
+            }
+
+            // Skin Temperature Tracker
+            try {
+                tempTracker = healthTrackingService.getHealthTracker(HealthTrackerType.SKIN_TEMPERATURE_CONTINUOUS)
+                tempTracker?.setEventListener(tempTrackerEventListener)
+                Log.d(TAG, "Skin Temperature tracker started")
+            } catch (e: Exception) {
+                Log.e(TAG, "Skin Temperature Tracker not supported or error: ${e.message}")
             }
             
         } catch (e: Exception) {
@@ -125,6 +175,28 @@ class HealthSensorManager(
         try {
             val ppgValue = dataPoint.getValue(ValueKey.PpgGreenSet.PPG_GREEN) as Int
             onPpgData(ppgValue.toDouble())
+        } catch (e: Exception) {
+            // Ignore if extraction fails
+        }
+    }
+
+    private fun processEdaDataPoint(dataPoint: DataPoint) {
+        try {
+            val edaValue = dataPoint.getValue(ValueKey.EdaSet.SKIN_CONDUCTANCE)
+            if (edaValue is Number) {
+                onEdaData(edaValue.toDouble())
+            }
+        } catch (e: Exception) {
+            // Ignore if extraction fails
+        }
+    }
+
+    private fun processTempDataPoint(dataPoint: DataPoint) {
+        try {
+            val tempValue = dataPoint.getValue(ValueKey.SkinTemperatureSet.SKIN_TEMPERATURE)
+            if (tempValue is Number) {
+                onTempData(tempValue.toDouble())
+            }
         } catch (e: Exception) {
             // Ignore if extraction fails
         }

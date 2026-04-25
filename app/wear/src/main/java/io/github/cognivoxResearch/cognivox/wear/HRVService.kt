@@ -70,6 +70,12 @@ class HRVService : Service() {
             onPpgData = { ppg ->
                 featureCalculator.addBvpData(ppg)
             },
+            onEdaData = { eda ->
+                featureCalculator.addEdaData(eda)
+            },
+            onTempData = { temp ->
+                featureCalculator.addTempData(temp)
+            },
             onConnected = {
                 showToast("Connected to Sensor")
             },

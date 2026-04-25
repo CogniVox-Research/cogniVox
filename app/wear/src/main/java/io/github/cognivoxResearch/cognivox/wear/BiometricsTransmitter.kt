@@ -20,7 +20,7 @@ class BiometricsTransmitter(private val context: Context) {
 
             for (node in nodes) {
                 Log.d(TAG, "Attempting to send to node: ${node.id} (${node.displayName})")
-                Wearable.getMessageClient(context).sendMessage(node.id, "/biometrics", data)
+                Wearable.getMessageClient(context).sendMessage(node.id, "/cg_biometrics", data)
                     .addOnSuccessListener { Log.d(TAG, "Features sent successfully to node ${node.id}") }
                     .addOnFailureListener { e -> Log.e(TAG, "Message failed to send to node ${node.id}: ${e.message}") }
             }

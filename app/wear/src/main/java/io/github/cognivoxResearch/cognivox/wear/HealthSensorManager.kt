@@ -193,7 +193,7 @@ class HealthSensorManager(
 
     private fun processTempDataPoint(dataPoint: DataPoint) {
         try {
-            val tempValue = dataPoint.getValue(ValueKey.SkinTemperatureSet.SKIN_TEMPERATURE)
+            val tempValue = dataPoint.getValue(ValueKey.SkinTemperatureSet.OBJECT_TEMPERATURE)
             if (tempValue is Number) {
                 onTempData(tempValue.toDouble())
             }

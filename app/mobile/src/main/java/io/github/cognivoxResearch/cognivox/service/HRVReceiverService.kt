@@ -15,6 +15,7 @@ class HRVReceiverService : WearableListenerService() {
 
         if (messageEvent.path == "/biometrics") {
             val json = messageEvent.data.decodeToString()
+            Log.d("HRVReceiverService", "Raw JSON received: $json")
             val input: FeatureInput = Gson().fromJson(json, FeatureInput::class.java)
             Log.d("HRVReceiver", "Rx Data: $input")
 

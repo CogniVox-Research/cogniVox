@@ -39,10 +39,10 @@ pub enum Line {
 }
 
 impl Line {
+    #[must_use]
     pub fn num_tokens(&self) -> usize {
         match self {
-            Line::Complete(segment) => segment.tokens.len(),
-            Line::Partial(segment) => segment.tokens.len(),
+            Line::Complete(segment) | Line::Partial(segment) => segment.tokens.len(),
             Line::Silence(_) => 0,
         }
     }

@@ -16,10 +16,10 @@ pub struct GameFeatures {
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone, Copy)]
-#[serde(rename_all = "lowercase")]
+#[serde(tag = "type", rename_all = "lowercase")]
 pub enum ASRSessionType {
     Speech,
-    Answer,
+    Answer { main_id: uuid::Uuid },
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]

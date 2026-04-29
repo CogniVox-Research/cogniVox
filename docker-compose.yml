@@ -1,6 +1,8 @@
 include:
   - docker/rabbitmq.yml
   - docker/seaweedfs.yml
+  - docker/gateway.yml
+
   - docker/asr.yml
   - docker/auth.yml
   - docker/biometric.yml
@@ -9,5 +11,4 @@ include:
   - docker/sds.yml
   - docker/stuck_detection.yml
   - docker/transcript_analysis.yml
-  - docker/gateway.yml
   - docker/llm.yml

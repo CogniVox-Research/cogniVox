@@ -4,7 +4,10 @@ use crate::{
     error::Result,
     game::proto::{self, Connection, DeviceConnection, WebConnection},
 };
-use common::{dto::ASRSessionCreate, mq};
+use common::{
+    dto::ASRSessionCreate,
+    mq::{self, ExchageType},
+};
 use jwt::PKeyWithDigest;
 use openssl::hash::MessageDigest;
 use openssl::pkey::PKey;
@@ -87,21 +90,20 @@ impl Debug for PendingSession {
 
 impl AppState {
     pub async fn create(config: AppConfig) -> Result<Self> {
-        let rabbitmq = common::mq::Connection::for_config(config.rabbitmq.clone()).await?;
+        let con = common::mq::Connection::from_config(config.rabbitmq.clone()).await?;
 
-        rabbitmq.create_exchange("asr_start").await?;
-        rabbitmq.create_exchange("audio").await?;
-        rabbitmq.create_topic_exchange("asr").await?;
-        rabbitmq.create_broadcast_exchange("stress").await?;
-        rabbitmq.create_exchange("results").await?;
+        con.declare_exchange(ExchageType::Direct, "asr_start")
+            .await?;
+        con.declare_exchange(ExchageType::Direct, "audio").await?;
+        con.declare_exchange(ExchageType::Topic, "asr").await?;
+        con.declare_exchange(ExchageType::Fanout, "stress").await?;
+        con.declare_exchange(ExchageType::Direct, "results").await?;
 
         let state = Self {
             pending: Default::default(),
             vr: Default::default(),
-            mq_connection: Arc::new(rabbitmq.clone()),
-            asr_session_queue: rabbitmq
-                .sender("start", Some("asr_start".to_owned()))
-                .await?,
+            mq_connection: Arc::new(con.clone()),
+            asr_session_queue: con.sender("start", Some("asr_start".to_owned())),
 
             endpoints: Arc::new(proto::Endpoints::from_config(&config.urls)),
             config,
@@ -128,10 +130,10 @@ impl AppState {
     }
 }
 
-static PUBLIC_KEY_STR: LazyLock<String> = {
+static PUBLIC_KEY: LazyLock<PKey<Public>> = {
     std::sync::LazyLock::new(|| {
         let mut public_key_data = String::new();
-        let paths = vec!["public.pem", "../auth/keys/public.pem"];
+        let paths = ["public.pem", "../auth/keys/public.pem"];
         let key_path = paths
             .iter()
             .find(|path| Path::new(path).exists())
@@ -141,17 +143,15 @@ static PUBLIC_KEY_STR: LazyLock<String> = {
             .expect("Public key should be accessable")
             .read_to_string(&mut public_key_data)
             .expect("Read should succeed");
-        public_key_data
+        PKey::public_key_from_pem(public_key_data.as_bytes()).expect("Public key should be valid")
     })
 };
 
 pub fn get_public_key() -> PKeyWithDigest<Public> {
-    let rs256_public_key = PKeyWithDigest {
+    PKeyWithDigest {
         digest: MessageDigest::sha256(),
-        key: PKey::public_key_from_pem(PUBLIC_KEY_STR.as_bytes()).unwrap(),
-    };
-
-    rs256_public_key
+        key: PUBLIC_KEY.clone(),
+    }
 }
 
 async fn remove_disconnected<C: Connection, A: cmp::Eq + Hash + Clone>(

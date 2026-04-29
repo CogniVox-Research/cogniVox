@@ -179,10 +179,10 @@ impl<In: Inbound, Out: Outbound> WebSocket<In, Out> {
             }
 
             Err(Error::SocketPong(data)) => {
-                if let Some(expected_pong) = last_ping {
-                    if *expected_pong == data {
-                        last_ping.take();
-                    }
+                if let Some(expected_pong) = last_ping
+                    && *expected_pong == data
+                {
+                    last_ping.take();
                 }
                 Ok(())
             }
@@ -216,7 +216,7 @@ macro_rules! recv_message {
                         continue;
                     }
                 },
-                Err(crate::error::Error::UnexpectedMessage(err)) => {
+                Err($crate::error::Error::UnexpectedMessage(err)) => {
                     log::debug!("Recieved unexpected message: {err}");
                     continue;
                 }
@@ -242,7 +242,7 @@ macro_rules! wait_for {
                         continue;
                     }
                 },
-                Err(crate::error::Error::UnexpectedMessage(err)) => {
+                Err($crate::error::Error::UnexpectedMessage(err)) => {
                     log::debug!("Recieved unexpected message: {err}");
                     continue;
                 }

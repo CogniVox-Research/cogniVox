@@ -3,6 +3,15 @@ services:
     restart: "unless-stopped"
     ports:
       - "7000:80"
+
+    depends_on:
+      game_service:
+        condition: service_healthy
+      auth_service:
+        condition: service_healthy
+      document_service:
+        condition: service_healthy
+
     build:
-      context: ../services/gateway/
-      dockerfile: Dockerfile
+      context: ../
+      dockerfile: ./services/gateway/Dockerfile

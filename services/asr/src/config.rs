@@ -5,5 +5,5 @@ use serde::Deserialize;
 pub struct Config {
     pub asr: asr_rs::Config,
     pub recording_store: StoreConfig,
-    pub rabbitmq: mq::Config,
+    pub rabbitmq: Option<mq::Config>,
 }

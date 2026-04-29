@@ -1,3 +1,6 @@
+#![warn(clippy::all)]
+#![deny(clippy::unwrap_used)]
+
 #[macro_use]
 extern crate rocket;
 
@@ -18,10 +21,16 @@ mod dto;
 mod error;
 mod game;
 mod services;
+mod util;
 
 #[rocket::get("/")]
 async fn index() -> Redirect {
     Redirect::moved(uri!("/ui"))
+}
+
+#[rocket::get("/health")]
+async fn health() -> &'static str {
+    "OK"
 }
 
 #[rocket::launch]
@@ -35,7 +44,7 @@ async fn rocket() -> _ {
     rocket
         .manage(store)
         .manage(Arc::new(app_state))
-        .mount("/", routes![index,])
+        .mount("/", routes![index, health])
         .mount("/", controller::route_list())
         .mount(
             "/ui",

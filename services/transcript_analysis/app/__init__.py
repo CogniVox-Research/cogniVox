@@ -16,6 +16,11 @@ class SimilarityCheckReq(BaseModel):
     speech_text: str
 
 
+@app.get("/health")
+async def health():
+    return "OK"
+
+
 @app.post("/")
 def check_similarity(req: SimilarityCheckReq):
     similarity_results = comparer.compare(req.expected_text, req.speech_text)

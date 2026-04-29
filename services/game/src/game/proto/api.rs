@@ -54,12 +54,12 @@ pub struct APIRequest<In: Serialize, Out: DeserializeOwned> {
 
 impl<In: Serialize, Out: DeserializeOwned> APIRequest<In, Out> {
     pub fn new(client: reqwest::Client, url: String) -> Self {
-        return APIRequest {
+        APIRequest {
             url,
             client,
             _in_type: PhantomData,
             _out_type: PhantomData,
-        };
+        }
     }
 
     pub async fn send(&self, data: In) -> error::Result<Out> {
@@ -79,6 +79,6 @@ impl<In: Serialize, Out: DeserializeOwned> APIRequest<In, Out> {
                 String::from_utf8_lossy(&content).into_owned()
             );
         }
-        Ok(decoded.map_err(Error::Deserialize)?)
+        decoded.map_err(Error::Deserialize)
     }
 }

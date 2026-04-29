@@ -12,20 +12,20 @@ pub struct Sender<T: Serialize + Sized> {
 }
 
 impl<T: Serialize + Sized> Sender<T> {
-    pub(crate) async fn create(
-        con: Connection,
-        exchange_name: String,
-        routing_key: String,
-    ) -> Result<Sender<T>> {
-        Ok(Sender {
+    pub(crate) fn create(con: Connection, exchange_name: String, routing_key: String) -> Sender<T> {
+        Sender {
             con,
             routing_key,
             exchange_name,
             _data_type: PhantomData,
-        })
+        }
     }
 
     /// Send a message.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the message cannot be added to the queue
     pub async fn send(&self, msg: T) -> Result<()> {
         let payload = serde_json::to_vec(&msg)?;
         self.con

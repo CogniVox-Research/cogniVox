@@ -84,6 +84,7 @@ fn convert_segment(s: asr_rs::Segment) -> asr::Segment {
     }
 }
 
+#[allow(clippy::needless_pass_by_value)]
 fn convert_timestamp(t: asr_rs::Timestamp) -> asr::Timestamp {
     asr::Timestamp {
         start: t.start,

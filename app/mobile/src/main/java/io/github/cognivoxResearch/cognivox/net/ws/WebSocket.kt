@@ -22,6 +22,7 @@ abstract class WebSocket<In, Out>(
     private val client: OkHttpClient = getWebsocketClient(),
     private val canRetry: Boolean = true,
     private val ignoreDeserializeErrors: Boolean = true,
+    private val auth: String? = null,
 ) where  Out : Message.To<Out> {
     private var websocket: WebSocket? = null
     private var isClosed = false
@@ -123,8 +124,12 @@ abstract class WebSocket<In, Out>(
         scope.launch {
             withContext(Dispatchers.IO) {
                 Log.d(tag, "Connecting to $url")
-                val request = Request.Builder().url(url).build()
-                websocket = client.newWebSocket(request, listener)
+                var request = Request.Builder().url(url);
+                if (auth != null) {
+                    request = request.addHeader("Cookie", "auth=$auth")
+                }
+                
+                websocket = client.newWebSocket(request.build(), listener)
             }
         }
     }

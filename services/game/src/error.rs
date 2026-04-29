@@ -21,7 +21,7 @@ pub enum Error {
     MQ(#[from] mq::MQError),
 
     #[error("Failed to send request: {0:?}")]
-    HTTP(#[from] reqwest::Error),
+    Http(#[from] reqwest::Error),
 
     #[error("Store error: {0:?}")]
     Store(file_store::StoreError),
@@ -41,4 +41,7 @@ pub enum Error {
 
     #[error("Auth token error: {0}")]
     Auth(#[from] jwt::Error),
+
+    #[error("Missing user id in token")]
+    NoUserId,
 }

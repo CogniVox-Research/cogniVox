@@ -1,25 +1,32 @@
+#![warn(clippy::pedantic)]
+#![deny(clippy::unwrap_used)]
+
 use common::{
-    dto::{ASRSessionCreate, ASRSessionType, AudioFormat, MQMessage},
+    dto::{ASRSessionType, AudioFormat},
     file_store::Store,
-    mq,
+    util::fail::Fail,
 };
-use rocket::{State, response::content::RawHtml, tokio};
+use rocket::{State, fairing::AdHoc, response::content::RawHtml, tokio};
 use rocket_ws::{Channel, WebSocket};
 
-use crate::transcript::{Input, run_transcription};
-
+mod asr;
 mod audio;
 mod config;
 mod dto;
 pub mod error;
-mod transcript;
+mod mq;
 
 #[macro_use]
 extern crate rocket;
 
 #[get("/")]
-async fn index() -> RawHtml<&'static str> {
+fn index() -> RawHtml<&'static str> {
     RawHtml(include_str!("../assets/index.html"))
+}
+
+#[get("/health")]
+fn health() -> &'static str {
+    "OK"
 }
 
 #[get("/audio/<session_id>")]
@@ -35,8 +42,8 @@ fn stream_audio(
 
     ws.channel(move |stream| {
         Box::pin(async move {
-            transcript::run_transcription(
-                transcript::Input::WS(stream),
+            asr::run_asr(
+                asr::AudioStreamInput::WS(stream),
                 session_id,
                 AudioFormat::WebM,
                 ASRSessionType::Speech,
@@ -44,77 +51,43 @@ fn stream_audio(
                 store,
             )
             .await
-            .unwrap();
+            .log_err("Error in asr session");
             Ok(())
         })
     })
 }
 
 #[launch]
-async fn rocket() -> _ {
-    let rocket = rocket::build();
-    let cfg: config::Config = rocket.figment().extract().expect("config");
-    let store = Store::from_config(&cfg.recording_store).expect("store should load");
-    let transcriber = asr_rs::Transcriber::new(cfg.asr).expect("transcriber should be created");
+fn rocket() -> _ {
+    let mut rocket = rocket::build();
+    let cfg: config::Config = rocket.figment().extract().fail("Failed to load config");
+    let store = Store::from_config(&cfg.recording_store).fail("Failed to setup store");
+    let transcriber = asr_rs::Transcriber::new(cfg.asr).fail("Failed to initalize ASR");
+
     transcriber
         .download_models()
         .expect("Models should download successfully");
 
-    let rabbit_mq = mq::Connection::for_config(cfg.rabbitmq)
-        .await
-        .expect("connection should succeed");
+    if let Some(mq_config) = cfg.rabbitmq {
+        log::info!("Started rabbitMQ listener");
 
-    let mut listener = rabbit_mq
-        .recieve::<ASRSessionCreate>(Some("start".to_owned()))
-        .await
-        .unwrap()
-        .bind_exchange("asr_start".to_string(), "start".to_string())
-        .await
-        .unwrap();
-
-    let mq_store = store.clone();
-    let mq_transcriber = transcriber.clone();
-    tokio::spawn(async move {
-        while let Some(data) = listener.recv().await {
-            let data = data.unwrap().get().await.unwrap();
-            log::info!("got session start {data:?}");
-            let session_id = data.session_id.to_string();
-
-            let recv = rabbit_mq
-                .recieve::<Vec<u8>>(None)
-                .await
-                .unwrap()
-                .bind_exchange("audio".to_owned(), session_id.clone())
-                .await
-                .unwrap();
-
-            let send = rabbit_mq
-                .sender::<MQMessage>(&session_id, Some("asr".to_owned()))
-                .await
-                .unwrap();
-
-            let mq_store = mq_store.clone();
-            let mq_transcriber = mq_transcriber.clone();
-            let audio_format = data.audio_format;
-            let session_type = data.session_type;
-
-            tokio::spawn(async move {
-                run_transcription(
-                    Input::MQ(recv, send),
-                    session_id,
-                    audio_format,
-                    session_type,
-                    mq_transcriber.clone(),
-                    mq_store.clone(),
-                )
-                .await
-                .unwrap()
-            });
-        }
-    });
+        let transcriber = transcriber.clone();
+        let store = store.clone();
+        rocket = rocket.attach(AdHoc::on_liftoff("MQ Listener", move |_| {
+            Box::pin(async move {
+                tokio::spawn(mq::start_mq_listener(
+                    mq_config,
+                    store.clone(),
+                    transcriber.clone(),
+                ));
+            })
+        }));
+    } else {
+        log::info!("MQ config not found. Skipping mq listener");
+    }
 
     rocket
         .manage(transcriber)
         .manage(store)
-        .mount("/", routes![index, stream_audio])
+        .mount("/", routes![index, stream_audio, health])
 }

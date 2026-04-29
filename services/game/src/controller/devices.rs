@@ -1,45 +1,42 @@
 use std::sync::Arc;
 
-use jwt::{Header, RegisteredClaims, VerifyWithKey};
-use rocket::{State, serde::json::Json, tokio};
+use rocket::{State, serde::json::Json};
 use rocket_ws::{Channel, WebSocket};
 
 use crate::{
-    app::{AppState, Device, get_public_key},
+    app::{AppState, Device},
     game::proto::{self, DeviceConnection, DeviceInbound, DeviceOutbound},
+    util,
 };
 
 #[rocket::get("/ws/device")]
-pub async fn vr_device(ws: WebSocket, state: &State<Arc<AppState>>) -> Channel<'_> {
+pub async fn vr_device(
+    ws: WebSocket,
+    state: &State<Arc<AppState>>,
+    user: super::guard::User,
+) -> Channel<'_> {
     let device_id = uuid::Uuid::now_v7();
 
     let mut con = DeviceConnection::new();
     let channel = con.handle_websocket(ws);
     let state = state.inner().clone();
 
-    let key = get_public_key();
-
-    tokio::spawn(async move {
+    util::websocket_task(async move {
         con.send(DeviceOutbound::Ok {
             device_id,
-            user_name: "Test User".to_owned(),
+            user_name: user.username.clone(),
         })
-        .await
-        .unwrap();
+        .await?;
 
-        let info = proto::recv_message!(con, DeviceInbound::Connect).unwrap();
-        let token: jwt::Token<Header, RegisteredClaims, _> =
-            info.auth.verify_with_key(&key).unwrap();
-        let user_id = token.claims().subject.clone().unwrap();
+        let info = proto::recv_message!(con, DeviceInbound::Connect)?;
 
         let pending_devices = state.pending.lock().await;
         for pending in pending_devices.values() {
-            if pending.user_id == user_id {
+            if pending.user_id == user.user_id {
                 con.send(DeviceOutbound::Join {
                     session_id: pending.session_id,
                 })
-                .await
-                .unwrap();
+                .await?;
                 break;
             }
         }
@@ -48,11 +45,15 @@ pub async fn vr_device(ws: WebSocket, state: &State<Arc<AppState>>) -> Channel<'
             con,
             device_id,
             device_name: info.device_name,
-            user_id,
+            user_id: user.user_id.clone(),
         };
-        log::info!("Device connected: {device:?}");
+
+        log::info!("Device connected: {device:?} for user {user:?}");
+
         let mut vr = state.vr.lock().await;
         vr.insert(device.user_id.clone(), device);
+
+        Ok(())
     });
 
     channel
@@ -61,7 +62,7 @@ pub async fn vr_device(ws: WebSocket, state: &State<Arc<AppState>>) -> Channel<'
 #[rocket::get("/devices")]
 pub async fn get_devices(
     state: &State<Arc<AppState>>,
-    user: super::guard::User,
+    _user: super::guard::User,
 ) -> Json<Vec<(String, uuid::Uuid)>> {
     let devices = state.vr.lock().await;
     let mut user_devices = vec![];

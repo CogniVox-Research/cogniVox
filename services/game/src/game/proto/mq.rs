@@ -8,26 +8,21 @@ use crate::{dto::stress::StressRequest, error::Result, game::proto::ServiceInbou
 pub struct MQSession {
     session_id: uuid::Uuid,
     audio_tx: mq::Sender<Vec<u8>>,
-    stress_tx: mq::Sender<StressRequest>,
+    stress_tx: mq::Sender<Box<StressRequest>>,
     result_rx: mq::Consumer<super::ServiceInbound>,
 }
 
 impl MQSession {
     pub async fn new(con: &mq::Connection, session_id: uuid::Uuid) -> Result<Self> {
         let session_id_str = session_id.to_string();
-        let audio_tx = con
-            .sender(&session_id_str, Some("audio".to_owned()))
-            .await?;
-        let stress_tx = con
-            .sender(&session_id_str, Some("stress".to_owned()))
-            .await?;
+        let audio_tx = con.sender(&session_id_str, Some("audio".to_owned()));
+        let stress_tx = con.sender(&session_id_str, Some("stress".to_owned()));
 
         let result_rx = con
-            .recieve(None)
-            .await?
-            .bind_exchange("asr".to_owned(), session_id_str.clone())
-            .await?
-            .bind_exchange("results".to_owned(), session_id_str.to_owned())
+            .consumer()
+            .on_exchange("asr", &session_id_str)
+            .on_exchange("results", &session_id_str)
+            .connect()
             .await?;
 
         Ok(Self {
@@ -49,7 +44,7 @@ impl MQSession {
         Ok(())
     }
 
-    pub async fn send_stress_metrics(&self, stress: StressRequest) -> Result<()> {
+    pub async fn send_stress_metrics(&self, stress: Box<StressRequest>) -> Result<()> {
         self.stress_tx.send(stress).await?;
         Ok(())
     }

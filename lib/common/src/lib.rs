@@ -1,3 +1,6 @@
+#![warn(clippy::pedantic)]
+#![deny(clippy::unwrap_used)]
+
 #[cfg(feature = "store")]
 pub mod file_store;
 
@@ -5,3 +8,4 @@ pub mod file_store;
 pub mod mq;
 
 pub mod dto;
+pub mod util;

@@ -14,7 +14,7 @@ pub enum GameInbound {
     Audio(Vec<u8>),
     Ready(common::dto::GameFeatures),
     SpeechStart,
-    Stress(dto::stress::StressRequest),
+    Stress(Box<dto::stress::StressRequest>),
     SpeechEnd,
     QuestionStart,
     QuestionEnd,

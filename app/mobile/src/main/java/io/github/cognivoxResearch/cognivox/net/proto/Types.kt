@@ -11,7 +11,8 @@ data class StressResponse(
     val label: Long,
     @SerialName("stress_score")
     val stressScore: Double,
-    val suggestion: String
+    val suggestion: String,
+    val feedback: String
 )
 
 @Serializable

@@ -1,11 +1,13 @@
 services:
   auth_service:
+    image: ghcr.io/cognivox-research/auth_service:v0.0.2
     restart: "unless-stopped"
+    ports:
+      - "8010:8010"
     build:
       context: ../
       dockerfile: ./services/auth/Dockerfile
-    ports:
-      - "8010:8010"
     volumes:
       - ../services/auth/config.toml:/app/services/auth/config.toml:ro
       - ../services/auth/keys:/app/services/auth/keys:ro
+      - ../services/auth/auth.db:/app/services/auth/auth.db:z

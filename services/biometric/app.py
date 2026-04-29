@@ -1,22 +1,15 @@
-import asyncio
-import json
 import os
-from asyncio.tasks import Task
 from contextlib import asynccontextmanager
 from typing import Optional
 
-import aio_pika
 import joblib
 import numpy as np
 import pydantic
 import shared
-from aio_pika.abc import AbstractChannel
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 from shared import rabbitmq
 from typing_extensions import Literal
-
-from ai_feedback import generate_ai_biometric_feedback
 
 # Load models
 current_dir = os.path.dirname(os.path.abspath(__file__))
@@ -84,37 +77,33 @@ class Config(shared.config.SharedBaseSettings):
 config = Config.load()
 
 
-async def read_queue(conn: AbstractChannel):
-    queue_reader = await rabbitmq.read_queue(conn, None, FeatureInput, "stress")
-    output = await conn.get_exchange("results")
+class StressListener(rabbitmq.QueueListener[FeatureInput]):
+    def __init__(self, rabbitmq_url: str):
+        super().__init__(
+            rabbitmq_url,
+            None,
+            FeatureInput,
+            exchange="stress",
+            response_exchange="results",
+        )
 
-    async def _task():
-        async for features in queue_reader:
-            print("Got Request", features)
-            session_id = features.session_id
-            assert session_id is not None
+    async def handle_message(self, message: FeatureInput) -> rabbitmq.Message | None:
+        print("Got Request", message)
+        session_id = message.session_id
+        assert session_id is not None
 
-            response = predict_stress(features)
-            print("Response", response)
+        response = predict_stress(message)
+        print("Response", response)
 
-            await output.publish(
-                aio_pika.Message(
-                    body=json.dumps({"type": "stress", "data": response}).encode()
-                ),
-                routing_key=session_id,
-                mandatory=False,
-            )
-
-    return asyncio.create_task(_task())
+        return rabbitmq.Message(
+            data={"type": "stress", "data": response}, routing_key=session_id
+        )
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    global llm_server
-    async with rabbitmq.connect(config.rabbitmq_url) as con:
-        task = await read_queue(con)
+    with StressListener(config.rabbitmq_url):
         yield
-        task.cancel()
 
 
 app = FastAPI(lifespan=lifespan)
@@ -129,6 +118,11 @@ def predict_stress_from_features_dict(model, feature_cols, feat_dict, threshold=
     proba = model.predict_proba(x)[0, 1]
     label = 1 if proba >= threshold else 0
     return label, float(proba)
+
+
+@app.get("health")
+def health():
+    return "OK"
 
 
 def generate_suggestion(label, stress_score):

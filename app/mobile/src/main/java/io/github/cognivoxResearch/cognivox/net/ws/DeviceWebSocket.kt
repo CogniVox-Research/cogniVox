@@ -17,7 +17,8 @@ class DeviceWebSocket(
         url,
         DeviceInbound.Companion,
         canRetry = true,
-        ignoreDeserializeErrors = true
+        ignoreDeserializeErrors = true,
+        auth = auth,
     ) {
     override fun onMessage(message: DeviceInbound) {
         when (message) {
@@ -32,7 +33,7 @@ class DeviceWebSocket(
     }
 
     override fun onConnect() {
-        send(DeviceOutbound.Connect(deviceName, auth))
+        send(DeviceOutbound.Connect(deviceName))
     }
 
     interface Listener {

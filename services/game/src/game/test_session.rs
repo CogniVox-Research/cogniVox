@@ -4,11 +4,10 @@ use rocket::tokio::{self, time::sleep};
 
 use crate::{
     dto::settings::{AudienceDifficulty, GameSettings, SceneType},
-    error::Result,
     game::proto::{self, GameConnection, GameInbound},
 };
 
-pub async fn start_test_session(mut game: GameConnection) -> Result<()> {
+pub async fn start_test_session(mut game: GameConnection) {
     tokio::spawn(async move {
         sleep(Duration::from_secs(1)).await;
 
@@ -31,7 +30,7 @@ pub async fn start_test_session(mut game: GameConnection) -> Result<()> {
 
         sleep(Duration::from_secs(2)).await;
 
-        let questions = vec!["Test question?"];
+        let questions = ["Test question?"];
 
         for question in questions.iter() {
             game.send(super::proto::GameOutbound::Question(question.to_string()))
@@ -46,5 +45,4 @@ pub async fn start_test_session(mut game: GameConnection) -> Result<()> {
 
         game.send(super::proto::GameOutbound::End).await
     });
-    Ok(())
 }

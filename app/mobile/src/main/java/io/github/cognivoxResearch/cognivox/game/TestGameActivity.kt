@@ -69,7 +69,8 @@ class TestGameActivity : AppCompatActivity(), GodotHost {
                     "",
                     1,
                     0.6,
-                    "State: Highly Stressed. Strong markers detected. Stop what you are doing, close your eyes, and take 5 deep breaths."
+                    "State: Highly Stressed. Strong markers detected. Stop what you are doing, close your eyes, and take 5 deep breaths.",
+                    feedback=""
                 )
             )
         }

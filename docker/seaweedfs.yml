@@ -21,6 +21,13 @@ services:
       - ./config/s3.json:/etc/seaweedfs/s3.json:ro
     restart: unless-stopped
 
+    healthcheck:
+      test: curl http://localhost:8333 || exit 1
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
+
 volumes:
   seaweedfs-master-data:
   seaweedfs-volume-data:

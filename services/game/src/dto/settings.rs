@@ -3,7 +3,6 @@ use serde::{Deserialize, Serialize};
 #[derive(Debug, Serialize, Deserialize)]
 pub struct DeviceInfo {
     pub device_name: String,
-    pub auth: String,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -36,7 +35,7 @@ pub enum SceneType {
 
 impl SceneType {
     pub fn is_inteview(&self) -> bool {
-        return matches!(self, Self::Interview);
+        matches!(self, Self::Interview)
     }
 }
 
@@ -48,13 +47,13 @@ pub enum AudienceDifficulty {
     Hard,
 }
 
-impl Into<GameSettings> for &Settings {
-    fn into(self) -> GameSettings {
+impl From<&Settings> for GameSettings {
+    fn from(val: &Settings) -> Self {
         GameSettings {
-            scene: self.scene,
-            distractions: self.distractions,
-            difficulty: self.difficulty,
-            qa: self.qa,
+            scene: val.scene,
+            distractions: val.distractions,
+            difficulty: val.difficulty,
+            qa: val.qa,
         }
     }
 }

@@ -1,6 +1,5 @@
 package io.github.cognivoxResearch.cognivox.wear
 
-import kotlinx.serialization.InternalSerializationApi
 import kotlinx.serialization.Serializable
 
 @Serializable

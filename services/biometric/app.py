@@ -120,7 +120,7 @@ def predict_stress_from_features_dict(model, feature_cols, feat_dict, threshold=
     return label, float(proba)
 
 
-@app.get("health")
+@app.get("/health")
 def health():
     return "OK"
 

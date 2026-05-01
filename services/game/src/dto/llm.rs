@@ -34,13 +34,13 @@ pub struct AnswerEvaluate {
     pub questions_with_answers: Vec<AnswerEvaluateItem>,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct EvaluateResult {
     pub overall_score: f64,
     pub results: Vec<EvaluateResultItem>,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct EvaluateResultItem {
     pub question: String,
     pub matching_percentage: f64,

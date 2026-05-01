@@ -6,13 +6,13 @@ pub struct Request {
     pub expected_text: String,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct Response {
     pub similarity: Similarity,
     pub grammar: Vec<Grammar>,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct Similarity {
     pub overall_similarity: f64,
     pub structural_transcript: StructuralInfo,
@@ -27,14 +27,14 @@ pub struct Similarity {
     pub sentence_count_speech: usize,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct StructuralInfo {
     pub sentence_count: usize,
     pub avg_sentence_length: f64,
     pub lexical_density: f64,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct Alignment {
     pub transcript_sentence: String,
     pub closest_speech_sentence: String,
@@ -42,13 +42,13 @@ pub struct Alignment {
     pub paraphrase_type: String,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct OrderAnalysis {
     pub in_order_percentage: f64,
     pub out_of_order_percentage: f64,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct Grammar {
     pub original: String,
     pub corrected: String,

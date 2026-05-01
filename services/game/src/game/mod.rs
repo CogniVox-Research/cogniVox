@@ -2,19 +2,19 @@ use std::{sync::Arc, time::Instant};
 pub mod test_session;
 
 use crate::{
-    app::{AppState, PendingSession},
-    dto::{
+    app::{AppState, PendingSession}, db::models::StuckEvent, dto::{
         self,
         llm::{self, Question},
         sds,
         settings::Settings,
         stress, transcript,
-    },
-    error::{Error, Result},
-    game::proto::{MQSession, ServiceInbound, SessionResult, WebOutbound},
-    services::{Llm, SpeechScore, TranscriptAnalysis},
+    }, error::{Error, Result}, game::proto::{MQSession, ServiceInbound, SessionResult, WebOutbound}, services::{Llm, SpeechScore, TranscriptAnalysis}
 };
+use crate::db:: models::{QuestionAnswer, SessionModel, SessionModelBuilder, Timestamped};
+
 pub mod proto;
+
+use chrono::Utc;
 use common::dto::{
     ASRSessionType, GameFeatures,
     asr::{ASR, ASRContentComplete},
@@ -35,7 +35,9 @@ pub struct Game {
     stress_data: dto::stress::OverallRequest,
     questions: Option<Vec<llm::Question>>,
 
-    state: Arc<AppState>,
+    session_data: SessionModelBuilder,
+
+    app: Arc<AppState>,
 }
 
 impl Game {
@@ -47,6 +49,8 @@ impl Game {
         log::info!("Speech started");
 
         let speech_asr = self.speech_loop(true).await?;
+
+        self.session_data.transcript(speech_asr.content.clone());
 
         let answer_result = if let Some(questions) = self.questions.take() {
             self.ask_questions(questions).await?
@@ -60,21 +64,26 @@ impl Game {
 
         self.stress_data.duration_seconds = Instant::now().duration_since(start_time).as_secs_f64();
         let stress_result = self
-            .state
+            .app
             .endpoints
             .stress_plan(self.stress_data.clone())
             .await;
 
+        let session_result=SessionResult {
+            transcript_analysis: ta_result,
+            speech_score: sds_score,
+            answer_score: answer_result,
+            stress_result,
+        };
+
+        self.session_data.result(session_result.clone());
         self.web
-            .send(WebOutbound::Results(Box::new(SessionResult {
-                transcript_analysis: ta_result,
-                speech_score: sds_score,
-                answer_score: answer_result,
-                stress_result,
-            })))
+            .send(WebOutbound::Results(Box::new(session_result)))
             .await?;
 
         self.game.send(GameOutbound::End).await?;
+
+        self.session_data.build().unwrap();
 
         Ok(())
     }
@@ -85,12 +94,12 @@ impl Game {
         recording_file: &str,
     ) -> (Option<sds::Response>, Option<transcript::Response>) {
         let transcript_analysis = self
-            .state
+            .app
             .endpoints
             .transcript_analysis(speech_text, &self.expected_speech)
             .await;
         let speech_score = self
-            .state
+            .app
             .endpoints
             .get_speech_score(&self.settings, speech_text, recording_file)
             .await;
@@ -104,12 +113,12 @@ impl Game {
         } else {
             uuid::Uuid::new_v4()
         };
-        let mut speech_mq = MQSession::new(&self.state.mq_connection, asr_session_id).await?;
+        let mut speech_mq = MQSession::new(&self.app.mq_connection, asr_session_id).await?;
         log::info!("MQ initialized for speech");
 
         speech_mq
             .create_asr_session(
-                &self.state.asr_session_queue,
+                &self.app.asr_session_queue,
                 self.game_settings.audio_format.clone(),
                 if is_speech {
                     ASRSessionType::Speech
@@ -158,12 +167,15 @@ impl Game {
                                 self.web.send(WebOutbound::ASR(asr.clone())).await?;
                             }
 
+                            self.session_data.stuck(Timestamped{value: StuckEvent::Unstuck, time: Utc::now()});
+
                             if let ASR::Complete(complete) = asr{
                                 break Ok(complete);
                             }
                         }
                         ServiceInbound::Stress(st) => {
                             self.update_stress(&st);
+                            self.session_data.stress_event(Timestamped{value: st.clone(), time: Utc::now()});
                             self.web.send(WebOutbound::Stress(st.clone())).await?;
                             self.game.send(GameOutbound::Stress(st)).await?;
                         }
@@ -171,18 +183,21 @@ impl Game {
                             if is_speech {
                                 self.game.send(GameOutbound::Stuck).await?;
                                 self.web.send(WebOutbound::Stuck).await?;
+                                self.session_data.stuck(Timestamped{value: StuckEvent::Stuck, time: Utc::now()});
                             }
                         }
                         ServiceInbound::Unstuck => {
                             if is_speech {
                                 self.game.send(GameOutbound::Unstuck).await?;
                                 self.web.send(WebOutbound::Unstuck).await?;
+                                self.session_data.stuck(Timestamped{value: StuckEvent::Unstuck, time: Utc::now()});
                             }
                         }
                         ServiceInbound::StuckSuggestion(sg) => {
                             if is_speech {
                                 self.game.send(GameOutbound::StuckSuggestion(sg.clone())).await?;
                                 self.web.send(WebOutbound::StuckSuggestion(sg.clone())).await?;
+                                self.session_data.stuck(Timestamped{value: StuckEvent::Suggestion(sg), time: Utc::now()});
                             }
                         }
                     }
@@ -222,22 +237,32 @@ impl Game {
             log::info!("Answer Ended");
             self.web.send(WebOutbound::QuestionEnd).await?;
 
+            // add to answer list for evaluation
             answers.push(llm::AnswerEvaluateItem {
                 question: question.question.clone(),
                 sample_answer: question.sample_answer.clone(),
                 user_answer: question_asr.full_text.clone(),
             });
+
+            // add to session data
+            self.session_data.question(QuestionAnswer{
+                question: question.question.clone(),
+                sample_answer: question.sample_answer.clone(),
+                given_answer: question_asr.content.clone(),
+                recording_file: question_asr.recording_file,
+            });
         }
 
-        Ok(self.state.endpoints.score_answers(answers).await)
+        Ok(self.app.endpoints.score_answers(answers).await)
     }
 
+    /// detects if the question has ended
     async fn check_answer_end(&mut self, asr: &ASR) {
         if let Some(ref silence) = asr.current_silence {
             let duration = silence.timestamp.end - silence.timestamp.start;
             let words: usize = asr.lines.iter().map(|l| l.num_tokens()).sum();
-            if words > self.state.config.min_answer_words
-                && duration > self.state.config.max_answer_silence
+            if words > self.app.config.min_answer_words
+                && duration > self.app.config.max_answer_silence
             {
                 let _ = self.game.send(GameOutbound::AnswerEnd).await;
             }
@@ -271,9 +296,12 @@ pub async fn start_game(
                 settings: web.settings,
                 expected_speech: web.document,
                 game_settings,
-                state: app_state,
+                app: app_state,
+                session_data: SessionModelBuilder::default(),
                 stress_data: stress::OverallRequest::default(),
             };
+
+            game.session_data.session_id(web.session_id);
 
             game.run().await
         }

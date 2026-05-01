@@ -34,7 +34,7 @@ pub enum WebOutbound {
     Results(Box<SessionResult>),
 }
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, Clone, Deserialize)]
 pub struct SessionResult {
     pub transcript_analysis: Option<dto::transcript::Response>,
     pub speech_score: Option<dto::sds::Response>,

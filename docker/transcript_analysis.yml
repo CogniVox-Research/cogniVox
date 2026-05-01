@@ -1,6 +1,6 @@
 services:
   transcript_analysis_service:
-    image: ghcr.io/cognivox-research/transcript_analysis_service:v0.0.2
+    image: ghcr.io/cognivox-research/transcript_analysis_service:v0.0.3
     restart: "unless-stopped"
     ports:
       - "8005:8005"

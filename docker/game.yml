@@ -18,7 +18,7 @@ services:
       dockerfile: ./services/game/Dockerfile
 
     volumes:
-      - ../services/game/Rocket.toml:/app/Rocket.toml:ro
-      - ../services/auth/keys/public.pem:/app/public.pem:ro
+      - ../services/game/Rocket.toml:/app/Rocket.toml:z
+      - ../services/auth/keys/public.pem:/app/public.pem:z
 
     env_file: ../.env.template

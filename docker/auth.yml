@@ -8,6 +8,6 @@ services:
       context: ../
       dockerfile: ./services/auth/Dockerfile
     volumes:
-      - ../services/auth/config.toml:/app/services/auth/config.toml:ro
-      - ../services/auth/keys:/app/services/auth/keys:ro
+      - ../services/auth/config.toml:/app/services/auth/config.toml:z
+      - ../services/auth/keys:/app/services/auth/keys:z
       - ../services/auth/auth.db:/app/services/auth/auth.db:z

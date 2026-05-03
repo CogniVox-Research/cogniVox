@@ -10,6 +10,6 @@ services:
       - "8003:8003"
 
     volumes:
-      - ../services/document/Rocket.toml:/app/Rocket.toml:ro
+      - ../services/document/Rocket.toml:/app/Rocket.toml:z
 
     env_file: ../.env.template

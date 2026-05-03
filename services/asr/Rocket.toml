@@ -10,7 +10,7 @@ model_dir="./models"
 segment_buffer=2
 silence_threshold=2
 
-[default.recording_store]
+[default.file_store]
 type="s3"
 endpoint="http://localhost:8333"
 bucket="cg-data"

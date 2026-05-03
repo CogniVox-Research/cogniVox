@@ -66,7 +66,7 @@ fn rocket() -> _ {
         .merge(Env::prefixed("CG_").split("__"))
         .extract()
         .fail("Failed to load config");
-    let store = Store::from_config(&cfg.recording_store).fail("Failed to setup store");
+    let store = Store::from_config(&cfg.file_store).fail("Failed to setup store");
     let transcriber = asr_rs::Transcriber::new(cfg.asr).fail("Failed to initalize ASR");
 
     transcriber

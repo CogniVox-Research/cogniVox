@@ -10,7 +10,7 @@ use crate::{
         stress, transcript,
     }, error::{Error, Result}, game::proto::{MQSession, ServiceInbound, SessionResult, WebOutbound}, services::{Llm, SpeechScore, TranscriptAnalysis}
 };
-use crate::db:: models::{QuestionAnswer, SessionModel, SessionModelBuilder, Timestamped};
+use crate::db:: models::{QuestionAnswer,  SessionModelBuilder, Timestamped};
 
 pub mod proto;
 
@@ -58,6 +58,9 @@ impl Game {
             None
         };
 
+        self.game.send(GameOutbound::End).await?;
+        self.web.send(WebOutbound::ResultProcessing).await?;
+
         let (sds_score, ta_result) = self
             .get_final_results(&speech_asr.full_text, &speech_asr.recording_file)
             .await;
@@ -81,9 +84,8 @@ impl Game {
             .send(WebOutbound::Results(Box::new(session_result)))
             .await?;
 
-        self.game.send(GameOutbound::End).await?;
 
-        self.session_data.build().unwrap();
+        // self.session_data.build().unwrap();
 
         Ok(())
     }

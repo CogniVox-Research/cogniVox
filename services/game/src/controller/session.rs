@@ -39,8 +39,8 @@ pub async fn web_session<'a, 'r>(
 
         let settings = proto::recv_message!(con, WebInbound::Start)?;
 
-        // TODO: validate document and settings.
         log::info!("Got game settings {settings:?}");
+        con.send(WebOutbound::ServerPrepair).await?;
 
         log::info!("Got document {}", settings.document_id);
         let expected_speech = fetch_document(&store, session_id, &settings.document_id).await?;

@@ -16,12 +16,15 @@ pub enum WebInbound {
 #[derive(Debug, Serialize)]
 #[serde(tag = "type", content = "data", rename_all = "snake_case")]
 pub enum WebOutbound {
-    ASR(common::dto::asr::ASR),
-    Stress(dto::stress::StressResponse),
-    Pair { session_id: uuid::Uuid },
     Session { session_id: uuid::Uuid },
+    ServerPrepair,
+    Pair { session_id: uuid::Uuid },
     GameConnected,
+
     HeartRate(Box<dto::stress::StressRequest>),
+    Stress(dto::stress::StressResponse),
+    ASR(common::dto::asr::ASR),
+
     Stuck,
     Unstuck,
     StuckSuggestion(String),
@@ -30,6 +33,7 @@ pub enum WebOutbound {
     Question(String),
     QuestionASR(common::dto::asr::ASR),
     QuestionEnd,
+    ResultProcessing,
 
     Results(Box<SessionResult>),
 }

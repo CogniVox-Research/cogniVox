@@ -1,4 +1,3 @@
-use std::env;
 use mongodb::{
     bson::{extjson::de::Error, doc},
     Client, Collection

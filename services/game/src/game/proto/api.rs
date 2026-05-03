@@ -23,7 +23,7 @@ impl Endpoints {
 
         Endpoints {
             transcript: APIRequest::new(request_client.clone(), url.transcript_analysis.clone()),
-            speech_score: APIRequest::new(request_client.clone(), url.sds_service.clone()),
+            speech_score: APIRequest::new(request_client.clone(), url.speech_score.clone()),
             interview_question: APIRequest::new(
                 request_client.clone(),
                 format!("{}/{}", url.llm.base, url.llm.interview_question),

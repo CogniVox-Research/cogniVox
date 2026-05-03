@@ -18,6 +18,7 @@ import io.github.cognivoxResearch.cognivox.net.ws.GameWebSocket
 import io.github.cognivoxResearch.cognivox.screen.game.GameState
 import io.github.cognivoxResearch.cognivox.util.TextToSpeechManager
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.godotengine.godot.Godot
@@ -98,7 +99,13 @@ class GameActivity : AppCompatActivity(), GodotHost {
         Log.i("GameActivity", "Game Main Loop Started")
 
         if (uiState.value is GameState.Loading)
-            uiState.value = (uiState.value as GameState.Loading).copy(godotLoaded = true)
+            lifecycleScope.launch {
+                delay(1000)
+                uiState.value = (uiState.value as GameState.Loading).copy(godotLoaded = true)
+                runOnUiThread {
+                    gameController!!.gameStart();
+                }
+            }
 
     }
 

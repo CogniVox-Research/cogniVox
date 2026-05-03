@@ -65,6 +65,18 @@ class GameController(
             overlayState.value =
                 (overlayState.value as GameState.Loading).copy(serverReady = true)
 
+        gameStart()
+    }
+
+    fun gameStart() {
+        if (overlayState.value !is GameState.Loading)
+            return
+
+        val loading = overlayState.value as GameState.Loading
+        if (!loading.godotLoaded || !loading.serverReady || !loading.connected || loading.gameSettings.isEmpty)
+            return
+
+        val settings = loading.gameSettings.get()
 
         emitSignal(
             GameSignals.INIT_SCENE,
@@ -73,7 +85,7 @@ class GameController(
             settings.size.toString(),
             settings.difficulty.ordinal.toString(),
             settings.distractions.toString(),
-            noVR.toString()
+            loading.noVr.toString()
         )
 
         this.settings = settings
@@ -193,6 +205,7 @@ class GameController(
             if (overlayState.value is GameState.Loading)
                 overlayState.value =
                     (overlayState.value as GameState.Loading).copy(connected = true)
+            gameStart()
         }
 
         override fun onDisconnect(t: Throwable, response: Response?) {

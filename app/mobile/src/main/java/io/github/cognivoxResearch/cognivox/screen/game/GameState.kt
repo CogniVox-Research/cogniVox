@@ -1,10 +1,15 @@
 package io.github.cognivoxResearch.cognivox.screen.game
 
+import io.github.cognivoxResearch.cognivox.net.proto.GameSettings
+import java.util.Optional
+
 sealed class GameState {
     data class Loading(
         val godotLoaded: Boolean = false,
         val serverReady: Boolean = false,
-        val connected: Boolean = false
+        val connected: Boolean = false,
+        val gameSettings: Optional<GameSettings> = Optional.empty(),
+        val noVr: Boolean = false,
     ) :
         GameState() {
         fun loadingMessage(): String {

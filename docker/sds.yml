@@ -9,3 +9,5 @@ services:
       - "8006:8006"
     volumes:
       - ./config/sds.toml:/app/services/sds/config.toml:ro
+
+    env_file: ../.env.template

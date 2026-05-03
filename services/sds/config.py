@@ -7,9 +7,8 @@ from shared.store import StoreConfig
 
 
 class Settings(SharedBaseSettings):
-    rabbitmq_url: str = Field()
     whisper_model: str = "tiny"
-    store: StoreConfig
+    file_store: StoreConfig
 
 
 config = Settings.load()

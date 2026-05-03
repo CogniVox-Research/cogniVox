@@ -11,7 +11,7 @@ use tokio::time::sleep;
 #[derive(Debug, Deserialize, Clone)]
 pub struct Config {
     pub connection_name: String,
-    pub address: String,
+    pub url: String,
 }
 
 #[derive(Debug, Clone)]
@@ -56,7 +56,7 @@ impl Connection {
             .configure_backoff(|backoff| backoff.with_max_times(3));
 
         let connection =
-            lapin::Connection::connect_with_runtime(&cfg.address, config, runtime.clone()).await?;
+            lapin::Connection::connect_with_runtime(&cfg.url, config, runtime.clone()).await?;
 
         let channel = connection.create_channel().await?;
 

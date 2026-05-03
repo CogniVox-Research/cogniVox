@@ -9,6 +9,7 @@ import shared
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 from shared import rabbitmq
+from shared.rabbitmq import Config as MQConfig
 from typing_extensions import Literal
 
 # Load models
@@ -70,7 +71,7 @@ class StressData(pydantic.BaseModel):
 
 
 class Config(shared.config.SharedBaseSettings):
-    rabbitmq_url: str = pydantic.Field()
+    rabbitmq: MQConfig = pydantic.Field()
     port: int = pydantic.Field()
 
 
@@ -78,9 +79,9 @@ config = Config.load()
 
 
 class StressListener(rabbitmq.QueueListener[FeatureInput]):
-    def __init__(self, rabbitmq_url: str):
+    def __init__(self, mq_config: MQConfig):
         super().__init__(
-            rabbitmq_url,
+            mq_config,
             None,
             FeatureInput,
             exchange="stress",
@@ -102,7 +103,7 @@ class StressListener(rabbitmq.QueueListener[FeatureInput]):
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    with StressListener(config.rabbitmq_url):
+    with StressListener(config.rabbitmq):
         yield
 
 

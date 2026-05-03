@@ -16,6 +16,10 @@ from aio_pika.abc import AbstractChannel, AbstractIncomingMessage
 from aiormq import AMQPConnectionError, ChannelNotFoundEntity
 
 
+class Config(pydantic.BaseModel):
+    url: str
+
+
 @dataclass
 class Message:
     data: typing.Any
@@ -25,14 +29,14 @@ class Message:
 class QueueListener[M: pydantic.BaseModel](abc.ABC):
     def __init__(
         self,
-        rabbitmq_url: str,
+        config: Config,
         queue_name: str | None,
         message_type: typing.Type[M],
         exchange: str = "",
         routing_key: str | None = None,
         response_exchange: str = "",
     ):
-        self.__rabbitmq_url = rabbitmq_url
+        self.__rabbitmq_url = config.url
         self.__queue_name = queue_name
         self.__exchange = exchange
         self.__routing_key = routing_key

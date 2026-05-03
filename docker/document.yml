@@ -11,3 +11,5 @@ services:
 
     volumes:
       - ../services/document/Rocket.toml:/app/Rocket.toml:ro
+
+    env_file: ../.env.template

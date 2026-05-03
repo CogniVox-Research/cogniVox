@@ -14,5 +14,7 @@ services:
         condition: service_healthy
 
     volumes:
-      - ./config/stuck_detection.toml:/app/services/stuck_detection/config.toml:ro
+      - ../services/stuck_detection/config.toml:/app/services/stuck_detection/config.toml:z
       - ../services/stuck_detection/models:/app/services/stuck_detection/models
+
+    env_file: ../.env.template

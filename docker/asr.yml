@@ -16,3 +16,5 @@ services:
     volumes:
       - ../services/asr/models:/app/models
       - ../services/asr/Rocket.toml:/app/Rocket.toml:z
+
+    env_file: ../.env.template

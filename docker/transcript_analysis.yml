@@ -10,5 +10,7 @@ services:
       dockerfile: ./services/transcript_analysis/Dockerfile
 
     volumes:
-      - ./config/transcript_analysis.toml:/app/services/transcript_analysis/config.toml:ro
+      - ../services/stuck_detection/config.toml:/app/services/transcript_analysis/config.toml:z
       - ../services/transcript_analysis/models:/app/services/transcript_analysis/models
+
+    env_file: ../.env.template

@@ -41,7 +41,7 @@ app = FastAPI(
     description="Analyze speech delivery quality and provide feedback",
     version="1.0.0",
 )
-store = connect_store(config.store)
+store = connect_store(config.file_store)
 
 UPLOAD_DIR = "audio/uploads"
 os.makedirs(UPLOAD_DIR, exist_ok=True)

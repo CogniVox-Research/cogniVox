@@ -6,7 +6,7 @@ use common::{
     file_store::Store,
     util::fail::Fail,
 };
-use rocket::{State, fairing::AdHoc, response::content::RawHtml, tokio};
+use rocket::{State, fairing::AdHoc, figment::providers::Env, response::content::RawHtml, tokio};
 use rocket_ws::{Channel, WebSocket};
 
 mod asr;
@@ -60,7 +60,12 @@ fn stream_audio(
 #[launch]
 fn rocket() -> _ {
     let mut rocket = rocket::build();
-    let cfg: config::Config = rocket.figment().extract().fail("Failed to load config");
+    let cfg: config::Config = rocket
+        .figment()
+        .clone()
+        .merge(Env::prefixed("CG_").split("__"))
+        .extract()
+        .fail("Failed to load config");
     let store = Store::from_config(&cfg.recording_store).fail("Failed to setup store");
     let transcriber = asr_rs::Transcriber::new(cfg.asr).fail("Failed to initalize ASR");
 

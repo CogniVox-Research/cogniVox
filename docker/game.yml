@@ -20,3 +20,5 @@ services:
     volumes:
       - ../services/game/Rocket.toml:/app/Rocket.toml:ro
       - ../services/auth/keys/public.pem:/app/public.pem:ro
+
+    env_file: ../.env.template

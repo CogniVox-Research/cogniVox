@@ -2,7 +2,7 @@ from contextlib import asynccontextmanager
 
 from shared import rabbitmq
 
-from .config import config
+from .config import MQConfig, config
 from .detector import detector
 from .dto import ASRData, UnstuckDetection
 
@@ -12,9 +12,9 @@ from fastapi import FastAPI
 
 
 class ASRListener(rabbitmq.QueueListener[ASRData]):
-    def __init__(self, rabbitmq_url: str):
+    def __init__(self, config: MQConfig):
         super().__init__(
-            rabbitmq_url,
+            config,
             None,
             ASRData,
             exchange="stress",
@@ -51,7 +51,7 @@ class ASRListener(rabbitmq.QueueListener[ASRData]):
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    with ASRListener(config.rabbitmq_url):
+    with ASRListener(config.rabbitmq):
         yield
 
 

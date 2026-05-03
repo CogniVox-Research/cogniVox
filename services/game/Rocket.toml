@@ -6,7 +6,7 @@ min_answer_words=20
 
 [default.urls]
 transcript_analysis="http://localhost:8005"
-sds_service="http://localhost:8006/analyze-speech"
+speech_score="http://localhost:8006/analyze-speech"
 
 [default.urls.llm]
 base="http://localhost:8013/api/v1"

@@ -12,7 +12,7 @@ pub struct AppConfig {
 
 #[derive(Debug, Deserialize)]
 pub struct URL {
-    pub sds_service: String,
+    pub speech_score: String,
     pub transcript_analysis: String,
     pub llm: LLMService,
 }

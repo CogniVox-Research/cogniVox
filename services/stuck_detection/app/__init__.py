@@ -4,28 +4,31 @@ from shared import rabbitmq
 
 from .config import MQConfig, config
 from .detector import detector
-from .dto import ASRData, UnstuckDetection
+from .dto import ASRData, MQData, UnstuckDetection
 
 __all__ = ["app", "config"]
 
 from fastapi import FastAPI
 
 
-class ASRListener(rabbitmq.QueueListener[ASRData]):
+class ASRListener(rabbitmq.QueueListener[MQData]):
     def __init__(self, config: MQConfig):
         super().__init__(
             config,
             None,
-            ASRData,
-            exchange="stress",
+            MQData,
+            exchange="asr",
+            routing_key="#",
             response_exchange="results",
         )
 
-    async def handle_message(self, message: ASRData) -> rabbitmq.Message | None:
-        if message.session_type and message.session_type == "answer":
+    async def handle_message(self, message: MQData) -> rabbitmq.Message | None:
+        asr = message.data
+
+        if asr.session_type and asr.session_type.type == "answer":
             return
 
-        detection = await detector.detect_stuck(message)
+        detection = await detector.detect_stuck(asr)
         if detection is None:
             return
 
@@ -46,7 +49,7 @@ class ASRListener(rabbitmq.QueueListener[ASRData]):
                 "data": detection.suggestion,
             }
 
-        return rabbitmq.Message(data=msg, routing_key=message.session_id)
+        return rabbitmq.Message(data=msg, routing_key=asr.session_id)
 
 
 @asynccontextmanager

@@ -281,6 +281,7 @@ class App {
       this.connect("game", message.data.session_id);
     } else if (mode === "game" && message.type === "question") {
       this.state = 7;
+    } else if (message.type === "audience_interest") {
     } else if (message.type === "a_s_r") {
       message.data.lines = undefined;
       message.data.session_id = undefined;

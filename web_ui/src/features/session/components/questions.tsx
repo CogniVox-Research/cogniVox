@@ -53,6 +53,14 @@ const QuestionPage = ({ state }: { state: QuestionState }) => {
     });
   };
 
+  const formatCompactValue = (value: number): string => {
+    const abs = Math.abs(value);
+    if (abs >= 1_000_000) return (value / 1_000_000).toFixed(2) + 'M';
+    if (abs >= 1_000) return (value / 1_000).toFixed(1) + 'K';
+    if (abs >= 100) return value.toFixed(1);
+    return value.toFixed(2);
+  };
+
   // Prepare chart data
   const stressChartData = state.stress.map((s) => ({
     time: formatDateTimestamp(s.timestamp),
@@ -240,11 +248,11 @@ const QuestionPage = ({ state }: { state: QuestionState }) => {
                 <div className="space-y-3">
                   <div className="flex items-center justify-between">
                     <span className="text-sm text-slate-700 font-medium">BVP Mean</span>
-                    <span className="text-2xl font-bold text-slate-900">{currentHeartRate.data.bvp_mean.toFixed(1)}</span>
+                    <span className="text-2xl font-bold text-slate-900">{formatCompactValue(currentHeartRate.data.bvp_mean)}</span>
                   </div>
                   <div className="flex items-center justify-between">
                     <span className="text-sm text-slate-700 font-medium">Std Dev</span>
-                    <span className="text-lg font-bold text-slate-900">{currentHeartRate.data.bvp_std.toFixed(1)}</span>
+                    <span className="text-lg font-bold text-slate-900">{formatCompactValue(currentHeartRate.data.bvp_std)}</span>
                   </div>
                   {currentHeartRate.data.temp_mean && (
                     <div className="flex items-center justify-between">

@@ -56,6 +56,20 @@ const BiometricsTab = ({ state }: BiometricsTabProps) => {
         });
     };
 
+    /**
+     * Format large numeric values into a compact, human-readable form.
+     * e.g. 2051897.3 → "2.05M", 18926.23 → "18.9K", 72.5 → "72.5"
+     */
+    const formatCompactValue = (value: number | string): string => {
+        const num = typeof value === 'string' ? parseFloat(value) : value;
+        if (isNaN(num)) return String(value);
+        const abs = Math.abs(num);
+        if (abs >= 1_000_000) return (num / 1_000_000).toFixed(2) + 'M';
+        if (abs >= 1_000) return (num / 1_000).toFixed(1) + 'K';
+        if (abs >= 100) return num.toFixed(1);
+        return num.toFixed(2);
+    };
+
     // Prepare biometric data
     const biometricChartData = state.heart_rate.map((hr) => ({
         time: formatDateTimestamp(hr.timestamp),
@@ -153,15 +167,22 @@ const BiometricsTab = ({ state }: BiometricsTabProps) => {
     ];
 
     // Health indicators
+    const rawAvgBVP = biometricChartData.length > 0
+        ? biometricChartData.reduce((sum, d) => sum + d.bvp_mean, 0) / biometricChartData.length
+        : 0;
+    const rawHRV = biometricChartData.length > 0
+        ? biometricChartData.reduce((sum, d) => sum + d.bvp_std, 0) / biometricChartData.length
+        : 0;
+
     const healthIndicators = [
         {
             label: 'Average Heart Rate (BVP)',
-            value: avgBVP,
-            unit: 'bpm',
-            normal: '60-100',
+            value: formatCompactValue(rawAvgBVP),
+            unit: 'µV',
+            normal: 'Relative measure',
             color: 'red',
             icon: Heart,
-            description: 'Blood volume pulse rate - indicator of heart activity',
+            description: 'Blood volume pulse signal amplitude - indicator of heart activity',
         },
         {
             label: 'Average Stress Level',
@@ -174,9 +195,7 @@ const BiometricsTab = ({ state }: BiometricsTabProps) => {
         },
         {
             label: 'Heart Rate Variability',
-            value: (biometricChartData.length > 0
-                ? (biometricChartData.reduce((sum, d) => sum + d.bvp_std, 0) / biometricChartData.length).toFixed(2)
-                : 0),
+            value: formatCompactValue(rawHRV),
             unit: 'std dev',
             normal: 'Higher is better',
             color: 'blue',
@@ -275,7 +294,7 @@ const BiometricsTab = ({ state }: BiometricsTabProps) => {
                                 <IconComponent className={`w-5 h-5 ${colors.accent} shrink-0`} />
                                 <p className={`text-xs font-bold ${colors.accent} uppercase tracking-wider`}>{indicator.label}</p>
                             </div>
-                            <p className={`text-3xl font-bold ${colors.text}`}>{indicator.value} <span className="text-sm">{indicator.unit}</span></p>
+                            <p className={`font-bold ${colors.text} ${String(indicator.value).length > 6 ? 'text-xl' : 'text-3xl'}`}>{indicator.value} <span className="text-sm">{indicator.unit}</span></p>
                             <p className={`text-xs ${colors.text} mt-2 opacity-75`}>{indicator.description}</p>
                             <p className={`text-xs ${colors.accent} font-semibold mt-2`}>Normal: {indicator.normal}</p>
                         </motion.div>
@@ -309,15 +328,15 @@ const BiometricsTab = ({ state }: BiometricsTabProps) => {
                     <div className="mt-4 grid grid-cols-3 gap-4">
                         <div className="bg-red-50 p-3 rounded-lg border border-red-200">
                             <p className="text-xs text-red-700 font-semibold uppercase">Average</p>
-                            <p className="text-2xl font-bold text-red-900">{avgBVP}</p>
+                            <p className="text-2xl font-bold text-red-900">{formatCompactValue(avgBVP)}</p>
                         </div>
                         <div className="bg-amber-50 p-3 rounded-lg border border-amber-200">
                             <p className="text-xs text-amber-700 font-semibold uppercase">Maximum</p>
-                            <p className="text-2xl font-bold text-amber-900">{maxBVP}</p>
+                            <p className="text-2xl font-bold text-amber-900">{formatCompactValue(maxBVP)}</p>
                         </div>
                         <div className="bg-blue-50 p-3 rounded-lg border border-blue-200">
                             <p className="text-xs text-blue-700 font-semibold uppercase">Minimum</p>
-                            <p className="text-2xl font-bold text-blue-900">{minBVP}</p>
+                            <p className="text-2xl font-bold text-blue-900">{formatCompactValue(minBVP)}</p>
                         </div>
                     </div>
                 </motion.div>

@@ -4,6 +4,45 @@ import android.util.Log
 import kotlin.math.pow
 import kotlin.math.sqrt
 
+/**
+ * Welford's online algorithm for running mean & standard deviation.
+ * Used to normalize Samsung PPG_GREEN raw ADC values (~100K-10M)
+ * into a scale compatible with the WESAD/Empatica E4 training data (~-100 to +100).
+ *
+ * After a calibration period ([minSamples]), each incoming value is transformed:
+ *   normalized = (raw - runningMean) / runningStd
+ *
+ * This z-score centers the signal around 0 and normalizes the spread,
+ * matching what the Empatica E4 BVP signal looks like in the WESAD dataset.
+ */
+class RunningNormalizer(private val minSamples: Int = 100) {
+    private var count = 0L
+    private var mean = 0.0
+    private var m2 = 0.0   // sum of squared deviations
+
+    /** Returns true once enough samples have been collected for stable normalization. */
+    val isCalibrated: Boolean get() = count >= minSamples
+
+    /** Update running stats with a new raw value and return the normalized result. */
+    fun normalize(rawValue: Double): Double {
+        // Welford's online update
+        count++
+        val delta = rawValue - mean
+        mean += delta / count
+        val delta2 = rawValue - mean
+        m2 += delta * delta2
+
+        // During calibration, return 0 (neutral) to avoid sending garbage
+        if (!isCalibrated) return 0.0
+
+        val variance = m2 / count
+        val std = sqrt(variance)
+
+        // Guard against zero std (constant signal)
+        return if (std > 1e-9) (rawValue - mean) / std else 0.0
+    }
+}
+
 class FeatureCalculator(
     private val onFeaturesCalculated: (HSRVDto) -> Unit
 ) {
@@ -19,6 +58,13 @@ class FeatureCalculator(
     private val TEMP_WINDOW_SIZE = 60 // Approx 60 seconds
     private var lastTransmissionTime = 0L
 
+    /**
+     * Normalizer for Samsung PPG_GREEN → WESAD BVP scale.
+     * Calibrates during the first 100 samples (~4s at 25Hz),
+     * then z-score normalizes all subsequent values.
+     */
+    private val bvpNormalizer = RunningNormalizer(minSamples = 100)
+
     fun addIbiData(value: Double) {
         if (ibiWindow.size >= WINDOW_SIZE) {
             ibiWindow.removeFirst()
@@ -28,10 +74,13 @@ class FeatureCalculator(
     }
 
     fun addBvpData(value: Double) {
+        // Normalize Samsung raw PPG value to WESAD-compatible scale
+        val normalizedValue = bvpNormalizer.normalize(value)
+
         if (bvpWindow.size >= BVP_WINDOW_SIZE) {
             bvpWindow.removeFirst()
         }
-        bvpWindow.addLast(value)
+        bvpWindow.addLast(normalizedValue)
     }
 
     fun addEdaData(value: Double) {
@@ -60,6 +109,11 @@ class FeatureCalculator(
         val currentTime = System.currentTimeMillis()
         // Transmit if we have enough data and enough time has passed (e.g. 5 seconds)
         if (ibiWindow.size >= 10 && accWindow.size >= 50 && currentTime - lastTransmissionTime > 5000) {
+            // Don't transmit until BVP normalizer is calibrated
+            if (!bvpNormalizer.isCalibrated) {
+                Log.d(TAG, "BVP normalizer still calibrating, skipping transmission")
+                return
+            }
             try {
                 calculateAndTransmitFeatures()
             } catch (e: Exception){
@@ -89,7 +143,7 @@ class FeatureCalculator(
         val accStd = sqrt(accSum / accValues.size)
         val accMax = accValues.maxOrNull() ?: 0.0
 
-        // BVP Stats
+        // BVP Stats (values are already normalized by RunningNormalizer)
         val bvpValues = bvpWindow.toList()
         var bvpMeanCalc = 0.0
         var bvpStdCalc = rmssd
@@ -97,8 +151,6 @@ class FeatureCalculator(
         var bvpMaxCalc: Double? = null
         var bvpRangeCalc: Double? = null
         var bvpEnergyCalc: Double? = null
-
-        Log.e(TAG, "${bvpValues}")
 
         if (bvpValues.isNotEmpty()) {
             bvpMeanCalc = bvpValues.average()
@@ -149,7 +201,7 @@ class FeatureCalculator(
             tempStdCalc = sqrt(tempSumSq / tempValues.size)
         }
 
-        Log.d(TAG, "Features: RMSSD($rmssd), ACC($accMean, $accStd, $accMax), BVP_MEAN($bvpMeanCalc), EDA_MEAN($edaMeanCalc), TEMP_MEAN($tempMeanCalc)")
+        Log.d(TAG, "Features [NORMALIZED]: RMSSD($rmssd), ACC($accMean, $accStd, $accMax), BVP_MEAN($bvpMeanCalc), BVP_STD($bvpStdCalc), EDA_MEAN($edaMeanCalc), TEMP_MEAN($tempMeanCalc)")
 
         val dto = HSRVDto(
             bvp_mean = bvpMeanCalc,

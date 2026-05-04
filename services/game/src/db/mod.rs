@@ -1,2 +1,2 @@
 pub mod models;
-mod sessions;
+pub mod sessions;

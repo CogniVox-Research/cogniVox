@@ -1,4 +1,5 @@
 use common::{file_store, mq};
+use mongodb::bson;
 use rocket_ws::Message;
 
 pub type Result<T, E = Error> = std::result::Result<T, E>;
@@ -44,4 +45,13 @@ pub enum Error {
 
     #[error("Missing user id in token")]
     NoUserId,
+
+    #[error(transparent)]
+    DB(#[from] mongodb::error::Error),
+
+    #[error(transparent)]
+    SessionInsert(#[from] bson::ser::Error),
+
+    #[error(transparent)]
+    GetSession(#[from] bson::extjson::de::Error)
 }

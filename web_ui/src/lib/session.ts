@@ -16,7 +16,6 @@ import type {
 import WS from "./ws";
 import { produce } from "immer";
 import { compactSpeech } from "./asr_util";
-import { th } from "zod/v4/locales";
 
 export type PrepairState = {
   state: "prepairing";

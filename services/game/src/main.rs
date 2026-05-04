@@ -18,7 +18,7 @@ use crate::app::AppState;
 mod app;
 pub mod config;
 mod controller;
-mod db;
+pub mod db;
 mod dto;
 mod error;
 mod game;

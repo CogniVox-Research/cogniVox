@@ -1,19 +1,27 @@
+use common::util::fail::Fail;
 use mongodb::{
-    bson::{extjson::de::Error, doc},
-    Client, Collection
+    Client, Collection, bson::{ self, doc}
 };
+use crate::error::Error;
+
 use super::models::SessionModel;
 
-pub struct MongoRepo {
+pub struct SessionRepo {
     col: Collection<SessionModel>,
 }
 
-impl MongoRepo {
+impl SessionRepo {
     pub async fn init(uri: String) -> Self {
-        let client = Client::with_uri_str(uri).await.unwrap();
+        let client = Client::with_uri_str(uri).await.fail("Cannot connect to mongodb");
         let db = client.database("cg_sessions");
         let col: Collection<SessionModel> = db.collection("sessions");
-        MongoRepo { col }
+        SessionRepo { col }
+    }
+
+    pub async fn insert_session(&self, s: SessionModel) -> Result<(), Error> {
+        self.col.insert_one(s).await?;
+            Ok(())
+
     }
 
     pub async fn get_all_sessions(&self) -> Result<Vec<SessionModel>, Error> {
@@ -21,19 +29,19 @@ impl MongoRepo {
             .col
             .find(doc! {})
             .await
-            .map_err(|e| Error::DeserializationError { message: e.to_string() })?;
+            .map_err(|e| bson::extjson::de::Error::DeserializationError { message: e.to_string() })?;
 
-        let mut restaurants: Vec<SessionModel> = Vec::new();
-        while cursor.advance().await.map_err(|e| Error::DeserializationError { message: e.to_string() })? {
+        let mut sessions: Vec<SessionModel> = Vec::new();
+        while cursor.advance().await.map_err(|e| bson::extjson::de::Error::DeserializationError { message: e.to_string() })? {
             match cursor.deserialize_current() {
-                Ok(restaurant) => restaurants.push(restaurant),
+                Ok(restaurant) => sessions.push(restaurant),
                 Err(e) => {
                     eprintln!("Warning: Skipping document due to deserialization error: {}", e);
                     continue;
                 }
             }
         }
-        Ok(restaurants)
+        Ok(sessions)
     }
 
 

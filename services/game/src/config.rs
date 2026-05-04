@@ -8,6 +8,7 @@ pub struct AppConfig {
     pub min_answer_words: usize,
     pub max_answer_silence: f64,
     pub urls: URL,
+    pub mongo_url: Option<String>
 }
 
 #[derive(Debug, Deserialize)]

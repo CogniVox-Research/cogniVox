@@ -15,10 +15,10 @@ use crate::db:: models::{QuestionAnswer,  SessionModelBuilder, Timestamped};
 pub mod proto;
 
 use chrono::Utc;
-use common::dto::{
+use common::{dto::{
     ASRSessionType, GameFeatures,
     asr::{ASR, ASRContentComplete},
-};
+}, util::fail::Fail};
 use proto::{GameConnection, GameInbound, GameOutbound, WebConnection};
 use rocket::tokio::{self, select};
 
@@ -85,7 +85,15 @@ impl Game {
             .await?;
 
 
-        // self.session_data.build().unwrap();
+        if  let Some(ref db) = self.app.session_repo {
+            match self.session_data.build() {
+                Ok(session_data) => {
+                    db.insert_session(session_data).await.log_err("Failed to insert session");
+                }
+                Err(e) => log::error!("Failed to convert value {e}"),
+            }
+
+        }
 
         Ok(())
     }

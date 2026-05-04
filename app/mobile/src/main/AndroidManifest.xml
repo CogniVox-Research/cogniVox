@@ -49,7 +49,7 @@
                 <action android:name="com.google.android.gms.wearable.MESSAGE_RECEIVED" />
                 <data
                     android:host="*"
-                    android:pathPrefix="/biometrics"
+                    android:pathPrefix="/cg_biometrics"
                     android:scheme="wear" />
             </intent-filter>
         </service>

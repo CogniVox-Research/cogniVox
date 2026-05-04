@@ -60,7 +60,11 @@ class FeatureCalculator(
         val currentTime = System.currentTimeMillis()
         // Transmit if we have enough data and enough time has passed (e.g. 5 seconds)
         if (ibiWindow.size >= 10 && accWindow.size >= 50 && currentTime - lastTransmissionTime > 5000) {
-            calculateAndTransmitFeatures()
+            try {
+                calculateAndTransmitFeatures()
+            } catch (e: Exception){
+                Log.e(TAG, "Failed to transmit $e")
+            }
         }
     }
 
@@ -93,6 +97,8 @@ class FeatureCalculator(
         var bvpMaxCalc: Double? = null
         var bvpRangeCalc: Double? = null
         var bvpEnergyCalc: Double? = null
+
+        Log.e(TAG, "${bvpValues}")
 
         if (bvpValues.isNotEmpty()) {
             bvpMeanCalc = bvpValues.average()

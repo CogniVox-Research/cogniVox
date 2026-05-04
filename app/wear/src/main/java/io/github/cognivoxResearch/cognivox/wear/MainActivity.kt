@@ -12,7 +12,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.wear.compose.material.MaterialTheme
 import com.google.android.gms.wearable.Wearable
-import io.github.cognivoxResearch.cognivox.wear.HRVService.Companion.TAG
+import io.github.cognivoxResearch.cognivox.wear.BiometricsTransmitter.Companion.TAG
 import io.github.cognivoxResearch.cognivox.wear.screens.PermissionScreen
 import io.github.cognivoxResearch.cognivox.wear.screens.RunningScreen
 

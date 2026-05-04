@@ -12,7 +12,7 @@ class FeatureCalculator(
     private val bvpWindow = ArrayDeque<Double>()
     private val edaWindow = ArrayDeque<Double>()
     private val tempWindow = ArrayDeque<Double>()
-    
+
     private val WINDOW_SIZE = 30 // Keep 30 IBIs for RMSSD
     private val BVP_WINDOW_SIZE = 500 // Approx 20 seconds at 25Hz
     private val EDA_WINDOW_SIZE = 60 // Approx 60 seconds at 1Hz
@@ -26,14 +26,14 @@ class FeatureCalculator(
         ibiWindow.addLast(value)
         checkAndTransmit()
     }
-    
+
     fun addBvpData(value: Double) {
         if (bvpWindow.size >= BVP_WINDOW_SIZE) {
             bvpWindow.removeFirst()
         }
         bvpWindow.addLast(value)
     }
-    
+
     fun addEdaData(value: Double) {
         if (edaWindow.size >= EDA_WINDOW_SIZE) {
             edaWindow.removeFirst()
@@ -47,7 +47,7 @@ class FeatureCalculator(
         }
         tempWindow.addLast(value)
     }
-    
+
     fun addAccData(value: Double) {
         if (accWindow.size >= 300) { // Keep ACC window larger (~10s)
             accWindow.removeFirst()
@@ -57,18 +57,18 @@ class FeatureCalculator(
     }
 
     private fun checkAndTransmit() {
-         val currentTime = System.currentTimeMillis()
-         // Transmit if we have enough data and enough time has passed (e.g. 5 seconds)
-         if (ibiWindow.size >= 10 && accWindow.size >= 50 && currentTime - lastTransmissionTime > 5000) {
+        val currentTime = System.currentTimeMillis()
+        // Transmit if we have enough data and enough time has passed (e.g. 5 seconds)
+        if (ibiWindow.size >= 10 && accWindow.size >= 50 && currentTime - lastTransmissionTime > 5000) {
             calculateAndTransmitFeatures()
-         }
+        }
     }
 
     private fun calculateAndTransmitFeatures() {
         // RMSSD Calculation
         val ibiValues = ibiWindow.toList()
         if (ibiValues.size < 2) return
-        
+
         var sumSquaredDiff = 0.0
         for (i in 0 until ibiValues.size - 1) {
             val diff = ibiValues[i+1] - ibiValues[i]
@@ -103,15 +103,15 @@ class FeatureCalculator(
                 bvpSumSq += (num - bvpMeanCalc).pow(2)
                 bvpEnergySum += num.pow(2)
             }
-            
+
             bvpStdCalc = sqrt(bvpSumSq / bvpValues.size)
             bvpMinCalc = bvpValues.minOrNull()
             bvpMaxCalc = bvpValues.maxOrNull()
-            
+
             if (bvpMaxCalc != null && bvpMinCalc != null) {
                 bvpRangeCalc = bvpMaxCalc - bvpMinCalc
             }
-            
+
             bvpEnergyCalc = bvpEnergySum / bvpValues.size
         }
 
@@ -144,7 +144,7 @@ class FeatureCalculator(
         }
 
         Log.d(TAG, "Features: RMSSD($rmssd), ACC($accMean, $accStd, $accMax), BVP_MEAN($bvpMeanCalc), EDA_MEAN($edaMeanCalc), TEMP_MEAN($tempMeanCalc)")
-        
+
         val dto = HSRVDto(
             bvp_mean = bvpMeanCalc,
             bvp_std = bvpStdCalc,
@@ -162,7 +162,7 @@ class FeatureCalculator(
             temp_mean = tempMeanCalc,
             temp_std = tempStdCalc
         )
-        
+
         onFeaturesCalculated(dto)
         lastTransmissionTime = System.currentTimeMillis()
     }

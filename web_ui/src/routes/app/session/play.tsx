@@ -1,5 +1,7 @@
 import ErrorPage from "@/features/session/components/error";
 import FinishedPage from "@/features/session/components/finished";
+import PrepairPage from "@/features/session/components/prepair";
+import ProcessingPage from "@/features/session/components/processing";
 import QuestionPage from "@/features/session/components/questions";
 import RunningPage from "@/features/session/components/running";
 import WaitingPage from "@/features/session/components/waiting";
@@ -32,5 +34,9 @@ function RouteComponent() {
       return <QuestionPage state={state} />;
     case "finished":
       return <FinishedPage state={state} />;
+    case "prepairing":
+      return <PrepairPage />;
+    case "processing":
+      return <ProcessingPage />;
   }
 }

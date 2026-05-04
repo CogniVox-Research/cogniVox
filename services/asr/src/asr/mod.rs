@@ -19,7 +19,10 @@ pub(crate) async fn run_asr(
     transcriber: asr_rs::Transcriber,
     store: Store,
 ) -> error::Result<()> {
-    let prefix = format!("{session_id}/recordings");
+    let prefix = match session_type {
+        ASRSessionType::Speech =>format!("{session_id}/recordings"),
+        ASRSessionType::Answer { main_id } => format!("{main_id}/recordings/questions/{session_id}"),
+    };
     let mut audio_pipeline = audio::Pipeline::new(store, &audio_format, prefix)?;
 
     let ts = transcriber.create_async_stream().await?;

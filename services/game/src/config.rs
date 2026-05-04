@@ -8,11 +8,12 @@ pub struct AppConfig {
     pub min_answer_words: usize,
     pub max_answer_silence: f64,
     pub urls: URL,
+    pub mongo_url: Option<String>
 }
 
 #[derive(Debug, Deserialize)]
 pub struct URL {
-    pub sds_service: String,
+    pub speech_score: String,
     pub transcript_analysis: String,
     pub llm: LLMService,
 }

@@ -1,8 +1,5 @@
 use crate::{
-    config::AppConfig,
-    dto::settings::Settings,
-    error::Result,
-    game::proto::{self, Connection, DeviceConnection, WebConnection},
+    config::AppConfig, db::sessions::SessionRepo, dto::settings::Settings, error::Result, game::proto::{self, Connection, DeviceConnection, WebConnection}
 };
 use common::{
     dto::ASRSessionCreate,
@@ -37,6 +34,8 @@ pub struct AppState {
 
     pub endpoints: Arc<proto::Endpoints>,
     pub config: AppConfig,
+
+    pub session_repo: Option<crate::db::sessions::SessionRepo>
 }
 
 pub struct Device {
@@ -99,6 +98,12 @@ impl AppState {
         con.declare_exchange(ExchageType::Fanout, "stress").await?;
         con.declare_exchange(ExchageType::Direct, "results").await?;
 
+        let db = if let Some(ref uri) = config.mongo_url{
+           Some( SessionRepo::init(uri.to_owned()).await)
+        } else{
+            None
+        };
+
         let state = Self {
             pending: Default::default(),
             vr: Default::default(),
@@ -106,6 +111,7 @@ impl AppState {
             asr_session_queue: con.sender("start", Some("asr_start".to_owned())),
 
             endpoints: Arc::new(proto::Endpoints::from_config(&config.urls)),
+            session_repo: db,
             config,
         };
 

@@ -6,7 +6,7 @@ min_answer_words=20
 
 [default.urls]
 transcript_analysis="http://localhost:8005"
-sds_service="http://localhost:8006/analyze-speech"
+speech_score="http://localhost:8006/analyze-speech"
 
 [default.urls.llm]
 base="http://localhost:8013/api/v1"
@@ -24,21 +24,4 @@ secret_access_key="admin_secret_key"
 
 [default.rabbitmq]
 connection_name="game"
-address="amqp://appuser:apppass@127.0.0.1"
-
-[release.urls]
-transcript_analysis="http://transcript_analysis_service:8005"
-sds_service="http://sds_service:8006/analyze-speech"
-
-[release.file_store]
-type="s3"
-endpoint="http://seaweedfs:8333"
-bucket="cg-data"
-access_key_id="admin_access_key"
-secret_access_key="admin_secret_key"
-
-[release.rabbitmq]
-address="amqp://appuser:apppass@rabbitmq"
-
-[release.urls.llm]
-base="http://llm_service:8013/api/v1"
+url="amqp://appuser:apppass@127.0.0.1"

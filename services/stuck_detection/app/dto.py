@@ -36,12 +36,16 @@ class CurrentSilence(pydantic.BaseModel):
     timestamp: Timestamp
 
 
+class SessionType(pydantic.BaseModel):
+    type: Literal["speech", "answer"]
+
+
 class ASRData(pydantic.BaseModel):
     type: Literal["partial", "complete"]
     lines: list[Text | Silence]
     full_text: str
     session_id: str
-    session_type: Optional[Literal["speech", "answer"]]
+    session_type: Optional[SessionType]
 
     current_silence: CurrentSilence | None
 

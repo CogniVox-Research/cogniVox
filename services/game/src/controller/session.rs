@@ -5,16 +5,13 @@ use rocket::State;
 use rocket_ws::{Channel, WebSocket};
 
 use crate::{
-    app::{AppState, PendingSession},
-    game::{
+    app::{AppState, PendingSession}, db::models::SessionModel, error::Error, game::{
         self,
         proto::{
             self, DeviceOutbound, GameConnection, GameOutbound, WebConnection, WebInbound,
             WebOutbound,
         },
-    },
-    services::{Llm, documents::fetch_document},
-    util,
+    }, services::{Llm, documents::fetch_document}, util
 };
 
 #[rocket::get("/ws/web")]
@@ -39,8 +36,8 @@ pub async fn web_session<'a, 'r>(
 
         let settings = proto::recv_message!(con, WebInbound::Start)?;
 
-        // TODO: validate document and settings.
         log::info!("Got game settings {settings:?}");
+        con.send(WebOutbound::ServerPrepair).await?;
 
         log::info!("Got document {}", settings.document_id);
         let expected_speech = fetch_document(&store, session_id, &settings.document_id).await?;
@@ -122,3 +119,21 @@ pub async fn test_game_session<'r>(ws: WebSocket) -> Channel<'r> {
 
     channel
 }
+
+// #[rocket::get("/api/sessions")]
+// pub async fn get_sessions<'a, 'r>(
+//     state: &'a State<Arc<AppState>>,
+//     user: super::guard::User,
+// ) -> Vec<SessionModel> {
+//     if let Some(ref repo) = state.session_repo{
+//         let sessions = repo.get_all_sessions().await;
+//         if let Ok(sessions) = sessions{
+//             sessions
+//         }else{
+//             vec![]
+//         }
+//     }else{
+//         vec![]
+//     }
+
+// }

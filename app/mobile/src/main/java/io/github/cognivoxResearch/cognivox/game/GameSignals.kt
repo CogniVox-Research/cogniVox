@@ -17,12 +17,14 @@ object GameSignals {
     val STRESS_SUGGESTION = SignalInfo("stress_suggestion", String::class.java, String::class.java)
     val SPEECH_UNSTUCK = SignalInfo("speech_unstuck")
     val STUCK_SUGGESTION = SignalInfo("speech_stuck_suggestion", String::class.java)
+    val AUDIENCE_INTEREST = SignalInfo("audience_interest")
 
     val ALL_SIGNALS = setOf(
         STRESS_SUGGESTION,
         SPEECH_UNSTUCK,
         STUCK_SUGGESTION,
         INIT_SCENE,
-        DISABLE_DISTRACTIONS
+        DISABLE_DISTRACTIONS,
+        AUDIENCE_INTEREST
     )
 }

@@ -17,6 +17,11 @@ import WS from "./ws";
 import { produce } from "immer";
 import { compactSpeech } from "./asr_util";
 
+export type PrepairState = {
+  state: "prepairing";
+  session_id: string;
+};
+
 export type WaitingState = {
   state: "waiting_join";
   session_id: string;
@@ -55,6 +60,14 @@ export type QuestionState = {
     }
 );
 
+export type ProcessingState = {
+  state: "processing";
+  asr: ASR;
+  stress: Timestamped<StressResponse>[];
+  heart_rate: Timestamped<HeartRate>[];
+  stuck: Timestamped<Stuck>[];
+};
+
 export type FinishedState = {
   state: "finished";
   transcript_analysis?: TranscriptResponse;
@@ -72,7 +85,9 @@ export type SessionState =
   | ErrorState
   | RunningState
   | FinishedState
-  | QuestionState;
+  | QuestionState
+  | PrepairState
+  | ProcessingState;
 
 const emptyASR = (): ASR => {
   return {
@@ -96,7 +111,7 @@ export default class Session {
     this.socket = socket;
     this.session_id = session_id;
     this.state = {
-      state: "waiting_join",
+      state: "prepairing",
       session_id,
     };
     this.getState = this.getState.bind(this);
@@ -159,6 +174,13 @@ export default class Session {
       });
     });
 
+    socket.subscribe("pair", () => {
+      this.update({
+        state: "waiting_join",
+        session_id: this.session_id,
+      });
+    });
+
     socket.subscribe("game_connected", () => {
       this.update({
         state: "running",
@@ -208,11 +230,10 @@ export default class Session {
       });
     });
 
-    socket.subscribe<FinalResult>("results", (results) => {
+    socket.subscribe("result_processing", () => {
       if (this.state.state === "running") {
         this.update({
-          state: "finished",
-          ...results,
+          state: "processing",
           asr: this.state.asr,
           stress: this.state.stress,
           heart_rate: this.state.heart_rate,
@@ -220,12 +241,23 @@ export default class Session {
         });
       } else if (this.state.state === "question") {
         this.update({
-          state: "finished",
-          ...results,
+          state: "processing",
           asr: this.state.speech.asr,
           stress: this.state.stress,
           heart_rate: this.state.heart_rate,
           stuck: this.state.stuck,
+        });
+      } else {
+        throw Error("Invalid state change");
+      }
+    });
+
+    socket.subscribe<FinalResult>("results", (results) => {
+      if (this.state.state === "processing") {
+        this.update({
+          ...results,
+          ...this.state,
+          state: "finished",
         });
       } else {
         throw Error("Invalid state change");

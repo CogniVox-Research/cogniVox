@@ -7,7 +7,7 @@ pub struct Request {
     pub transcript: String,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct Response {
     pub speech_type: String,
     pub speech_type_number: String,
@@ -17,7 +17,7 @@ pub struct Response {
     pub delivery: Delivery,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct Metrics {
     pub wpm: f64,
     pub avg_pause: f64,
@@ -50,7 +50,7 @@ pub struct Feedback {
     pub priority_metric: String,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct Delivery {
     pub delivery_score: f64,
     pub delivery_score_label: String,
@@ -58,7 +58,7 @@ pub struct Delivery {
     pub weights_used: WeightsUsed,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct WeightedBreakdown {
     pub clarity: f64,
     pub pace: f64,
@@ -67,7 +67,7 @@ pub struct WeightedBreakdown {
     pub loudness: f64,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct WeightsUsed {
     pub clarity: f64,
     pub pace: f64,

@@ -1,2 +1,0 @@
-rabbitmq_url = "amqp://appuser:apppass@rabbitmq"
-port=8002

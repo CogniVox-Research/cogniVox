@@ -1,1 +1,0 @@
-rabbitmq_url = "amqp://appuser:apppass@127.0.0.1/"

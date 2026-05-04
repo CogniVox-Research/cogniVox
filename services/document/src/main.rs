@@ -5,6 +5,7 @@ extern crate rocket;
 
 use common::file_store::Store;
 use common::util::fail::Fail;
+use rocket::figment::providers::Env;
 use rocket::form::Form;
 use rocket::http::Status;
 use rocket::response::content::RawHtml;
@@ -74,7 +75,11 @@ async fn upload_file(
 fn rocket() -> _ {
     let rocket = rocket::build();
     let figment = rocket.figment();
-    let config: config::AppConfig = figment.extract().fail("Failed to load config");
+    let config: config::AppConfig = figment
+        .clone()
+        .merge(Env::prefixed("CG_").split("__"))
+        .extract()
+        .fail("Config should load");
     let store = Store::from_config(&config.file_store).fail("Failed to create store");
 
     rocket

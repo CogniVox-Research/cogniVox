@@ -16,6 +16,10 @@ from aio_pika.abc import AbstractChannel, AbstractIncomingMessage
 from aiormq import AMQPConnectionError, ChannelNotFoundEntity
 
 
+class Config(pydantic.BaseModel):
+    url: str
+
+
 @dataclass
 class Message:
     data: typing.Any
@@ -25,14 +29,14 @@ class Message:
 class QueueListener[M: pydantic.BaseModel](abc.ABC):
     def __init__(
         self,
-        rabbitmq_url: str,
+        config: Config,
         queue_name: str | None,
         message_type: typing.Type[M],
         exchange: str = "",
         routing_key: str | None = None,
         response_exchange: str = "",
     ):
-        self.__rabbitmq_url = rabbitmq_url
+        self.__rabbitmq_url = config.url
         self.__queue_name = queue_name
         self.__exchange = exchange
         self.__routing_key = routing_key
@@ -51,7 +55,7 @@ class QueueListener[M: pydantic.BaseModel](abc.ABC):
                 queue_name=self.__queue_name,
                 msg_type=self.__msg_clazz,
                 exchange=self.__exchange,
-                routing_key=None,
+                routing_key=self.__routing_key,
             )
             response_exchange = await channel.get_exchange(self.__response_exchange)
 
@@ -164,12 +168,16 @@ async def read_queue[T: pydantic.BaseModel](
     queue = await channel.get_queue(queue_name, ensure=True)
 
     async def _iter():
-        async with queue.iterator() as queue_iter:
-            async for message in queue_iter:
-                async with message.process():
-                    if msg_type is not None:
-                        yield msg_type.model_validate_json(message.body)
-                    else:
-                        yield message
+        try:
+            async with queue.iterator() as queue_iter:
+                async for message in queue_iter:
+                    async with message.process():
+                        if msg_type is not None:
+                            yield msg_type.model_validate_json(message.body)
+                        else:
+                            yield message
+        except Exception as e:
+            print(f"Queue error: {e}")
+            quit(1)
 
     return _iter()

@@ -1,6 +1,6 @@
 services:
   stuck_detection_service:
-    image: ghcr.io/cognivox-research/stuck_detection_service:v0.0.2
+    image: ghcr.io/cognivox-research/stuck_detection_service:v0.0.3
     restart: "unless-stopped"
     ports:
       - "8012:8012"
@@ -14,5 +14,7 @@ services:
         condition: service_healthy
 
     volumes:
-      - ./config/stuck_detection.toml:/app/services/stuck_detection/config.toml:ro
+      - ../services/stuck_detection/config.toml:/app/services/stuck_detection/config.toml:z
       - ../services/stuck_detection/models:/app/services/stuck_detection/models
+
+    env_file: ../.env.template

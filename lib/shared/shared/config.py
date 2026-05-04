@@ -13,6 +13,9 @@ class SharedBaseSettings(BaseSettings):
         toml_file="config.toml",
         env_file=".env",
         env_file_encoding="utf-8",
+        env_nested_delimiter="__",
+        env_prefix="CG_",
+        env_ignore_empty=True,
         extra="allow",
     )
 
@@ -30,9 +33,8 @@ class SharedBaseSettings(BaseSettings):
         file_secret_settings: PydanticBaseSettingsSource,
     ) -> tuple[PydanticBaseSettingsSource, ...]:
         return (
-            env_settings,
-            dotenv_settings,
-            file_secret_settings,
-            TomlConfigSettingsSource(settings_cls),
             init_settings,
+            dotenv_settings,
+            env_settings,
+            TomlConfigSettingsSource(settings_cls),
         )

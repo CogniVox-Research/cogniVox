@@ -3,11 +3,12 @@ from pydantic import Field
 __all__ = ["Settings", "config"]
 
 from shared import SharedBaseSettings
+from shared.rabbitmq import Config as MQConfig
 from shared.store import StoreConfig
 
 
 class Settings(SharedBaseSettings):
-    rabbitmq_url: str = Field()
+    rabbitmq: MQConfig = Field()
     llm_continue_url: str = Field()
     max_silence: float = Field()
 

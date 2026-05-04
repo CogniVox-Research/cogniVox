@@ -1,6 +1,6 @@
 services:
   document_service:
-    image: ghcr.io/cognivox-research/document_service:v0.0.2
+    image: ghcr.io/cognivox-research/document_service:v0.0.3
     restart: "unless-stopped"
     build:
       context: ..
@@ -10,4 +10,6 @@ services:
       - "8003:8003"
 
     volumes:
-      - ../services/document/Rocket.toml:/app/Rocket.toml:ro
+      - ../services/document/Rocket.toml:/app/Rocket.toml:z
+
+    env_file: ../.env.template

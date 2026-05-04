@@ -10,13 +10,13 @@ model_dir="./models"
 segment_buffer=2
 silence_threshold=2
 
-[default.recording_store]
+[default.file_store]
 type="s3"
-endpoint="http://seaweedfs:8333"
+endpoint="http://localhost:8333"
 bucket="cg-data"
 access_key_id="admin_access_key"
 secret_access_key="admin_secret_key"
 
-[release.rabbitmq]
-address="amqp://appuser:apppass@rabbitmq"
+[default.rabbitmq]
+url="amqp://appuser:apppass@localhost"
 connection_name="asr"

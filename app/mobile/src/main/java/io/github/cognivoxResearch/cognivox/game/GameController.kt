@@ -24,6 +24,7 @@ import kotlinx.coroutines.launch
 import okhttp3.Response
 import org.godotengine.godot.Godot
 import org.godotengine.godot.plugin.GodotPlugin
+import java.util.Optional
 
 
 class GameController(
@@ -63,8 +64,24 @@ class GameController(
     internal fun onSessionInit(settings: GameSettings, noVR: Boolean = false) {
         if (overlayState.value is GameState.Loading)
             overlayState.value =
-                (overlayState.value as GameState.Loading).copy(serverReady = true)
+                (overlayState.value as GameState.Loading).copy(
+                    serverReady = true,
+                    noVr = noVR,
+                    gameSettings = Optional.of(settings)
+                )
 
+        gameStart()
+    }
+
+    fun gameStart() {
+        if (overlayState.value !is GameState.Loading)
+            return
+
+        val loading = overlayState.value as GameState.Loading
+        if (!loading.godotLoaded || !loading.serverReady || !loading.connected || loading.gameSettings.isEmpty)
+            return
+
+        val settings = loading.gameSettings.get()
 
         emitSignal(
             GameSignals.INIT_SCENE,
@@ -73,7 +90,7 @@ class GameController(
             settings.size.toString(),
             settings.difficulty.ordinal.toString(),
             settings.distractions.toString(),
-            noVR.toString()
+            loading.noVr.toString()
         )
 
         this.settings = settings
@@ -165,6 +182,28 @@ class GameController(
         }
     }
 
+    fun onDoubleWatchTap() {
+        when (val state = this.overlayState.value) {
+            is GameState.Question -> {
+                state.onEnd()
+            }
+
+            is GameState.SessionEnd -> {
+                state.onEnd()
+            }
+
+            is GameState.Speech -> {
+                state.onEnd()
+            }
+
+            is GameState.WaitingSpeech -> {
+                state.onStart()
+            }
+
+            else -> Log.i(tag, "Ignored watch double tap")
+        }
+    }
+
     internal val listener = object : GameWebSocket.Listener {
         override fun onMessage(message: ServerInbound) {
             when (message) {
@@ -182,6 +221,15 @@ class GameController(
                     }
                 }
 
+                is ServerInbound.AudienceInterest -> {
+                    activity!!.runOnUiThread {
+                        emitSignal(
+                            GameSignals.AUDIENCE_INTEREST.name,
+                            message.interest.toString(),
+                        )
+                    }
+                }
+
                 ServerInbound.AnswerEnd -> {
                     if (overlayState.value is GameState.Question)
                         onQuestionEnd()
@@ -193,6 +241,7 @@ class GameController(
             if (overlayState.value is GameState.Loading)
                 overlayState.value =
                     (overlayState.value as GameState.Loading).copy(connected = true)
+            gameStart()
         }
 
         override fun onDisconnect(t: Throwable, response: Response?) {

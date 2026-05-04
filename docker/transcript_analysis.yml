@@ -1,6 +1,6 @@
 services:
   transcript_analysis_service:
-    image: ghcr.io/cognivox-research/transcript_analysis_service:v0.0.2
+    image: ghcr.io/cognivox-research/transcript_analysis_service:v0.0.3
     restart: "unless-stopped"
     ports:
       - "8005:8005"
@@ -10,5 +10,7 @@ services:
       dockerfile: ./services/transcript_analysis/Dockerfile
 
     volumes:
-      - ./config/transcript_analysis.toml:/app/services/transcript_analysis/config.toml:ro
+      - ../services/stuck_detection/config.toml:/app/services/transcript_analysis/config.toml:z
       - ../services/transcript_analysis/models:/app/services/transcript_analysis/models
+
+    env_file: ../.env.template

@@ -225,7 +225,7 @@ class GameController(
                     activity!!.runOnUiThread {
                         emitSignal(
                             GameSignals.AUDIENCE_INTEREST.name,
-                            message.interest.toString(),
+                            message.data.toString(),
                         )
                     }
                 }

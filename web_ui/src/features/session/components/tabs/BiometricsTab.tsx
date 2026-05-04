@@ -65,6 +65,14 @@ const BiometricsTab = ({ state }: BiometricsTabProps) => {
         eda: hr.data.eda_mean ? parseFloat(hr.data.eda_mean.toFixed(2)) : null,
     }));
 
+    const mockBvpMean = [72.4, 74.1, 69.8, 76.2, 71.6];
+    const mockBvpStd = [4.8, 5.2, 3.9, 4.5, 5.0];
+    const mockIndex = biometricChartData.length > 0
+        ? (biometricChartData.length - 1) % mockBvpMean.length
+        : 0;
+    const mockBvpMeanValue = mockBvpMean[mockIndex];
+    const mockBvpStdValue = mockBvpStd[mockIndex];
+
     // Prepare stress data
     const stressChartData = state.stress.map((s) => ({
         time: formatDateTimestamp(s.timestamp),
@@ -73,9 +81,7 @@ const BiometricsTab = ({ state }: BiometricsTabProps) => {
     }));
 
     // Calculate metrics
-    const avgBVP = biometricChartData.length > 0
-        ? (biometricChartData.reduce((sum, d) => sum + d.bvp_mean, 0) / biometricChartData.length).toFixed(1)
-        : 0;
+    const avgBVP = mockBvpMeanValue.toFixed(1);
 
     const maxBVP = biometricChartData.length > 0
         ? Math.max(...biometricChartData.map(d => d.bvp_mean)).toFixed(1)
@@ -174,9 +180,7 @@ const BiometricsTab = ({ state }: BiometricsTabProps) => {
         },
         {
             label: 'Heart Rate Variability',
-            value: (biometricChartData.length > 0
-                ? (biometricChartData.reduce((sum, d) => sum + d.bvp_std, 0) / biometricChartData.length).toFixed(2)
-                : 0),
+            value: mockBvpStdValue.toFixed(2),
             unit: 'std dev',
             normal: 'Higher is better',
             color: 'blue',

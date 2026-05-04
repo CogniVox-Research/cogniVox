@@ -1,5 +1,5 @@
 import { motion } from "framer-motion";
-import { Loader2, Cpu, Sparkles } from "lucide-react";
+import { Cpu, Sparkles } from "lucide-react";
 
 const ProcessingPage = () => {
   return (
@@ -11,29 +11,27 @@ const ProcessingPage = () => {
             <div className="mx-auto mb-6 flex h-20 w-20 items-center justify-center rounded-full bg-sky-100 text-sky-600 shadow-sm shadow-sky-200/60">
               <Cpu className="h-10 w-10" />
             </div>
-            <h1 className="text-4xl font-semibold text-slate-900">Processing your results</h1>
+            <h1 className="text-4xl font-semibold text-slate-900">
+              Processing your results
+            </h1>
             <p className="mt-3 text-base leading-7 text-slate-600">
-              Analyzing your session data so you can review insights, transcript accuracy, and performance metrics.
+              Analyzing your session data so you can review insights, transcript
+              accuracy, and performance metrics.
             </p>
           </div>
 
           <div className="space-y-4 rounded-3xl border border-slate-200 bg-white/95 p-6 shadow-sm">
             <div className="flex items-center gap-4">
-              <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-sky-50 text-sky-600">
-                <Loader2 className="h-6 w-6 animate-spin" />
-              </div>
-              <div>
-                <p className="text-sm font-semibold text-slate-900">Transcribing audio</p>
-                <p className="text-sm text-slate-500">Converting speech into text and extracting key insights.</p>
-              </div>
-            </div>
-            <div className="flex items-center gap-4">
               <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-emerald-50 text-emerald-600">
                 <Sparkles className="h-6 w-6" />
               </div>
               <div>
-                <p className="text-sm font-semibold text-slate-900">Scoring delivery</p>
-                <p className="text-sm text-slate-500">Evaluating confidence, clarity, and pacing.</p>
+                <p className="text-sm font-semibold text-slate-900">
+                  Scoring delivery
+                </p>
+                <p className="text-sm text-slate-500">
+                  Evaluating confidence, clarity, and pacing.
+                </p>
               </div>
             </div>
             <div className="flex items-center gap-4">
@@ -41,8 +39,13 @@ const ProcessingPage = () => {
                 <Cpu className="h-6 w-6" />
               </div>
               <div>
-                <p className="text-sm font-semibold text-slate-900">Reviewing analytics</p>
-                <p className="text-sm text-slate-500">Checking biometric and behavior signals for a complete picture.</p>
+                <p className="text-sm font-semibold text-slate-900">
+                  Reviewing analytics
+                </p>
+                <p className="text-sm text-slate-500">
+                  Checking biometric and behavior signals for a complete
+                  picture.
+                </p>
               </div>
             </div>
           </div>
@@ -50,8 +53,12 @@ const ProcessingPage = () => {
           <div className="mx-auto w-full max-w-2xl rounded-3xl bg-slate-50/90 p-6 shadow-inner shadow-slate-200">
             <div className="flex items-center justify-between gap-3">
               <div>
-                <p className="text-sm font-semibold text-slate-900">Processing progress</p>
-                <p className="text-sm text-slate-500">This usually takes less than a minute.</p>
+                <p className="text-sm font-semibold text-slate-900">
+                  Processing progress
+                </p>
+                <p className="text-sm text-slate-500">
+                  This usually takes less than a minute.
+                </p>
               </div>
               <span className="rounded-full bg-slate-200 px-3 py-1 text-xs font-semibold uppercase tracking-[0.15em] text-slate-600">
                 Running
@@ -62,7 +69,11 @@ const ProcessingPage = () => {
                 className="h-full rounded-full bg-gradient-to-r from-sky-500 via-cyan-500 to-emerald-500"
                 initial={{ width: "8%" }}
                 animate={{ width: ["8%", "90%", "75%", "95%"] }}
-                transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
+                transition={{
+                  duration: 4,
+                  repeat: Infinity,
+                  ease: "easeInOut",
+                }}
               />
             </div>
           </div>

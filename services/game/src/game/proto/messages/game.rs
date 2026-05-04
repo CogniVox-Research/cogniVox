@@ -33,6 +33,7 @@ pub enum GameOutbound {
     Question(String),
     End,
     Error(String),
+    AudienceInterest(f32),
 }
 
 impl super::Inbound for GameInbound {

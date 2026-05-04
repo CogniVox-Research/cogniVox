@@ -1,4 +1,4 @@
-FROM rust:1.93.1-slim-trixie AS base
+FROM rust:1.95-slim-trixie AS base
 RUN apt update
 RUN --mount=type=cache,target=/var/cache/apt \
     apt install sccache

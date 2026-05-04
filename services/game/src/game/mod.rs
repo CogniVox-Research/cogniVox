@@ -1,24 +1,32 @@
 use std::{sync::Arc, time::Instant};
 pub mod test_session;
 
+use crate::db::models::{QuestionAnswer, SessionModelBuilder, Timestamped};
 use crate::{
-    app::{AppState, PendingSession}, db::models::StuckEvent, dto::{
+    app::{AppState, PendingSession},
+    db::models::StuckEvent,
+    dto::{
         self,
         llm::{self, Question},
         sds,
         settings::Settings,
         stress, transcript,
-    }, error::{Error, Result}, game::proto::{MQSession, ServiceInbound, SessionResult, WebOutbound}, services::{Llm, SpeechScore, TranscriptAnalysis}
+    },
+    error::{Error, Result},
+    game::proto::{MQSession, ServiceInbound, SessionResult, WebOutbound},
+    services::{Llm, SpeechScore, TranscriptAnalysis},
 };
-use crate::db:: models::{QuestionAnswer,  SessionModelBuilder, Timestamped};
 
 pub mod proto;
 
 use chrono::Utc;
-use common::{dto::{
-    ASRSessionType, GameFeatures,
-    asr::{ASR, ASRContentComplete},
-}, util::fail::Fail};
+use common::{
+    dto::{
+        ASRSessionType, GameFeatures,
+        asr::{ASR, ASRContentComplete},
+    },
+    util::fail::Fail,
+};
 use proto::{GameConnection, GameInbound, GameOutbound, WebConnection};
 use rocket::tokio::{self, select};
 
@@ -72,7 +80,7 @@ impl Game {
             .stress_plan(self.stress_data.clone())
             .await;
 
-        let session_result=SessionResult {
+        let session_result = SessionResult {
             transcript_analysis: ta_result,
             speech_score: sds_score,
             answer_score: answer_result,
@@ -84,15 +92,15 @@ impl Game {
             .send(WebOutbound::Results(Box::new(session_result)))
             .await?;
 
-
-        if  let Some(ref db) = self.app.session_repo {
+        if let Some(ref db) = self.app.session_repo {
             match self.session_data.build() {
                 Ok(session_data) => {
-                    db.insert_session(session_data).await.log_err("Failed to insert session");
+                    db.insert_session(session_data)
+                        .await
+                        .log_err("Failed to insert session");
                 }
                 Err(e) => log::error!("Failed to convert value {e}"),
             }
-
         }
 
         Ok(())
@@ -177,7 +185,10 @@ impl Game {
                                 self.web.send(WebOutbound::ASR(asr.clone())).await?;
                             }
 
-                            self.session_data.stuck(Timestamped{value: StuckEvent::Unstuck, time: Utc::now()});
+                            if let Some(interest) =  crate::services::audience::engagement_score(&asr){
+                                self.game.send(GameOutbound::AudienceInterest(interest)).await?;
+                            }
+
 
                             if let ASR::Complete(complete) = asr{
                                 break Ok(complete);
@@ -255,7 +266,7 @@ impl Game {
             });
 
             // add to session data
-            self.session_data.question(QuestionAnswer{
+            self.session_data.question(QuestionAnswer {
                 question: question.question.clone(),
                 sample_answer: question.sample_answer.clone(),
                 given_answer: question_asr.content.clone(),

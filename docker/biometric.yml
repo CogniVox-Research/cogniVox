@@ -1,6 +1,6 @@
 services:
   biometric_service:
-    image: ghcr.io/cognivox-research/biometric_service:v0.0.3
+    image: ghcr.io/cognivox-research/biometric_service:v0.1.1
     restart: "unless-stopped"
     ports:
       - "8011:8011"

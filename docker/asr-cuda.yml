@@ -1,6 +1,6 @@
 services:
   asr_service:
-    image: ghcr.io/cognivox-research/asr_service_cuda:v0.0.2
+    image: ghcr.io/cognivox-research/asr_service_cuda:v0.1.1
     runtime: nvidia
     restart: "unless-stopped"
     ports:
@@ -8,7 +8,7 @@ services:
 
     build:
       context: ../
-      dockerfile: ./services/asr/cuda.Dockerfile
+      dockerfile: ./services/asr/Dockerfile
 
     depends_on:
       rabbitmq:

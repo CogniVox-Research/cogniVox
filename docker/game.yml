@@ -1,6 +1,6 @@
 services:
   game_service:
-    image: ghcr.io/cognivox-research/game_service:v0.0.3
+    image: ghcr.io/cognivox-research/game_service:v0.1.1
     restart: "unless-stopped"
     ports:
       - "8004:8004"

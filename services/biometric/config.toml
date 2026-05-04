@@ -1,0 +1,4 @@
+port=8002
+
+[rabbitmq]
+url="amqp://appuser:apppass@localhost"

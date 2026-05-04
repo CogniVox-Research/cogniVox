@@ -1,0 +1,19 @@
+services:
+  biometric_service:
+    image: ghcr.io/cognivox-research/biometric_service:v0.1.1
+    restart: "unless-stopped"
+    ports:
+      - "8011:8011"
+
+    build:
+      context: ../
+      dockerfile: ./services/biometric/Dockerfile
+
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+
+    env_file: ../.env.template
+
+    volumes:
+      - ../services/biometric/config.toml:/app/services/biometric/config.toml:z

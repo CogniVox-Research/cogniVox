@@ -1,0 +1,13 @@
+services:
+  sds_service:
+    image: ghcr.io/cognivox-research/sds_service:v0.1.1
+    restart: "unless-stopped"
+    build:
+      context: ../
+      dockerfile: ./services/sds/Dockerfile
+    ports:
+      - "8006:8006"
+    volumes:
+      - ../services/sds/config.toml:/app/services/sds/config.toml:z
+
+    env_file: ../.env.template

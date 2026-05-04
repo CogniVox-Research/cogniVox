@@ -1,0 +1,11 @@
+services:
+  llm_service:
+    image: ghcr.io/cognivox-research/llm_service:v0.1.1
+    restart: "unless-stopped"
+    build:
+      context: ../
+      dockerfile: ./services/llm/Dockerfile
+    ports:
+      - "8013:8013"
+    env_file:
+      - ../services/llm/.env

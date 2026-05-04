@@ -1,0 +1,11 @@
+# RSA key pair — never commit private key
+keys/private.pem
+keys/public.pem
+
+# SQLite database file
+auth.db
+
+# Python
+__pycache__/
+*.pyc
+.venv/

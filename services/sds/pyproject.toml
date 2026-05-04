@@ -1,0 +1,42 @@
+[tool.poetry]
+name = "sds-service"
+version = "0.1.0"
+description = "Speech Delivery Scoring Service"
+authors = ["CogniVox Team"]
+package-mode = false
+
+[tool.poetry.dependencies]
+python = ">=3.13,<3.14"
+fastapi = {extras = ["all"], version = "^0.135.1"}
+uvicorn = "^0.24.0"
+pydantic = "^2.12.5"
+pydantic-settings = "^2.0.0"
+python-dotenv = "^1.0.0"
+shared = { path = "../../lib/shared", develop = true }
+joblib = "^1.5.3"
+numpy = "^2.4.2"
+audioread = "^3.1.0"
+soundfile = "^0.13.1"
+aiofiles = "^25.1.0"
+httpx = "^0.28.1"
+openai-whisper = "^20250625"
+scipy = "^1.17.1"
+librosa = "^0.11.0"
+pandas = "^3.0.1"
+python-multipart = "^0.0.18"
+scikit-learn = "^1.7.2"
+torch = {version="^2.10.0", source="torch-cpu"}
+google-genai = "^1.0.0"
+
+[tool.poetry.group.dev.dependencies]
+pytest = "^9.0.2"
+pytest-asyncio = "^0.21.0"
+
+[build-system]
+requires = ["poetry-core>=2.0.0,<3.0.0"]
+build-backend = "poetry.core.masonry.api"
+
+[[tool.poetry.source]]
+name = "torch-cpu"
+url = "https://download.pytorch.org/whl/cpu"
+priority = "explicit"

@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="utf-8" />
+        <title>upload test</title>
+
+        <style>
+            body {
+                font-family: Arial, sans-serif;
+                margin: 2rem;
+            }
+            form {
+                margin-bottom: 1.5rem;
+            }
+            #response {
+                white-space: pre-wrap;
+                background: #f8f8f8;
+                padding: 1rem;
+                border: 1px solid #ddd;
+            }
+        </style>
+    </head>
+
+    <body>
+        <form id="uploadForm">
+            <input type="file" name="file" required />
+            <button type="submit">Upload</button>
+        </form>
+
+        <div id="response"></div>
+
+        <script>
+            const onUpload = async (e) => {
+                e.preventDefault();
+
+                const form = e.target;
+                const fileInput = form.querySelector("input[type=file]");
+                if (!fileInput.files.length) {
+                    alert("Please select a file first.");
+                    return;
+                }
+
+                const file = fileInput.files[0];
+                const fd = new FormData();
+                fd.append(fileInput.name, file);
+
+                const resp = await fetch("/parse", {
+                    method: "POST",
+                    body: fd,
+                });
+
+                const json = await resp.json();
+
+                document.getElementById("response").textContent =
+                    JSON.stringify(json, null, 2);
+            };
+            document
+                .getElementById("uploadForm")
+                .addEventListener("submit", onUpload);
+        </script>
+    </body>
+</html>

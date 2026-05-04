@@ -1,0 +1,25 @@
+[project]
+name = "shared"
+version = "0.1.1"
+description = "Add your description here"
+requires-python = ">=3.12"
+package-mode = false
+
+[tool.poetry]
+name = "shared"
+version = "0.1.1"
+description = ""
+authors = ["yehan2002 <yehanjaya2002@gmail.com>"]
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "^3.12"
+pydantic-settings = "^2.11.0"
+aio-pika = "^9.5.8"
+boto3 = "^1.42.59"
+pytest = "^9.0.2"
+
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"

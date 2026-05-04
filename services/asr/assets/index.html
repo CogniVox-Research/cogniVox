@@ -1,0 +1,145 @@
+<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="utf-8" />
+        <title>ASR Test</title>
+        <style>
+            body {
+                font-family: sans-serif;
+                margin: 2rem;
+            }
+            button,
+            input {
+                padding: 0.5rem 1rem;
+                font-size: 1rem;
+            }
+            #status {
+                margin-top: 1rem;
+            }
+        </style>
+    </head>
+    <body>
+        <button id="start-btn">Start Streaming</button>
+        <button id="stop-btn" disabled>Stop</button>
+
+        <p>Status: <span id="status"></span></p>
+        <p>Session: <span id="session"></span></p>
+        <pre id="transcript"></pre>
+
+        <script>
+            const startBtn = document.getElementById("start-btn");
+            const stopBtn = document.getElementById("stop-btn");
+            const statusPara = document.getElementById("status");
+            const session = document.getElementById("session");
+            const transcript = document.getElementById("transcript");
+
+            let mediaRecorder;
+            let socket;
+
+            function log(msg) {
+                console.log(msg);
+                statusPara.textContent = msg;
+            }
+
+            const stop = () => {
+                if (mediaRecorder && mediaRecorder.state === "recording")
+                    mediaRecorder.stop();
+                if (socket && socket.readyState === WebSocket.OPEN)
+                    socket.send("END");
+                startBtn.disabled = false;
+                stopBtn.disabled = true;
+            };
+
+            async function init() {
+                const stream = await navigator.mediaDevices.getUserMedia({
+                    audio: true,
+                });
+
+                mediaRecorder = new MediaRecorder(stream, {
+                    mimeType: "audio/webm; codecs=opus",
+                });
+
+                mediaRecorder.ondataavailable = (evt) => {
+                    if (!socket || socket.readyState !== WebSocket.OPEN) return;
+                    socket.send(evt.data);
+                };
+
+                mediaRecorder.onstop = () => {
+                    if (socket && socket.readyState === WebSocket.OPEN)
+                        socket.close();
+                    log("Recording stopped.");
+                };
+
+                mediaRecorder.start(1000);
+                log("Started recording and streaming...");
+            }
+
+            const format_ts = (ts) => {
+                return (
+                    ts.toFixed().toString().padStart(2, "0") +
+                    ":" +
+                    ((ts * 100) % 100).toFixed().toString().padStart(2, "0")
+                );
+            };
+
+            function openSocket() {
+                const id = Math.floor(Math.random() * 1e15).toString(36);
+                const url = `ws://${window.location.host}/audio/test-${id}`;
+                socket = new WebSocket(url);
+                socket.onopen = () => log(`WebSocket connected`);
+                socket.onerror = (e) => {
+                    stop();
+                    log(`WebSocket error: ${e.message}`);
+                };
+                socket.onclose = () => {
+                    stop();
+                    log("WebSocket closed");
+                };
+
+                socket.onmessage = (d) => {
+                    transcript.innerText = "";
+                    let data = JSON.parse(d.data);
+                    for (let idx in data.lines) {
+                        let line = data.lines[idx];
+                        console.log(line);
+
+                        const elem = document.createElement("p");
+                        elem.innerText = `[${format_ts(line.timestamp.start)}-${format_ts(line.timestamp.end)}]`;
+                        if (line.type === "silence") {
+                            elem.innerText += "[Silence]";
+                            elem.style.color = "#f58138";
+                        } else if (line.type === "partial") {
+                            elem.innerText += line.text;
+                            elem.style.color = "#767676";
+                        } else if (line.type === "complete") {
+                            elem.innerText += line.text;
+                            elem.style.color =
+                                line.probability > 0.85 ? "#42aa46" : "#6e2a9e";
+                        } else {
+                            console.error("Unsupported message", line);
+                        }
+
+                        transcript.appendChild(elem);
+                    }
+                };
+
+                return id;
+            }
+
+            startBtn.onclick = async () => {
+                try {
+                    await init();
+                    const session_id = openSocket();
+                    session.innerText = session_id;
+                    transcript.innerText = "";
+                    startBtn.disabled = true;
+                    stopBtn.disabled = false;
+                } catch (e) {
+                    log(`Error: ${e}`);
+                }
+            };
+
+            stopBtn.onclick = stop;
+        </script>
+    </body>
+</html>

@@ -1,0 +1,33 @@
+[[image]]
+path = "asr"
+
+[[image]]
+path = "asr"
+variant = "cuda"
+
+[[image]]
+path = "auth"
+
+[[image]]
+path = "biometric"
+
+[[image]]
+path = "document"
+
+[[image]]
+path = "game"
+
+[[image]]
+path = "gateway"
+
+[[image]]
+path = "llm"
+
+[[image]]
+path = "sds"
+
+[[image]]
+path = "stuck_detection"
+
+[[image]]
+path = "transcript_analysis"

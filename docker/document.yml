@@ -1,0 +1,15 @@
+services:
+  document_service:
+    image: ghcr.io/cognivox-research/document_service:v0.1.1
+    restart: "unless-stopped"
+    build:
+      context: ..
+      dockerfile: ./services/document/Dockerfile
+
+    ports:
+      - "8003:8003"
+
+    volumes:
+      - ../services/document/Rocket.toml:/app/Rocket.toml:z
+
+    env_file: ../.env.template

@@ -1,0 +1,27 @@
+[default]
+address = "0.0.0.0"
+port=8004
+max_answer_silence=10
+min_answer_words=20
+
+[default.urls]
+transcript_analysis="http://localhost:8005"
+speech_score="http://localhost:8006/analyze-speech"
+
+[default.urls.llm]
+base="http://localhost:8013/api/v1"
+interview_question="generate-interview-questions"
+speech_question="generate-speech-questions"
+stress_management="generate-stress-management-plan"
+evaluate="evaluate-answers"
+
+[default.file_store]
+type="s3"
+endpoint="http://127.0.0.1:8333"
+bucket="cg-data"
+access_key_id="admin_access_key"
+secret_access_key="admin_secret_key"
+
+[default.rabbitmq]
+connection_name="game"
+url="amqp://appuser:apppass@127.0.0.1"

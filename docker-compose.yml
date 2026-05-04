@@ -1,0 +1,14 @@
+include:
+  - docker/rabbitmq.yml
+  - docker/seaweedfs.yml
+  - docker/gateway.yml
+
+  - docker/asr-cuda.yml
+  - docker/auth.yml
+  - docker/biometric.yml
+  - docker/document.yml
+  - docker/game.yml
+  - docker/sds.yml
+  - docker/stuck_detection.yml
+  - docker/transcript_analysis.yml
+  - docker/llm.yml

@@ -13,7 +13,7 @@ const PrepairPage = () => {
             </div>
             <h1 className="text-4xl font-semibold text-slate-900">Preparing your session</h1>
             <p className="mt-3 text-base leading-7 text-slate-600">
-              Getting everything ready for your interview experience. This includes loading your session, preparing the AI flow, and syncing analytics.
+              Getting everything ready for your interview experience.
             </p>
           </div>
 
@@ -42,10 +42,6 @@ const PrepairPage = () => {
               <p className="mt-2 text-sm leading-6 text-slate-600">
                 Your session is finalizing. It should be ready in just a few seconds.
               </p>
-            </div>
-            <div className="rounded-3xl bg-slate-200/80 p-4 text-sm text-slate-700">
-              <Sparkles className="inline-block mr-2 h-4 w-4 align-middle text-primary" />
-              Optimized for a smooth interview experience.
             </div>
           </div>
         </div>

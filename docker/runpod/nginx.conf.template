@@ -1,0 +1,84 @@
+events {}
+
+http {
+    # ---- Resolve upstreams from environment variables ----
+    # Set via RunPod pod environment:
+    #   AUTH_SERVICE_HOST=<pod-id>.runpod.internal:8010
+    #   DOCUMENT_SERVICE_HOST=<pod-id>.runpod.internal:8003
+    #   etc.
+
+    resolver 8.8.8.8 valid=30s ipv6=off;
+
+    upstream auth_service {
+        server ${AUTH_SERVICE_HOST};
+    }
+
+    upstream document_service {
+        server ${DOCUMENT_SERVICE_HOST};
+    }
+
+    upstream game_service {
+        server ${GAME_SERVICE_HOST};
+    }
+
+    upstream llm_service {
+        server ${LLM_SERVICE_HOST};
+    }
+
+    upstream transcript_analysis_service {
+        server ${TRANSCRIPT_SERVICE_HOST};
+    }
+
+    upstream sds {
+        server ${SDS_SERVICE_HOST};
+    }
+
+    server {
+        listen 80;
+
+        # Auth service
+        location /api/auth/ {
+            proxy_pass http://auth_service/;
+            proxy_set_header Host $host;
+            proxy_set_header X-Real-IP $remote_addr;
+            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+            proxy_redirect off;
+        }
+
+        # Document upload
+        location /api/document/upload/ {
+            proxy_pass http://document_service/upload/;
+            proxy_set_header Host $host;
+            proxy_set_header X-Real-IP $remote_addr;
+            proxy_redirect off;
+        }
+
+        # WebSocket game service
+        location /api/ws/ {
+            proxy_pass http://game_service/ws/;
+            proxy_http_version 1.1;
+            proxy_set_header Upgrade $http_upgrade;
+            proxy_set_header Connection "upgrade";
+            proxy_buffering off;
+            proxy_read_timeout 3600s;
+        }
+
+        location /api/internal/llm/ {
+            proxy_pass http://llm_service/api/v1/;
+        }
+
+        location /api/internal/analyze_transcript {
+            proxy_pass http://transcript_analysis_service/;
+        }
+
+        location /api/internal/speech_score/ {
+            proxy_pass http://sds/analyze-speech;
+        }
+
+        # Health check endpoint
+        location /health {
+            return 200 'OK';
+            add_header Content-Type text/plain;
+        }
+    }
+}

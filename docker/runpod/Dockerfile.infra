@@ -1,0 +1,62 @@
+# ============================================================
+# CogniVox — RunPod Infrastructure Pod
+# Combines RabbitMQ + SeaweedFS in one container via supervisord
+# ============================================================
+
+FROM ubuntu:22.04
+
+ENV DEBIAN_FRONTEND=noninteractive
+
+# ------ Install dependencies ------
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    curl \
+    wget \
+    gnupg \
+    supervisor \
+    ca-certificates \
+    erlang-base \
+    erlang-nox \
+    && rm -rf /var/lib/apt/lists/*
+
+# ------ Install RabbitMQ ------
+RUN curl -1sLf 'https://dl.cloudsmith.io/public/rabbitmq/rabbitmq-server/gpg.9F4587F226208342.key' \
+    | gpg --dearmor -o /usr/share/keyrings/rabbitmq.gpg \
+    && echo "deb [signed-by=/usr/share/keyrings/rabbitmq.gpg] https://dl.cloudsmith.io/public/rabbitmq/rabbitmq-server/deb/ubuntu jammy main" \
+    > /etc/apt/sources.list.d/rabbitmq.list \
+    && apt-get update \
+    && apt-get install -y --no-install-recommends rabbitmq-server \
+    && rm -rf /var/lib/apt/lists/*
+
+# Enable RabbitMQ management plugin
+RUN rabbitmq-plugins enable --offline rabbitmq_management
+
+# Set default RabbitMQ credentials
+ENV RABBITMQ_DEFAULT_USER=appuser
+ENV RABBITMQ_DEFAULT_PASS=apppass
+
+# ------ Install SeaweedFS ------
+ARG SEAWEEDFS_VERSION=3.79
+RUN wget -qO /tmp/seaweedfs.tar.gz \
+    "https://github.com/seaweedfs/seaweedfs/releases/download/${SEAWEEDFS_VERSION}/linux_amd64.tar.gz" \
+    && tar -xzf /tmp/seaweedfs.tar.gz -C /usr/local/bin/ \
+    && rm /tmp/seaweedfs.tar.gz \
+    && chmod +x /usr/local/bin/weed
+
+# ------ Copy configs ------
+COPY docker/runpod/s3.json /etc/seaweedfs/s3.json
+COPY docker/runpod/supervisord.conf /etc/supervisor/conf.d/cognivox.conf
+
+# ------ Create data directories ------
+RUN mkdir -p /data/rabbitmq /data/seaweedfs
+
+# ------ Expose ports ------
+# RabbitMQ AMQP + Management
+EXPOSE 5672 15672
+# SeaweedFS: Master, Filer, S3, WebDAV, Volume
+EXPOSE 9333 8888 8333 7333 9340
+
+# ------ Healthcheck ------
+HEALTHCHECK --interval=15s --timeout=5s --retries=5 --start-period=30s \
+    CMD curl -sf http://localhost:15672 > /dev/null && curl -sf http://localhost:8333 > /dev/null || exit 1
+
+CMD ["/usr/bin/supervisord", "-n", "-c", "/etc/supervisor/conf.d/cognivox.conf"]

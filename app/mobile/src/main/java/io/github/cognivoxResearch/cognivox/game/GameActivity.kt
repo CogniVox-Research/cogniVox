@@ -39,18 +39,22 @@ class GameActivity : AppCompatActivity(), GodotHost {
 
     var hasStopped: Boolean = false
 
+    private val requestPermissionLauncher = registerForActivityResult(
+        ActivityResultContracts.RequestPermission()
+    ) { isGranted ->
+        if (!isGranted) {
+            runOnUiThread {
+                Toast.makeText(baseContext, "Permissions not granted", Toast.LENGTH_LONG).show()
+            }
+            finish()
+        }
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE;
 
-        registerForActivityResult(ActivityResultContracts.RequestPermission()) { isGranted ->
-            if (!isGranted) {
-                runOnUiThread {
-                    Toast.makeText(baseContext, "Permissions not granted", Toast.LENGTH_LONG).show()
-                }
-                finish()
-            }
-        }
+        requestPermissionLauncher.launch(android.Manifest.permission.RECORD_AUDIO)
 
         tts = TextToSpeechManager(this.applicationContext)
 

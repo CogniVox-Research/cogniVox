@@ -7,10 +7,6 @@ import android.app.Service
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.content.pm.ServiceInfo
-import android.hardware.Sensor
-import android.hardware.SensorEvent
-import android.hardware.SensorEventListener
-import android.hardware.SensorManager
 import android.os.Build
 import android.os.Handler
 import android.os.IBinder
@@ -251,7 +247,31 @@ class HRVService : Service() {
                         )
                     }
             }
-        }
+        )
+        motionSensorManager.start()
+
+        healthSensorManager = HealthSensorManager(
+            context = this,
+            onIbiData = { ibi ->
+                featureCalculator.addIbiData(ibi)
+            },
+            onPpgData = { ppg ->
+                featureCalculator.addBvpData(ppg)
+            },
+            onEdaData = { eda ->
+                featureCalculator.addEdaData(eda)
+            },
+            onTempData = { temp ->
+                featureCalculator.addTempData(temp)
+            },
+            onConnected = {
+                showToast("Connected to Sensor")
+            },
+            onError = { error ->
+                showToast("Sensor Connection Failed: $error")
+            }
+        )
+        healthSensorManager.connect()
     }
 
     private fun createNotification(): Notification {
@@ -278,12 +298,11 @@ class HRVService : Service() {
     override fun onDestroy() {
         super.onDestroy()
         WearDataRepository.setServiceRunning(false)
-        healthTracker?.unsetEventListener()
-        if (::healthTrackingService.isInitialized) {
-            healthTrackingService.disconnectService()
+        if (::healthSensorManager.isInitialized) {
+            healthSensorManager.disconnect()
         }
-        if (::sensorManager.isInitialized) {
-            sensorManager.unregisterListener(sensorListener)
+        if (::motionSensorManager.isInitialized) {
+            motionSensorManager.stop()
         }
     }
 

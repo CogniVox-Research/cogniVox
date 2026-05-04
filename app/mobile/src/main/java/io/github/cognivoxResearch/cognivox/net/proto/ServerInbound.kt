@@ -33,6 +33,10 @@ sealed class ServerInbound {
     data class Question(val data: String) : ServerInbound()
 
     @Serializable
+    @SerialName("audience_score")
+    data class AudienceInterest(val interest: Double) : ServerInbound()
+
+    @Serializable
     @SerialName("answer_end")
     object AnswerEnd : ServerInbound()
 

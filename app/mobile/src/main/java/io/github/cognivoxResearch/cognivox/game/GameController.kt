@@ -221,6 +221,15 @@ class GameController(
                     }
                 }
 
+                is ServerInbound.AudienceInterest -> {
+                    activity!!.runOnUiThread {
+                        emitSignal(
+                            GameSignals.AUDIENCE_INTEREST.name,
+                            message.interest.toString(),
+                        )
+                    }
+                }
+
                 ServerInbound.AnswerEnd -> {
                     if (overlayState.value is GameState.Question)
                         onQuestionEnd()

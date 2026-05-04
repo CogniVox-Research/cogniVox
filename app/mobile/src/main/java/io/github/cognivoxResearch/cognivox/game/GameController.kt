@@ -24,6 +24,7 @@ import kotlinx.coroutines.launch
 import okhttp3.Response
 import org.godotengine.godot.Godot
 import org.godotengine.godot.plugin.GodotPlugin
+import java.util.Optional
 
 
 class GameController(
@@ -63,7 +64,11 @@ class GameController(
     internal fun onSessionInit(settings: GameSettings, noVR: Boolean = false) {
         if (overlayState.value is GameState.Loading)
             overlayState.value =
-                (overlayState.value as GameState.Loading).copy(serverReady = true)
+                (overlayState.value as GameState.Loading).copy(
+                    serverReady = true,
+                    noVr = noVR,
+                    gameSettings = Optional.of(settings)
+                )
 
         gameStart()
     }
@@ -174,6 +179,28 @@ class GameController(
     fun onHRVReceived(input: FeatureInput) {
         if (canSendHRV) {
             this.websocket?.send(ServerOutbound.Stress(input))
+        }
+    }
+
+    fun onDoubleWatchTap() {
+        when (val state = this.overlayState.value) {
+            is GameState.Question -> {
+                state.onEnd()
+            }
+
+            is GameState.SessionEnd -> {
+                state.onEnd()
+            }
+
+            is GameState.Speech -> {
+                state.onEnd()
+            }
+
+            is GameState.WaitingSpeech -> {
+                state.onStart()
+            }
+
+            else -> Log.i(tag, "Ignored watch double tap")
         }
     }
 
